@@ -31,6 +31,34 @@ Parameters:
     Default: /dev/sda1
 
 Resources:
+  # docs: https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-iam-role.html
+  Role:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          Action: sts:AssumeRole
+          Effect: Allow
+          Principal:
+            Service: ec2.amazonaws.com
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AmazonS3ReadOnlyAccess
+        - arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy
+        - arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore
+      RoleName: !Ref Name
+      Tags:
+        - Key: Name
+          Value: !Ref Name
+
+  # docs: https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-iam-instanceprofile.html
+  InstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      InstanceProfileName: !Ref Name
+      Roles:
+        - !Ref Role
+
   # docs: https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-properties-ec2-security-group.html
   SecurityGroup:
     Type: AWS::EC2::SecurityGroup
@@ -49,7 +77,7 @@ Resources:
   Instance:
     Type: AWS::EC2::Instance
     Properties:
-      IamInstanceProfile: game-servers
+      IamInstanceProfile: !Ref InstanceProfile
       InstanceType: !Ref InstanceType
       PropagateTagsToVolumeOnCreation: True
       SecurityGroupIds:

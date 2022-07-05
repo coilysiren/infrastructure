@@ -1,6 +1,7 @@
 # builtin
 import os
 import io
+import textwrap
 import zipfile
 
 # 3rd party
@@ -27,7 +28,11 @@ def ssh(ctx: invoke.Context, name="eco-server", user="ubuntu"):
         ],
     )
     ip = response["Reservations"][0]["Instances"][0]["PublicIpAddress"]
-    ctx.run(f"ssh {user}@{ip}", pty=True)
+    ctx.run(
+        f"ssh {user}@{ip}",
+        pty=True,
+        echo=True,
+    )
 
 
 @invoke.task
@@ -35,22 +40,28 @@ def deploy(ctx: invoke.Context, name="eco-server"):
     ctx.run(
         "aws cloudformation validate-template --template-body file://instance.yaml",
         pty=True,
+        echo=True,
     )
+    # docs: https://docs.aws.amazon.com/cli/latest/reference/cloudformation/deploy/index.html
     ctx.run(
-        f"""
-        aws cloudformation deploy \
-            --template-file instance.yaml \
-            --stack-name {name} \
-            --parameter-overrides Name={name}
-    """,
+        textwrap.dedent(
+            f"""
+            aws cloudformation deploy \
+                --template-file instance.yaml \
+                --stack-name {name} \
+                --parameter-overrides Name={name} \
+                --capabilities CAPABILITY_NAMED_IAM
+            """
+        ),
         pty=True,
+        echo=True,
     )
 
 
 @invoke.task
 def push_asset(ctx: invoke.Context, name="EcoServerLinux", bucket="coilysiren-assets"):
     downloads = os.listdir(os.path.join(os.path.expanduser("~"), "Downloads"))
-    options = [download for download in downloads if "EcoServerLinux" in download]
+    options = [download for download in downloads if name in download]
 
     if len(options) == 0:
         raise Exception(f'could not find "{name}" download from {downloads}')
@@ -59,14 +70,20 @@ def push_asset(ctx: invoke.Context, name="EcoServerLinux", bucket="coilysiren-as
 
     asset_path = os.path.join(os.path.expanduser("~"), "Downloads", options[0])
 
-    print(f"syncing from {asset_path} to s3://{bucket}/{name}")
-    with open(asset_path, "rb") as data:
-        s3.upload_fileobj(data, bucket, name)
+    ctx.run(
+        f"aws s3 cp {asset_path} s3://{bucket}/downloads/{name}",
+        pty=True,
+        echo=True,
+    )
 
 
 @invoke.task
 def pull_asset(ctx: invoke.Context, name="EcoServerLinux", bucket="coilysiren-assets"):
-    ctx.run(f"aws s3 cp s3://coilysiren-assets/EcoServerLinux .", pty=True)
+    ctx.run(
+        f"aws s3 cp s3://{bucket}/downloads/{name} .",
+        pty=True,
+        echo=True,
+    )
 
 
 # @invoke.task
