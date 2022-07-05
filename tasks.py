@@ -2,6 +2,7 @@
 import os
 import io
 import textwrap
+from urllib import response
 import zipfile
 
 # 3rd party
@@ -52,6 +53,7 @@ def build(ctx: invoke.Context, name="eco-server", user="ubuntu"):
         pty=True,
         echo=True,
     )
+
     # docs: https://docs.aws.amazon.com/cli/latest/reference/cloudformation/deploy/index.html
     #
     # the packer build uses an IAM role deployed by the following stack
@@ -69,6 +71,7 @@ def build(ctx: invoke.Context, name="eco-server", user="ubuntu"):
         pty=True,
         echo=True,
     )
+
     ctx.run(
         "packer build ubuntu.pkr.hcl",
         pty=True,
@@ -85,13 +88,14 @@ def deploy(ctx: invoke.Context, name="eco-server"):
             aws cloudformation validate-template --template-body file://iam.yaml && \
             aws cloudformation deploy \
                 --template-file iam.yaml \
-                --stack-name game-server-iam \
-                --capabilities CAPABILITY_NAMED_IAM
+                --capabilities CAPABILITY_NAMED_IAM \
+                --stack-name game-server-iam
             """
         ),
         pty=True,
         echo=True,
     )
+
     # docs: https://docs.aws.amazon.com/cli/latest/reference/cloudformation/deploy/index.html
     ctx.run(
         textwrap.dedent(
@@ -105,21 +109,39 @@ def deploy(ctx: invoke.Context, name="eco-server"):
         pty=True,
         echo=True,
     )
-    # # docs: https://docs.aws.amazon.com/cli/latest/reference/cloudformation/deploy/index.html
-    # ctx.run(
-    #     textwrap.dedent(
-    #         f"""
-    #         aws cloudformation validate-template --template-body file://instance.yaml && \
-    #         aws cloudformation deploy \
-    #             --template-file instance.yaml \
-    #             --stack-name {name} \
-    #             --parameter-overrides Name={name} \
-    #             --capabilities CAPABILITY_NAMED_IAM
-    #         """
-    #     ),
-    #     pty=True,
-    #     echo=True,
-    # )
+
+    # docs: https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/ec2.html#EC2.Client.describe_images
+    response = ec2.describe_images(
+        Filters=[
+            {"Name": "name", "Values": ["ubuntu-packer"]},
+        ],
+    )
+    ubuntu_ami = response["Images"][0]["ImageId"]
+
+    # docs: https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/ssm.html#SSM.Client.get_parameter
+    response = ssm.get_parameter(
+        Name="/cfn/base-security-group",
+        WithDecryption=True,
+    )
+    security_groups = [response["Parameter"]["Value"]]
+
+    # docs: https://docs.aws.amazon.com/cli/latest/reference/cloudformation/deploy/index.html
+    ctx.run(
+        textwrap.dedent(
+            f"""
+            aws cloudformation validate-template --template-body file://instance.yaml && \
+            aws cloudformation deploy \
+                --template-file instance.yaml \
+                --parameter-overrides \
+                    Name={name} \
+                    AMI={ubuntu_ami} \
+                    SecurityGroups={",".join(security_groups)} \
+                --stack-name {name}
+            """
+        ),
+        pty=True,
+        echo=True,
+    )
 
 
 @invoke.task
@@ -152,11 +174,11 @@ def pull_asset(ctx: invoke.Context, name="EcoServerLinux", bucket="coilysiren-as
 
 # @invoke.task
 # def eco_download(ctx: invoke.Context, version="v0.9.5.4"):
-#     # docs: https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/ssm.html#SSM.Client.get_parameter
-#     response = ssm.get_parameter(
-#         Name="/eco/username",
-#         WithDecryption=True,
-#     )
+# # docs: https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/ssm.html#SSM.Client.get_parameter
+# response = ssm.get_parameter(
+#     Name="/eco/username",
+#     WithDecryption=True,
+# )
 #     username = response["Parameter"]["Value"]
 #     response = ssm.get_parameter(
 #         Name="/eco/password",
