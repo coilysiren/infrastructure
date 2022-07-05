@@ -6,9 +6,9 @@
 
 ## per game server configuration
 
-- `/cfn/{name}-eip-id`
-- `/cfn/{name}-security-group`
-- `/cfn/{name}-instance-type`
+- `/cfn/{name}/eip-id`
+- `/cfn/{name}/security-group`
+- `/cfn/{name}/instance-type`
 
 ## eco server download
 
