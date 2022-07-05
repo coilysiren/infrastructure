@@ -17,16 +17,8 @@ ssm = boto3.client("ssm")
 
 @invoke.task
 def ssh(ctx: invoke.Context, name="eco-server", user="ubuntu"):
-    # docs: https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/ec2.html#EC2.Client.describe_instances
-    response = ec2.describe_instances(
-        Filters=[
-            {"Name": "tag:Name", "Values": [name]},
-            {"Name": "instance-state-name", "Values": ["running"]},
-        ],
-    )
-    ip = response["Reservations"][0]["Instances"][0]["PublicIpAddress"]
     ctx.run(
-        f"ssh {user}@{ip}",
+        f"ssh {user}@{name}.coilysiren.me",
         pty=True,
         echo=True,
     )
@@ -50,7 +42,6 @@ def build(ctx: invoke.Context, name="eco-server", user="ubuntu"):
         echo=True,
     )
 
-    #
     # the packer build uses an IAM role deployed by the following stack
     ctx.run(
         textwrap.dedent(

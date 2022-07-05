@@ -9,6 +9,7 @@ Parameters:
     Type: AWS::EC2::KeyPair::KeyName
     Default: ssh
     NoEcho: true
+    # TODO: regen with password, better name
   InstanceType:
     Description: https://aws.amazon.com/ec2/instance-types/
     Type: String
@@ -25,6 +26,7 @@ Parameters:
     Type: String
     Description: aws ec2 describe-images --query "Images[0].RootDeviceName" --image-ids ami-XXXXXXXXXX
     Default: /dev/sda1
+    # TODO: persisting the save file
 
 Resources:
   # docs: https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-properties-ec2-instance.html
@@ -32,7 +34,7 @@ Resources:
     Type: AWS::EC2::Instance
     Properties:
       IamInstanceProfile: game-server
-      InstanceType: !Ref InstanceType
+      InstanceType: !Ref InstanceType # TODO: ssm /cfn/eco-instance-type
       PropagateTagsToVolumeOnCreation: True
       SecurityGroupIds: !Ref SecurityGroups
       KeyName: !Ref KeyName
@@ -41,6 +43,25 @@ Resources:
       Tags:
         - Key: Name
           Value: !Ref Name
+
+  # docs: https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-properties-ec2-eip-association.html
+  EIPAssociation:
+    Type: AWS::EC2::EIPAssociation
+    Properties:
+      AllocationId: eipalloc-0524c5bad9df42cdb # TODO: ssm /cfn/eco-eip-id
+      InstanceId: !Ref Instance
+
+  # docs: http://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-properties-route53-recordset.html
+  RecordSet:
+    Type: AWS::Route53::RecordSet
+    Properties:
+      Name: !Sub ${Name}.coilysiren.me.
+      HostedZoneName: coilysiren.me.
+      TTL: 60
+      Type: A
+      ResourceRecords:
+        # TODO: ssm /cfn/eco-epi-address
+        - 3.225.219.68
 
   # # docs: https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-properties-ec2-ebs-volume.html
   # Volume:
@@ -61,15 +82,3 @@ Resources:
   #     InstanceId: !Ref Instance
   #     VolumeId: !Ref Volume
   #     Device: !Ref AMIDeviceMount
-
-  # docs: https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-ssm-parameter.html
-  PublicIp:
-    Type: AWS::SSM::Parameter
-    Properties:
-      Name: /cfn/public-ip
-      Type: String
-      Value: !GetAtt Instance.PublicIp
-
-Outputs:
-  PublicIp:
-    Value: !GetAtt Instance.PublicIp
