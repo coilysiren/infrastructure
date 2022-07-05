@@ -21,6 +21,7 @@ ssm = boto3.client("ssm")
 
 @invoke.task
 def ssh(ctx: invoke.Context, name="eco-server", user="ubuntu"):
+    # TODO: ec2 instance connect
     ctx.run(
         f"ssh {user}@{name}.coilysiren.me",
         pty=True,
@@ -50,9 +51,9 @@ def build(ctx: invoke.Context):
     ctx.run(
         textwrap.dedent(
             f"""
-            aws cloudformation validate-template --template-body file://cfn/iam.yaml && \
+            aws cloudformation validate-template --template-body file://templates/iam.yaml && \
             aws cloudformation deploy \
-                --template-file cfn/iam.yaml \
+                --template-file templates/iam.yaml \
                 --stack-name game-server-iam \
                 --parameter-overrides Name=game-server \
                 --capabilities CAPABILITY_NAMED_IAM
@@ -74,9 +75,9 @@ def deploy(ctx: invoke.Context, name="eco-server"):
     ctx.run(
         textwrap.dedent(
             f"""
-            aws cloudformation validate-template --template-body file://cfn/iam.yaml && \
+            aws cloudformation validate-template --template-body file://templates/iam.yaml && \
             aws cloudformation deploy \
-                --template-file cfn/iam.yaml \
+                --template-file templates/iam.yaml \
                 --capabilities CAPABILITY_NAMED_IAM \
                 --stack-name game-server-iam
             """
@@ -90,9 +91,9 @@ def deploy(ctx: invoke.Context, name="eco-server"):
     ctx.run(
         textwrap.dedent(
             f"""
-            aws cloudformation validate-template --template-body file://cfn/networking.yaml && \
+            aws cloudformation validate-template --template-body file://templates/networking.yaml && \
             aws cloudformation deploy \
-                --template-file cfn/networking.yaml \
+                --template-file templates/networking.yaml \
                 --parameter-overrides \
                     HomeIP='{home_ip}/32' \
                     VPC={vpc} \
@@ -127,9 +128,9 @@ def deploy(ctx: invoke.Context, name="eco-server"):
     ctx.run(
         textwrap.dedent(
             f"""
-            aws cloudformation validate-template --template-body file://cfn/instance.yaml && \
+            aws cloudformation validate-template --template-body file://templates/instance.yaml && \
             aws cloudformation deploy \
-                --template-file cfn/instance.yaml \
+                --template-file templates/instance.yaml \
                 --parameter-overrides \
                     Name={name} \
                     AMI={ubuntu_ami} \
@@ -144,9 +145,9 @@ def deploy(ctx: invoke.Context, name="eco-server"):
     ctx.run(
         textwrap.dedent(
             f"""
-            aws cloudformation validate-template --template-body file://cfn/dns.yaml && \
+            aws cloudformation validate-template --template-body file://templates/dns.yaml && \
             aws cloudformation deploy \
-                --template-file cfn/dns.yaml \
+                --template-file templates/dns.yaml \
                 --parameter-overrides \
                     Name={name} \
                 --stack-name {name}-dns

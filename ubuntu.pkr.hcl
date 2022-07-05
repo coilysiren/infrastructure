@@ -35,6 +35,7 @@ build {
     ]
     // TODO: modify ssh port
     // TODO: security updates - via https://askubuntu.com/questions/194/how-can-i-install-just-security-updates-from-the-command-line
+    // TODO: move into a big bash file
     inline = [
       "#!/bin/bash",
       "set -eux && sudo echo 'debconf debconf/frontend select Noninteractive' | sudo debconf-set-selections",
