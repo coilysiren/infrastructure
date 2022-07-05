@@ -1,9 +1,6 @@
 # builtin
 import os
-import io
 import textwrap
-from urllib import response
-import zipfile
 
 # 3rd party
 import boto3
@@ -16,7 +13,6 @@ import invokepatch
 invokepatch.fix_annotations()
 ec2 = boto3.client("ec2")
 ssm = boto3.client("ssm")
-s3 = boto3.client("s3")
 
 
 @invoke.task
@@ -54,7 +50,6 @@ def build(ctx: invoke.Context, name="eco-server", user="ubuntu"):
         echo=True,
     )
 
-    # docs: https://docs.aws.amazon.com/cli/latest/reference/cloudformation/deploy/index.html
     #
     # the packer build uses an IAM role deployed by the following stack
     ctx.run(
@@ -81,7 +76,6 @@ def build(ctx: invoke.Context, name="eco-server", user="ubuntu"):
 
 @invoke.task
 def deploy(ctx: invoke.Context, name="eco-server"):
-    # docs: https://docs.aws.amazon.com/cli/latest/reference/cloudformation/deploy/index.html
     ctx.run(
         textwrap.dedent(
             f"""
@@ -96,13 +90,20 @@ def deploy(ctx: invoke.Context, name="eco-server"):
         echo=True,
     )
 
-    # docs: https://docs.aws.amazon.com/cli/latest/reference/cloudformation/deploy/index.html
+    # docs: https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/ec2.html#EC2.Client.describe_vpcs
+    response = ec2.describe_vpcs()
+    vpc = response["Vpcs"][0]["VpcId"]
+
+    home_ip = requests.get("http://ifconfig.me").text
     ctx.run(
         textwrap.dedent(
-            """
+            f"""
             aws cloudformation validate-template --template-body file://networking.yaml && \
             aws cloudformation deploy \
                 --template-file networking.yaml \
+                --parameter-overrides \
+                    HomeIP='{home_ip}/32' \
+                    VPC={vpc} \
                 --stack-name game-server-networking
             """
         ),
@@ -119,13 +120,18 @@ def deploy(ctx: invoke.Context, name="eco-server"):
     ubuntu_ami = response["Images"][0]["ImageId"]
 
     # docs: https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/ssm.html#SSM.Client.get_parameter
+    security_groups = []
     response = ssm.get_parameter(
         Name="/cfn/base-security-group",
         WithDecryption=True,
     )
-    security_groups = [response["Parameter"]["Value"]]
+    security_groups.append(response["Parameter"]["Value"])
+    response = ssm.get_parameter(
+        Name="/cfn/eco-security-group",
+        WithDecryption=True,
+    )
+    security_groups.append(response["Parameter"]["Value"])
 
-    # docs: https://docs.aws.amazon.com/cli/latest/reference/cloudformation/deploy/index.html
     ctx.run(
         textwrap.dedent(
             f"""
@@ -170,25 +176,3 @@ def pull_asset(ctx: invoke.Context, name="EcoServerLinux", bucket="coilysiren-as
         pty=True,
         echo=True,
     )
-
-
-# @invoke.task
-# def eco_download(ctx: invoke.Context, version="v0.9.5.4"):
-# # docs: https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/ssm.html#SSM.Client.get_parameter
-# response = ssm.get_parameter(
-#     Name="/eco/username",
-#     WithDecryption=True,
-# )
-#     username = response["Parameter"]["Value"]
-#     response = ssm.get_parameter(
-#         Name="/eco/password",
-#         WithDecryption=True,
-#     )
-#     password = response["Parameter"]["Value"]
-#     response = requests.get(
-#         f"https://play.eco/s3/release/EcoServerLinux_{version}-beta.zip",
-#         auth=(username, password),
-#     )
-#     print(response.content)
-#     zipped_eco = zipfile.ZipFile(io.BytesIO(response.content))
-#     zipped_eco.extractall("eco-server-linux")

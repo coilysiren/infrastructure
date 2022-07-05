@@ -39,8 +39,13 @@ build {
       "sudo echo 'debconf debconf/frontend select Noninteractive' | sudo debconf-set-selections",
       "sudo apt-get update -qq && sudo apt-get install -qq -y awscli unzip libssl-dev libgdiplus libc6-dev",
       // via https://stackoverflow.com/questions/72108697/when-i-open-unity-and-make-something-project-then-the-error-is-coming-that-no
-      "wget -q http://security.ubuntu.com/ubuntu/pool/main/o/openssl1.0/libssl1.0.0_1.0.2n-1ubuntu5.10_amd64.deb",
-      "sudo dpkg -i libssl1.0.0_1.0.2n-1ubuntu5.10_amd64.deb",
+      "
+        cd /tmp &&
+        wget -q http://security.ubuntu.com/ubuntu/pool/main/o/openssl1.0/libssl1.0.0_1.0.2n-1ubuntu5.10_amd64.deb &&
+        libssl1.0.0_1.0.2n-1ubuntu5.10_amd64.deb &&
+        rm libssl1.0.0_1.0.2n-1ubuntu5.10_amd64.deb &&
+        cd -
+      ",
       // eco setup
       "mkdir -p /home/ubuntu/games/eco",
       "cd /home/ubuntu/games/eco",

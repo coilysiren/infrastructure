@@ -5,13 +5,14 @@ Parameters:
     Type: String
     Description: name of the server
   KeyName:
-    Description: https://us-east-1.console.aws.amazon.com/ec2/v2/home?region=us-east-1#KeyPairs
+    Description: https://console.aws.amazon.com/ec2/v2/home?region=us-east-1#KeyPairs
     Type: AWS::EC2::KeyPair::KeyName
     Default: ssh
+    NoEcho: true
   InstanceType:
     Description: https://aws.amazon.com/ec2/instance-types/
     Type: String
-    Default: t3.micro
+    Default: t3.small
   AMI:
     Type: AWS::EC2::Image::Id
   Subnet:
