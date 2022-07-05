@@ -19,11 +19,15 @@ Parameters:
     Default: 24.188.109.78/32
   AMI:
     Type: AWS::EC2::Image::Id
-    Description: latest 64-bit (x86) ubuntu server here - https://us-east-1.console.aws.amazon.com/ec2/v2/home?region=us-east-1#AMICatalog
-    Default: ami-052efd3df9dad4825
+    Description: latest free x86 64 bit ubuntu AMI from Canonical - https://aws.amazon.com/marketplace/search
+    Default: ami-07d160315197aca8f
+  Subnet:
+    Type: AWS::EC2::Subnet::Id
+    Description: us-east-1c
+    Default: subnet-08bcb7e889b485874
   AMIDeviceMount:
     Type: String
-    Description: aws ec2 describe-images --image-ids ami-XXXXXXXXXX --query "Images[0].RootDeviceName"
+    Description: aws ec2 describe-images --query "Images[0].RootDeviceName" --image-ids ami-XXXXXXXXXX
     Default: /dev/sda1
 
 Resources:
@@ -37,15 +41,22 @@ Resources:
           FromPort: "22"
           ToPort: "22"
           CidrIp: !Ref "SSHLocation"
+      Tags:
+        - Key: Name
+          Value: !Ref Name
 
   # docs: https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-properties-ec2-instance.html
   Instance:
     Type: AWS::EC2::Instance
     Properties:
+      IamInstanceProfile: game-servers
       InstanceType: !Ref InstanceType
-      SecurityGroups: [!Ref SecurityGroup]
+      PropagateTagsToVolumeOnCreation: True
+      SecurityGroupIds:
+        - !GetAtt SecurityGroup.GroupId
       KeyName: !Ref KeyName
       ImageId: !Ref AMI
+      SubnetId: !Ref Subnet
       Tags:
         - Key: Name
           Value: !Ref Name
@@ -58,16 +69,17 @@ Resources:
     Properties:
       Size: 10
       AvailabilityZone: !GetAtt Instance.AvailabilityZone
+      Tags:
+        - Key: Name
+          Value: !Ref Name
 
-  # docs: https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-properties-ec2-ebs-volumeattachment.html
-  #
-  # get the device mount point via
-  VolumeAttachment:
-    Type: AWS::EC2::VolumeAttachment
-    Properties:
-      InstanceId: !Ref Instance
-      VolumeId: !Ref Volume
-      Device: !Ref AMIDeviceMount
+  # # docs: https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-properties-ec2-ebs-volumeattachment.html
+  # VolumeAttachment:
+  #   Type: AWS::EC2::VolumeAttachment
+  #   Properties:
+  #     InstanceId: !Ref Instance
+  #     VolumeId: !Ref Volume
+  #     Device: !Ref AMIDeviceMount
 
 Outputs:
   InstancePublicDnsName:

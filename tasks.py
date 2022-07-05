@@ -18,16 +18,12 @@ s3 = boto3.client("s3")
 
 
 @invoke.task
-def ssh(ctx: invoke.Context, name="eco-server", user="ec2-user"):
+def ssh(ctx: invoke.Context, name="eco-server", user="ubuntu"):
     # docs: https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/ec2.html#EC2.Client.describe_instances
     response = ec2.describe_instances(
         Filters=[
-            {
-                "Name": "tag:Name",
-                "Values": [
-                    name,
-                ],
-            },
+            {"Name": "tag:Name", "Values": [name]},
+            {"Name": "instance-state-name", "Values": ["running"]},
         ],
     )
     ip = response["Reservations"][0]["Instances"][0]["PublicIpAddress"]
