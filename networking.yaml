@@ -1,0 +1,31 @@
+AWSTemplateFormatVersion: "2010-09-09"
+
+Parameters:
+  SSHLocation:
+    Description: curl ifconfig.me
+    Type: String
+    Default: 24.188.109.78/32
+
+Resources:
+  # docs: https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-properties-ec2-security-group.html
+  BaseSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: general ec2 security group
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: "22"
+          ToPort: "22"
+          CidrIp: !Ref "SSHLocation"
+
+  # docs: https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-ssm-parameter.html
+  BaseSecurityGroupSSM:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: /cfn/base-security-group
+      Type: String
+      Value: !GetAtt BaseSecurityGroup.GroupId
+
+Outputs:
+  BaseSecurityGroup:
+    Value: !GetAtt BaseSecurityGroup.GroupId

@@ -52,6 +52,23 @@ def build(ctx: invoke.Context, name="eco-server", user="ubuntu"):
         pty=True,
         echo=True,
     )
+    # docs: https://docs.aws.amazon.com/cli/latest/reference/cloudformation/deploy/index.html
+    #
+    # the packer build uses an IAM role deployed by the following stack
+    ctx.run(
+        textwrap.dedent(
+            f"""
+            aws cloudformation validate-template --template-body file://iam.yaml && \
+            aws cloudformation deploy \
+                --template-file iam.yaml \
+                --stack-name game-server-iam \
+                --parameter-overrides Name=game-server \
+                --capabilities CAPABILITY_NAMED_IAM
+            """
+        ),
+        pty=True,
+        echo=True,
+    )
     ctx.run(
         "packer build ubuntu.pkr.hcl",
         pty=True,
@@ -61,25 +78,48 @@ def build(ctx: invoke.Context, name="eco-server", user="ubuntu"):
 
 @invoke.task
 def deploy(ctx: invoke.Context, name="eco-server"):
-    ctx.run(
-        "aws cloudformation validate-template --template-body file://instance.yaml",
-        pty=True,
-        echo=True,
-    )
     # docs: https://docs.aws.amazon.com/cli/latest/reference/cloudformation/deploy/index.html
     ctx.run(
         textwrap.dedent(
             f"""
+            aws cloudformation validate-template --template-body file://iam.yaml && \
             aws cloudformation deploy \
-                --template-file instance.yaml \
-                --stack-name {name} \
-                --parameter-overrides Name={name} \
+                --template-file iam.yaml \
+                --stack-name game-server-iam \
                 --capabilities CAPABILITY_NAMED_IAM
             """
         ),
         pty=True,
         echo=True,
     )
+    # docs: https://docs.aws.amazon.com/cli/latest/reference/cloudformation/deploy/index.html
+    ctx.run(
+        textwrap.dedent(
+            """
+            aws cloudformation validate-template --template-body file://networking.yaml && \
+            aws cloudformation deploy \
+                --template-file networking.yaml \
+                --stack-name game-server-networking
+            """
+        ),
+        pty=True,
+        echo=True,
+    )
+    # # docs: https://docs.aws.amazon.com/cli/latest/reference/cloudformation/deploy/index.html
+    # ctx.run(
+    #     textwrap.dedent(
+    #         f"""
+    #         aws cloudformation validate-template --template-body file://instance.yaml && \
+    #         aws cloudformation deploy \
+    #             --template-file instance.yaml \
+    #             --stack-name {name} \
+    #             --parameter-overrides Name={name} \
+    #             --capabilities CAPABILITY_NAMED_IAM
+    #         """
+    #     ),
+    #     pty=True,
+    #     echo=True,
+    # )
 
 
 @invoke.task

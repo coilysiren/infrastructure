@@ -4,7 +4,6 @@ Parameters:
   Name:
     Type: String
     Description: name of the server
-    Default: eco-server
   KeyName:
     Description: https://us-east-1.console.aws.amazon.com/ec2/v2/home?region=us-east-1#KeyPairs
     Type: AWS::EC2::KeyPair::KeyName
@@ -31,34 +30,6 @@ Parameters:
     Default: /dev/sda1
 
 Resources:
-  # docs: https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-iam-role.html
-  Role:
-    Type: AWS::IAM::Role
-    Properties:
-      AssumeRolePolicyDocument:
-        Version: 2012-10-17
-        Statement:
-          Action: sts:AssumeRole
-          Effect: Allow
-          Principal:
-            Service: ec2.amazonaws.com
-      ManagedPolicyArns:
-        - arn:aws:iam::aws:policy/AmazonS3ReadOnlyAccess
-        - arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy
-        - arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore
-      RoleName: !Ref Name
-      Tags:
-        - Key: Name
-          Value: !Ref Name
-
-  # docs: https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-iam-instanceprofile.html
-  InstanceProfile:
-    Type: AWS::IAM::InstanceProfile
-    Properties:
-      InstanceProfileName: !Ref Name
-      Roles:
-        - !Ref Role
-
   # docs: https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-properties-ec2-security-group.html
   SecurityGroup:
     Type: AWS::EC2::SecurityGroup
@@ -77,7 +48,7 @@ Resources:
   Instance:
     Type: AWS::EC2::Instance
     Properties:
-      IamInstanceProfile: !Ref InstanceProfile
+      IamInstanceProfile: game-server
       InstanceType: !Ref InstanceType
       PropagateTagsToVolumeOnCreation: True
       SecurityGroupIds:
@@ -109,7 +80,14 @@ Resources:
   #     VolumeId: !Ref Volume
   #     Device: !Ref AMIDeviceMount
 
+  # docs: https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-ssm-parameter.html
+  PublicIp:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: /cfn/public-ip
+      Type: String
+      Value: !GetAtt Instance.PublicIp
+
 Outputs:
-  InstancePublicDnsName:
-    Value: !GetAtt [Instance, PublicDnsName]
-    Description: DNS Name of the newly created EC2 instance
+  PublicIp:
+    Value: !GetAtt Instance.PublicIp

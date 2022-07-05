@@ -12,7 +12,7 @@ export DEBIAN_FRONTEND=noninteractive
 sudo apt-get update
 
 # general
-sudo apt install -y awscli unzip libssl-dev
+sudo apt install -y awscli unzip libssl-dev libgdiplus libc6-dev
 
 # via https://wiki.play.eco/en/Server_on_Linux
 sudo apt install -y libgdiplus libc6-dev
