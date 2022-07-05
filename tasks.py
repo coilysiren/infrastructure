@@ -11,7 +11,11 @@ import requests
 import invokepatch
 
 invokepatch.fix_annotations()
+
+# docs: https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/ec2.html
 ec2 = boto3.client("ec2")
+
+# docs: https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/ssm.html
 ssm = boto3.client("ssm")
 
 
@@ -25,7 +29,7 @@ def ssh(ctx: invoke.Context, name="eco-server", user="ubuntu"):
 
 
 @invoke.task
-def build(ctx: invoke.Context, name="eco-server", user="ubuntu"):
+def build(ctx: invoke.Context):
     ctx.run(
         "packer init .",
         pty=True,
@@ -46,9 +50,9 @@ def build(ctx: invoke.Context, name="eco-server", user="ubuntu"):
     ctx.run(
         textwrap.dedent(
             f"""
-            aws cloudformation validate-template --template-body file://iam.yaml && \
+            aws cloudformation validate-template --template-body file://cfn/iam.yaml && \
             aws cloudformation deploy \
-                --template-file iam.yaml \
+                --template-file cfn/iam.yaml \
                 --stack-name game-server-iam \
                 --parameter-overrides Name=game-server \
                 --capabilities CAPABILITY_NAMED_IAM
@@ -70,9 +74,9 @@ def deploy(ctx: invoke.Context, name="eco-server"):
     ctx.run(
         textwrap.dedent(
             f"""
-            aws cloudformation validate-template --template-body file://iam.yaml && \
+            aws cloudformation validate-template --template-body file://cfn/iam.yaml && \
             aws cloudformation deploy \
-                --template-file iam.yaml \
+                --template-file cfn/iam.yaml \
                 --capabilities CAPABILITY_NAMED_IAM \
                 --stack-name game-server-iam
             """
@@ -81,17 +85,14 @@ def deploy(ctx: invoke.Context, name="eco-server"):
         echo=True,
     )
 
-    # docs: https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/ec2.html#EC2.Client.describe_vpcs
-    response = ec2.describe_vpcs()
-    vpc = response["Vpcs"][0]["VpcId"]
-
-    home_ip = requests.get("http://ifconfig.me").text
+    vpc = ec2.describe_vpcs()["Vpcs"][0]["VpcId"]
+    home_ip = requests.get("http://ifconfig.me").text  # TODO: ssm /cfn/home-ip-address
     ctx.run(
         textwrap.dedent(
             f"""
-            aws cloudformation validate-template --template-body file://networking.yaml && \
+            aws cloudformation validate-template --template-body file://cfn/networking.yaml && \
             aws cloudformation deploy \
-                --template-file networking.yaml \
+                --template-file cfn/networking.yaml \
                 --parameter-overrides \
                     HomeIP='{home_ip}/32' \
                     VPC={vpc} \
@@ -102,7 +103,7 @@ def deploy(ctx: invoke.Context, name="eco-server"):
         echo=True,
     )
 
-    # docs: https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/ec2.html#EC2.Client.describe_images
+    # get AMI
     response = ec2.describe_images(
         Filters=[
             {"Name": "name", "Values": ["ubuntu-packer"]},
@@ -110,7 +111,7 @@ def deploy(ctx: invoke.Context, name="eco-server"):
     )
     ubuntu_ami = response["Images"][0]["ImageId"]
 
-    # docs: https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/ssm.html#SSM.Client.get_parameter
+    # get security groups
     security_groups = []
     response = ssm.get_parameter(
         Name="/cfn/base-security-group",
@@ -126,9 +127,9 @@ def deploy(ctx: invoke.Context, name="eco-server"):
     ctx.run(
         textwrap.dedent(
             f"""
-            aws cloudformation validate-template --template-body file://instance.yaml && \
+            aws cloudformation validate-template --template-body file://cfn/instance.yaml && \
             aws cloudformation deploy \
-                --template-file instance.yaml \
+                --template-file cfn/instance.yaml \
                 --parameter-overrides \
                     Name={name} \
                     AMI={ubuntu_ami} \
@@ -140,30 +141,60 @@ def deploy(ctx: invoke.Context, name="eco-server"):
         echo=True,
     )
 
-
-@invoke.task
-def push_asset(ctx: invoke.Context, name="EcoServerLinux", bucket="coilysiren-assets"):
-    downloads = os.listdir(os.path.join(os.path.expanduser("~"), "Downloads"))
-    options = [download for download in downloads if name in download]
-
-    if len(options) == 0:
-        raise Exception(f'could not find "{name}" download from {downloads}')
-    elif len(options) > 1:
-        raise Exception(f'found too many downloads called "{name}" from {downloads}')
-
-    asset_path = os.path.join(os.path.expanduser("~"), "Downloads", options[0])
-
     ctx.run(
-        f"aws s3 cp {asset_path} s3://{bucket}/downloads/{name}",
+        textwrap.dedent(
+            f"""
+            aws cloudformation validate-template --template-body file://cfn/dns.yaml && \
+            aws cloudformation deploy \
+                --template-file cfn/dns.yaml \
+                --parameter-overrides \
+                    Name={name} \
+                --stack-name {name}-dns
+            """
+        ),
         pty=True,
         echo=True,
     )
 
 
 @invoke.task
-def pull_asset(ctx: invoke.Context, name="EcoServerLinux", bucket="coilysiren-assets"):
+def delete(ctx: invoke.Context, name="eco-server"):
     ctx.run(
-        f"aws s3 cp s3://{bucket}/downloads/{name} .",
+        f"aws cloudformation delete-stack --stack-name {name}",
+        pty=True,
+        echo=True,
+    )
+
+
+@invoke.task
+def push_asset(
+    ctx: invoke.Context, download="EcoServerLinux", bucket="coilysiren-assets"
+):
+    downloads = os.listdir(os.path.join(os.path.expanduser("~"), "Downloads"))
+    options = [filename for filename in downloads if download in filename]
+
+    if len(options) == 0:
+        raise Exception(f'could not find "{download}" download from {downloads}')
+    elif len(options) > 1:
+        raise Exception(
+            f'found too many downloads called "{download}" from {downloads}'
+        )
+
+    asset_path = os.path.join(os.path.expanduser("~"), "Downloads", options[0])
+
+    ctx.run(
+        f"aws s3 cp {asset_path} s3://{bucket}/downloads/{download}",
+        pty=True,
+        echo=True,
+    )
+
+
+@invoke.task
+def pull_asset(
+    ctx: invoke.Context, download="EcoServerLinux", bucket="coilysiren-assets"
+):
+    ctx.run(
+        f"aws s3 cp s3://{bucket}/downloads/{download} .",
         pty=True,
         echo=True,
     )

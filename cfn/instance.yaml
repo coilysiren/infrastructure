@@ -51,18 +51,6 @@ Resources:
       AllocationId: eipalloc-0524c5bad9df42cdb # TODO: ssm /cfn/eco-eip-id
       InstanceId: !Ref Instance
 
-  # docs: http://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-properties-route53-recordset.html
-  RecordSet:
-    Type: AWS::Route53::RecordSet
-    Properties:
-      Name: !Sub ${Name}.coilysiren.me.
-      HostedZoneName: coilysiren.me.
-      TTL: 60
-      Type: A
-      ResourceRecords:
-        # TODO: ssm /cfn/eco-epi-address
-        - 3.225.219.68
-
   # # docs: https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-properties-ec2-ebs-volume.html
   # Volume:
   #   Type: AWS::EC2::Volume

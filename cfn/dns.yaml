@@ -1,0 +1,19 @@
+AWSTemplateFormatVersion: "2010-09-09"
+
+Parameters:
+  Name:
+    Type: String
+    Description: name of the server
+
+Resources:
+  # docs: http://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-properties-route53-recordset.html
+  RecordSet:
+    Type: AWS::Route53::RecordSet
+    Properties:
+      Name: !Sub ${Name}.coilysiren.me.
+      HostedZoneName: coilysiren.me.
+      TTL: 60
+      Type: A
+      ResourceRecords:
+        # TODO: ssm /cfn/eco-epi-address
+        - 3.225.219.68
