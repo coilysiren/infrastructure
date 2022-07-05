@@ -21,6 +21,10 @@ Parameters:
     Type: AWS::EC2::Image::Id
     Description: latest 64-bit (x86) ubuntu server here - https://us-east-1.console.aws.amazon.com/ec2/v2/home?region=us-east-1#AMICatalog
     Default: ami-052efd3df9dad4825
+  AMIDeviceMount:
+    Type: String
+    Description: aws ec2 describe-images --image-ids ami-XXXXXXXXXX --query "Images[0].RootDeviceName"
+    Default: /dev/sda1
 
 Resources:
   # docs: https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-properties-ec2-security-group.html
@@ -56,12 +60,14 @@ Resources:
       AvailabilityZone: !GetAtt Instance.AvailabilityZone
 
   # docs: https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-properties-ec2-ebs-volumeattachment.html
+  #
+  # get the device mount point via
   VolumeAttachment:
     Type: AWS::EC2::VolumeAttachment
     Properties:
       InstanceId: !Ref Instance
       VolumeId: !Ref Volume
-      Device: /dev/sdh
+      Device: !Ref AMIDeviceMount
 
 Outputs:
   InstancePublicDnsName:
