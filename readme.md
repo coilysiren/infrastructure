@@ -9,6 +9,9 @@
 ```bash
 export DEBIAN_FRONTEND=noninteractive
 
+sudo apt-get update
+
+# general
 sudo apt install -y awscli unzip libssl-dev
 
 # via https://wiki.play.eco/en/Server_on_Linux
@@ -24,4 +27,5 @@ cd /home/ubuntu/games/eco
 aws s3 cp s3://coilysiren-assets/downloads/EcoServerLinux .
 unzip EcoServerLinux
 chmod a+x EcoServer
+./EcoServer
 ```

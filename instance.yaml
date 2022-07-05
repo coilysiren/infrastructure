@@ -12,7 +12,7 @@ Parameters:
   InstanceType:
     Description: https://aws.amazon.com/ec2/instance-types/
     Type: String
-    Default: t2.nano
+    Default: t3.micro
   SSHLocation:
     Description: curl ifconfig.me
     Type: String
@@ -20,7 +20,7 @@ Parameters:
   AMI:
     Type: AWS::EC2::Image::Id
     Description: latest free x86 64 bit ubuntu AMI from Canonical - https://aws.amazon.com/marketplace/search
-    Default: ami-07d160315197aca8f
+    Default: ami-05fce43d35a2bb540
   Subnet:
     Type: AWS::EC2::Subnet::Id
     Description: us-east-1c

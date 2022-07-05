@@ -36,6 +36,30 @@ def ssh(ctx: invoke.Context, name="eco-server", user="ubuntu"):
 
 
 @invoke.task
+def build(ctx: invoke.Context, name="eco-server", user="ubuntu"):
+    ctx.run(
+        "packer init .",
+        pty=True,
+        echo=True,
+    )
+    ctx.run(
+        "packer fmt .",
+        pty=True,
+        echo=True,
+    )
+    ctx.run(
+        "packer validate .",
+        pty=True,
+        echo=True,
+    )
+    ctx.run(
+        "packer build ubuntu.pkr.hcl",
+        pty=True,
+        echo=True,
+    )
+
+
+@invoke.task
 def deploy(ctx: invoke.Context, name="eco-server"):
     ctx.run(
         "aws cloudformation validate-template --template-body file://instance.yaml",
