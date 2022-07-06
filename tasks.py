@@ -20,13 +20,19 @@ ssm = boto3.client("ssm")
 
 
 @invoke.task
-def ssh(ctx: invoke.Context, name="eco-server", user="ubuntu"):
-    # TODO: ec2 instance connect
-    ctx.run(
-        f"ssh {user}@{name}.coilysiren.me",
-        pty=True,
-        echo=True,
-    )
+def ssh(ctx: invoke.Context, name="eco-server", user="ubuntu", cmd=""):
+    if cmd:
+        ctx.run(
+            f"ssh -t {user}@{name}.coilysiren.me '{cmd}'",
+            pty=True,
+            echo=True,
+        )
+    else:
+        ctx.run(
+            f"ssh {user}@{name}.coilysiren.me",
+            pty=True,
+            echo=True,
+        )
 
 
 @invoke.task
@@ -211,7 +217,9 @@ def redeploy(ctx: invoke.Context, name="eco-server"):
 
 @invoke.task
 def push_asset(
-    ctx: invoke.Context, download="EcoServerLinux", bucket="coilysiren-assets"
+    ctx: invoke.Context,
+    download,
+    bucket="coilysiren-assets",
 ):
     downloads = os.listdir(os.path.join(os.path.expanduser("~"), "Downloads"))
     options = [filename for filename in downloads if download in filename]
@@ -234,10 +242,59 @@ def push_asset(
 
 @invoke.task
 def pull_asset(
-    ctx: invoke.Context, download="EcoServerLinux", bucket="coilysiren-assets"
+    ctx: invoke.Context,
+    download,
+    bucket="coilysiren-assets",
 ):
     ctx.run(
         f"aws s3 cp s3://{bucket}/downloads/{download} .",
         pty=True,
         echo=True,
+    )
+
+
+@invoke.task
+def eco_push_mods(
+    ctx: invoke.Context,
+    bucket="coilysiren-assets",
+):
+    ctx.run(
+        "rm -rf eco-mod-cache* && git clone git@github.com:coilysiren/eco-mod-cache.git",
+        pty=True,
+        echo=True,
+    )
+    ctx.run(
+        "cd eco-mod-cache && zip -r eco-mod-cache * && cd -",
+        pty=True,
+        echo=True,
+    )
+    ctx.run(
+        "mv eco-mod-cache/eco-mod-cache.zip ~/Downloads/",
+        pty=True,
+        echo=True,
+    )
+    push_asset(ctx, download="eco-mod-cache")
+    ssh(
+        ctx,
+        cmd=f"cd /home/ubuntu/games/eco/Mods/UserCode && aws s3 cp s3://{bucket}/downloads/eco-mod-cache . && unzip -u -o eco-mod-cache",
+    )
+
+
+@invoke.task
+def eco_tail(
+    ctx: invoke.Context,
+):
+    ssh(
+        ctx,
+        cmd='multitail -Q 1 "/home/ubuntu/games/eco/Logs/*"',
+    )
+
+
+@invoke.task
+def eco_restart(
+    ctx: invoke.Context,
+):
+    ssh(
+        ctx,
+        cmd="sudo systemctl restart eco-server",
     )

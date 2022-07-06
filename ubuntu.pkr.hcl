@@ -44,14 +44,13 @@ build {
     environment_vars = [
       "DEBIAN_FRONTEND=noninteractive",
     ]
-    // TODO: modify ssh port
     inline = [
       <<-EOT
         #!/bin/bash
         set -eux &&
 
         sudo echo 'debconf debconf/frontend select Noninteractive' | sudo debconf-set-selections &&
-        sudo apt-get update -qq && sudo apt-get install -qq -y --no-install-recommends awscli unzip libssl-dev libgdiplus libc6-dev unattended-upgrades &&
+        sudo apt-get update -qq && sudo apt-get install -qq -y --no-install-recommends awscli unzip libssl-dev libgdiplus libc6-dev unattended-upgrades multitail &&
 
         wget -P /tmp -q http://security.ubuntu.com/ubuntu/pool/main/o/openssl1.0/libssl1.0.0_1.0.2n-1ubuntu5.10_amd64.deb &&
         sudo apt-get install -qq -y --no-install-recommends /tmp/libssl1.0.0_1.0.2n-1ubuntu5.10_amd64.deb
