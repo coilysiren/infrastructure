@@ -45,12 +45,10 @@ Resources:
           set -eux
           exec > >(tee /var/log/user-data-1.log|logger -t user-data -s 2>/var/log/user-data-2.log) 2>&1
             mkdir -p /home/ubuntu/games
-            sudo mkfs.ext4 /dev/nvme1n1
             sudo mount /dev/nvme1n1 /home/ubuntu/games
             sudo chown ubuntu /home/ubuntu/games
             sudo blkid -o export /dev/nvme1n1
             echo "$(sudo blkid -o export /dev/nvme1n1 | grep ^UUID=) /home/ubuntu/games ext4 defaults,noatime" | sudo tee -a /etc/fstab
-            sudo systemctl daemon-reload
             sudo systemctl enable eco-server
             sudo systemctl start eco-server
       Tags:
