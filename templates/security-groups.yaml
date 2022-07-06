@@ -89,10 +89,10 @@ Resources:
           ToPort: 3001
           CidrIpv6: ::/0
 
-  EcoSecurityGroupSSM:
+  EcoSecurityGroupParameter:
     Type: AWS::SSM::Parameter
     Properties:
-      Name: /cfn/eco-security-group
+      Name: /cfn/eco-server/security-group
       Type: String
       Value: !GetAtt EcoSecurityGroup.GroupId
 

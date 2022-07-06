@@ -6,6 +6,14 @@ Parameters:
     Description: name of the server
 
 Resources:
+  # docs: https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-properties-ec2-eip.html
+  EIP:
+    Type: AWS::EC2::EIP
+    Properties:
+      Tags:
+        - Key: Name
+          Value: !Ref Name
+
   # docs: http://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-properties-route53-recordset.html
   RecordSet:
     Type: AWS::Route53::RecordSet
@@ -15,5 +23,15 @@ Resources:
       TTL: 60
       Type: A
       ResourceRecords:
-        # TODO: ssm /cfn/eco-epi-address
-        - 3.225.219.68
+        - !Ref EIP
+
+  EIPParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: !Sub /cfn/${Name}/eip-id
+      Type: String
+      Value: !GetAtt EIP.AllocationId
+
+Outputs:
+  EIP:
+    Value: !GetAtt EIP.AllocationId

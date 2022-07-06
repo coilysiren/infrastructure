@@ -22,6 +22,8 @@ Parameters:
     Default: subnet-08bcb7e889b485874
   SecurityGroups:
     Type: List<AWS::EC2::SecurityGroup::Id>
+  EIPAllocationId:
+    Type: String
   AMIDeviceMount:
     Type: String
     Description: aws ec2 describe-images --query "Images[0].RootDeviceName" --image-ids ami-XXXXXXXXXX
@@ -34,7 +36,7 @@ Resources:
     Type: AWS::EC2::Instance
     Properties:
       IamInstanceProfile: game-server
-      InstanceType: !Ref InstanceType # TODO: ssm /cfn/eco-instance-type
+      InstanceType: !Ref InstanceType
       PropagateTagsToVolumeOnCreation: True
       SecurityGroupIds: !Ref SecurityGroups
       KeyName: !Ref KeyName
@@ -48,7 +50,7 @@ Resources:
   EIPAssociation:
     Type: AWS::EC2::EIPAssociation
     Properties:
-      AllocationId: eipalloc-0524c5bad9df42cdb # TODO: ssm /cfn/eco-eip-id
+      AllocationId: !Ref EIPAllocationId
       InstanceId: !Ref Instance
 
   # # docs: https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-properties-ec2-ebs-volume.html

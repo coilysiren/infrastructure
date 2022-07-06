@@ -91,51 +91,13 @@ def deploy(ctx: invoke.Context, name="eco-server"):
     ctx.run(
         textwrap.dedent(
             f"""
-            aws cloudformation validate-template --template-body file://templates/networking.yaml && \
+            aws cloudformation validate-template --template-body file://templates/security-groups.yaml && \
             aws cloudformation deploy \
-                --template-file templates/networking.yaml \
+                --template-file templates/security-groups.yaml \
                 --parameter-overrides \
                     HomeIP='{home_ip}/32' \
                     VPC={vpc} \
                 --stack-name game-server-networking
-            """
-        ),
-        pty=True,
-        echo=True,
-    )
-
-    # get AMI
-    response = ec2.describe_images(
-        Filters=[
-            {"Name": "name", "Values": ["ubuntu-packer"]},
-        ],
-    )
-    ubuntu_ami = response["Images"][0]["ImageId"]
-
-    # get security groups
-    security_groups = []
-    response = ssm.get_parameter(
-        Name="/cfn/base-security-group",
-        WithDecryption=True,
-    )
-    security_groups.append(response["Parameter"]["Value"])
-    response = ssm.get_parameter(
-        Name="/cfn/eco-security-group",
-        WithDecryption=True,
-    )
-    security_groups.append(response["Parameter"]["Value"])
-
-    ctx.run(
-        textwrap.dedent(
-            f"""
-            aws cloudformation validate-template --template-body file://templates/instance.yaml && \
-            aws cloudformation deploy \
-                --template-file templates/instance.yaml \
-                --parameter-overrides \
-                    Name={name} \
-                    AMI={ubuntu_ami} \
-                    SecurityGroups={",".join(security_groups)} \
-                --stack-name {name}
             """
         ),
         pty=True,
@@ -151,6 +113,52 @@ def deploy(ctx: invoke.Context, name="eco-server"):
                 --parameter-overrides \
                     Name={name} \
                 --stack-name {name}-dns
+            """
+        ),
+        pty=True,
+        echo=True,
+    )
+
+    # get AMI
+    response = ec2.describe_images(
+        Filters=[
+            {"Name": "name", "Values": ["ubuntu-packer"]},
+        ],
+    )
+    ubuntu_ami = response["Images"][0]["ImageId"]
+
+    # get EIP id
+    response = ssm.get_parameter(
+        Name=f"/cfn/{name}/eip-id",
+        WithDecryption=True,
+    )
+    eip_ip = response["Parameter"]["Value"]
+
+    # get security groups
+    security_groups = []
+    response = ssm.get_parameter(
+        Name="/cfn/base-security-group",
+        WithDecryption=True,
+    )
+    security_groups.append(response["Parameter"]["Value"])
+    response = ssm.get_parameter(
+        Name=f"/cfn/{name}/security-group",
+        WithDecryption=True,
+    )
+    security_groups.append(response["Parameter"]["Value"])
+
+    ctx.run(
+        textwrap.dedent(
+            f"""
+            aws cloudformation validate-template --template-body file://templates/instance.yaml && \
+            aws cloudformation deploy \
+                --template-file templates/instance.yaml \
+                --parameter-overrides \
+                    Name={name} \
+                    AMI={ubuntu_ami} \
+                    EIPAllocationId={eip_ip} \
+                    SecurityGroups={",".join(security_groups)} \
+                --stack-name {name}
             """
         ),
         pty=True,
