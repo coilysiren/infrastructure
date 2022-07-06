@@ -278,6 +278,35 @@ def eco_push_mods(
         ctx,
         cmd=f"cd /home/ubuntu/games/eco/Mods/UserCode && aws s3 cp s3://{bucket}/downloads/eco-mod-cache . && unzip -u -o eco-mod-cache",
     )
+    eco_restart(ctx)
+
+
+@invoke.task
+def eco_push_config(
+    ctx: invoke.Context,
+    bucket="coilysiren-assets",
+):
+    ctx.run(
+        "rm -rf eco-configs* && git clone git@github.com:coilysiren/eco-configs.git",
+        pty=True,
+        echo=True,
+    )
+    ctx.run(
+        "cd eco-configs && zip -r eco-configs * && cd -",
+        pty=True,
+        echo=True,
+    )
+    ctx.run(
+        "mv eco-configs/eco-configs.zip ~/Downloads/",
+        pty=True,
+        echo=True,
+    )
+    push_asset(ctx, download="eco-configs")
+    ssh(
+        ctx,
+        cmd=f"cd /home/ubuntu/games/eco/Configs && aws s3 cp s3://{bucket}/downloads/eco-configs . && unzip -u -o eco-configs",
+    )
+    eco_restart(ctx)
 
 
 @invoke.task
