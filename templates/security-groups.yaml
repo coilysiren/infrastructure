@@ -35,7 +35,7 @@ Resources:
           CidrIpv6: ::/0
 
   # docs: https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-ssm-parameter.html
-  BaseSecurityGroupSSM:
+  BaseSecurityGroupParam:
     Type: AWS::SSM::Parameter
     Properties:
       Name: /cfn/base-security-group
@@ -88,8 +88,11 @@ Resources:
           FromPort: 3001
           ToPort: 3001
           CidrIpv6: ::/0
+      Tags:
+        - Key: Name
+          Value: eco-server
 
-  EcoSecurityGroupParameter:
+  EcoSecurityGroupParam:
     Type: AWS::SSM::Parameter
     Properties:
       Name: /cfn/eco-server/security-group

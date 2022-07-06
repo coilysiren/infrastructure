@@ -97,7 +97,7 @@ def deploy(ctx: invoke.Context, name="eco-server"):
                 --parameter-overrides \
                     HomeIP='{home_ip}/32' \
                     VPC={vpc} \
-                --stack-name game-server-networking
+                --stack-name game-server-security-groups
             """
         ),
         pty=True,
@@ -119,6 +119,21 @@ def deploy(ctx: invoke.Context, name="eco-server"):
         echo=True,
     )
 
+    ctx.run(
+        textwrap.dedent(
+            f"""
+            aws cloudformation validate-template --template-body file://templates/volume.yaml && \
+            aws cloudformation deploy \
+                --template-file templates/volume.yaml \
+                --parameter-overrides \
+                    Name={name} \
+                --stack-name {name}-volume
+            """
+        ),
+        pty=True,
+        echo=True,
+    )
+
     # get AMI
     response = ec2.describe_images(
         Filters=[
@@ -126,6 +141,13 @@ def deploy(ctx: invoke.Context, name="eco-server"):
         ],
     )
     ubuntu_ami = response["Images"][0]["ImageId"]
+
+    # get EBS volume
+    response = ssm.get_parameter(
+        Name=f"/cfn/{name}/ebs-vol",
+        WithDecryption=True,
+    )
+    ebs_volume = response["Parameter"]["Value"]
 
     # get EIP id
     response = ssm.get_parameter(
@@ -155,6 +177,7 @@ def deploy(ctx: invoke.Context, name="eco-server"):
                 --template-file templates/instance.yaml \
                 --parameter-overrides \
                     Name={name} \
+                    Volume={ebs_volume} \
                     AMI={ubuntu_ami} \
                     EIPAllocationId={eip_ip} \
                     SecurityGroups={",".join(security_groups)} \
@@ -173,6 +196,17 @@ def delete(ctx: invoke.Context, name="eco-server"):
         pty=True,
         echo=True,
     )
+    ctx.run(
+        f"aws cloudformation wait stack-delete-complete --stack-name {name}",
+        pty=True,
+        echo=True,
+    )
+
+
+@invoke.task
+def redeploy(ctx: invoke.Context, name="eco-server"):
+    delete(ctx, name)
+    deploy(ctx, name)
 
 
 @invoke.task

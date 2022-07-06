@@ -25,7 +25,7 @@ Resources:
       ResourceRecords:
         - !Ref EIP
 
-  EIPParameter:
+  EIPParam:
     Type: AWS::SSM::Parameter
     Properties:
       Name: !Sub /cfn/${Name}/eip-id

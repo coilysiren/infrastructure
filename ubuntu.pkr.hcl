@@ -28,38 +28,41 @@ build {
     "source.amazon-ebs.ubuntu-packer"
   ]
 
+  provisioner "file" {
+    source      = "assets/eco-server.service"
+    destination = "/tmp/eco-server.service"
+  }
+
+  provisioner "shell" {
+    inline = [
+      "sudo mv /tmp/eco-server.service /etc/systemd/system/eco-server.service",
+    ]
+  }
+
   provisioner "shell" {
     max_retries = 5
     environment_vars = [
       "DEBIAN_FRONTEND=noninteractive",
     ]
     // TODO: modify ssh port
-    // TODO: security updates - via https://askubuntu.com/questions/194/how-can-i-install-just-security-updates-from-the-command-line
-    // TODO: move into a big bash file
     inline = [
-      "#!/bin/bash",
-      "set -eux && sudo echo 'debconf debconf/frontend select Noninteractive' | sudo debconf-set-selections",
-      "set -eux && sudo apt-get update -qq && sudo apt-get install -qq -y --no-install-recommends awscli unzip libssl-dev libgdiplus libc6-dev",
-      // via https://stackoverflow.com/questions/72108697/when-i-open-unity-and-make-something-project-then-the-error-is-coming-that-no
       <<-EOT
+        #!/bin/bash
         set -eux &&
-        cd /tmp &&
-        wget -q http://security.ubuntu.com/ubuntu/pool/main/o/openssl1.0/libssl1.0.0_1.0.2n-1ubuntu5.10_amd64.deb &&
-        sudo apt-get install -qq -y --no-install-recommends /tmp/libssl1.0.0_1.0.2n-1ubuntu5.10_amd64.deb &&
-        rm /tmp/libssl1.0.0_1.0.2n-1ubuntu5.10_amd64.deb &&
-        cd -
+
+        sudo echo 'debconf debconf/frontend select Noninteractive' | sudo debconf-set-selections &&
+        sudo apt-get update -qq && sudo apt-get install -qq -y --no-install-recommends awscli unzip libssl-dev libgdiplus libc6-dev unattended-upgrades &&
+
+        wget -P /tmp -q http://security.ubuntu.com/ubuntu/pool/main/o/openssl1.0/libssl1.0.0_1.0.2n-1ubuntu5.10_amd64.deb &&
+        sudo apt-get install -qq -y --no-install-recommends /tmp/libssl1.0.0_1.0.2n-1ubuntu5.10_amd64.deb
       EOT
       ,
-      // eco setup
-      <<-EOT
-        set -eux &&
-        mkdir -p /home/ubuntu/games/eco &&
-        cd /home/ubuntu/games/eco &&
-        aws s3 cp s3://coilysiren-assets/downloads/EcoServerLinux . &&
-        unzip -qq EcoServerLinux &&
-        chmod a+x EcoServer
-      EOT
-      ,
+    ]
+  }
+
+  provisioner "shell" {
+    inline = [
+      "sudo rm -rf /tmp",
     ]
   }
 }

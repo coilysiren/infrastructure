@@ -24,11 +24,8 @@ Parameters:
     Type: List<AWS::EC2::SecurityGroup::Id>
   EIPAllocationId:
     Type: String
-  AMIDeviceMount:
+  Volume:
     Type: String
-    Description: aws ec2 describe-images --query "Images[0].RootDeviceName" --image-ids ami-XXXXXXXXXX
-    Default: /dev/sda1
-    # TODO: persisting the save file
 
 Resources:
   # docs: https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-properties-ec2-instance.html
@@ -42,6 +39,20 @@ Resources:
       KeyName: !Ref KeyName
       ImageId: !Ref AMI
       SubnetId: !Ref Subnet
+      UserData:
+        Fn::Base64: |
+          #!/bin/bash
+          set -eux
+          exec > >(tee /var/log/user-data-1.log|logger -t user-data -s 2>/var/log/user-data-2.log) 2>&1
+            mkdir -p /home/ubuntu/games
+            sudo mkfs.ext4 /dev/nvme1n1
+            sudo mount /dev/nvme1n1 /home/ubuntu/games
+            sudo chown ubuntu /home/ubuntu/games
+            sudo blkid -o export /dev/nvme1n1
+            echo "$(sudo blkid -o export /dev/nvme1n1 | grep ^UUID=) /home/ubuntu/games ext4 defaults,noatime" | sudo tee -a /etc/fstab
+            sudo systemctl daemon-reload
+            sudo systemctl enable eco-server
+            sudo systemctl start eco-server
       Tags:
         - Key: Name
           Value: !Ref Name
@@ -53,22 +64,10 @@ Resources:
       AllocationId: !Ref EIPAllocationId
       InstanceId: !Ref Instance
 
-  # # docs: https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-properties-ec2-ebs-volume.html
-  # Volume:
-  #   Type: AWS::EC2::Volume
-  #   DeletionPolicy: Snapshot
-  #   UpdateReplacePolicy: Snapshot
-  #   Properties:
-  #     Size: 10
-  #     AvailabilityZone: !GetAtt Instance.AvailabilityZone
-  #     Tags:
-  #       - Key: Name
-  #         Value: !Ref Name
-
-  # # docs: https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-properties-ec2-ebs-volumeattachment.html
-  # VolumeAttachment:
-  #   Type: AWS::EC2::VolumeAttachment
-  #   Properties:
-  #     InstanceId: !Ref Instance
-  #     VolumeId: !Ref Volume
-  #     Device: !Ref AMIDeviceMount
+  # docs: https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-properties-ec2-ebs-volumeattachment.html
+  VolumeAttachment:
+    Type: AWS::EC2::VolumeAttachment
+    Properties:
+      InstanceId: !Ref Instance
+      VolumeId: !Ref Volume
+      Device: sdg
