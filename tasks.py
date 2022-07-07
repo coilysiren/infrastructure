@@ -47,10 +47,10 @@ ssm = boto3.client("ssm")
 
 @invoke.task
 def ssh(
-    ctx: invoke.Context, name="eco-server", user="ubuntu", cmd="cd games/eco/ && bash"
+    ctx: invoke.Context, name="eco-server", user="ubuntu", cmd="cd games/ && bash"
 ):
     ctx.run(
-        f"ssh -t {user}@{name}.coilysiren.me '{cmd}'",
+        f"ssh  -o 'ConnectionAttempts 10' -t {user}@{name}.coilysiren.me '{cmd}'",
         pty=True,
         echo=True,
     )

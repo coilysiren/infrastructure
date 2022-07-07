@@ -48,6 +48,6 @@ build {
     environment_vars = [
       "DEBIAN_FRONTEND=noninteractive",
     ]
-    script = "./scripts/ubuntu-install.sh"
+    script = "./scripts/ubuntu-setup.sh"
   }
 }

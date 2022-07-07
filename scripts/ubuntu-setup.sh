@@ -1,12 +1,15 @@
 #!/usr/bin/env bash
-# shellcheck disable=SC1091 # dont try to lint /etc/environment file
+# shellcheck disable=SC1091 # dont try to lint /home/ubuntu/.bashrc file
+# shellcheck disable=SC2016 # dont worry about the unexpanded $PATH in single quotes
 
 set -eux
 
 # holding pen for bin scripts
 mkdir -p /home/ubuntu/.local/bin
-sudo echo 'export PATH="/home/ubuntu/.local/bin:$PATH"' | sudo tee -a /etc/environment
-set +x && . /etc/environment && set -x
+if ! grep -q "home/ubuntu" "/home/ubuntu/.bashrc"; then
+ echo 'export PATH="/home/ubuntu/.local/bin:$PATH"' | tee -a /home/ubuntu/.bashrc
+fi
+set +x && . /home/ubuntu/.bashrc && set -x
 
 # general installs
 sudo echo 'debconf debconf/frontend select Noninteractive' | sudo debconf-set-selections
