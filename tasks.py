@@ -94,6 +94,12 @@ def deploy_shared(ctx: invoke.Context):
 @invoke.task
 def build(ctx: invoke.Context):
     ctx.run(
+        "shellcheck ./scripts/*",
+        pty=True,
+        echo=True,
+    )
+
+    ctx.run(
         "packer init .",
         pty=True,
         echo=True,
