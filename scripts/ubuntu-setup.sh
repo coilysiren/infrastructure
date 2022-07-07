@@ -6,10 +6,8 @@ set -eux
 
 # holding pen for bin scripts
 mkdir -p /home/ubuntu/.local/bin
-if ! grep -q "home/ubuntu" "/home/ubuntu/.bashrc"; then
- echo 'export PATH="/home/ubuntu/.local/bin:$PATH"' | tee -a /home/ubuntu/.bashrc
-fi
-set +x && . /home/ubuntu/.bashrc && set -x
+echo 'export PATH="/home/ubuntu/.local/bin:$PATH"' | tee -a /home/ubuntu/.bashrc
+export PATH="/home/ubuntu/.local/bin:$PATH"
 
 # general installs
 sudo echo 'debconf debconf/frontend select Noninteractive' | sudo debconf-set-selections
@@ -23,12 +21,9 @@ sudo apt-get install -qq -y --no-install-recommends /tmp/libssl1.0.0_1.0.2n-1ubu
 # aws cli
 curl -q 'https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip' -o 'awscliv2.zip'
 unzip -qq -u awscliv2.zip
-sudo ./aws/install
+sudo ./aws/install --update
 aws --version
 aws configure set default.region us-east-1
-
-# eco system service
-sudo mv /tmp/*.service /etc/systemd/system/
 
 # python packages
 mv /tmp/requirements.txt /home/ubuntu/requirements.txt
@@ -39,6 +34,9 @@ mv /tmp/tasks.py /home/ubuntu/tasks.py
 chmod a+x /home/ubuntu/tasks.py
 cd /home/ubuntu/
 invoke --list
+
+# eco system service
+sudo mv /tmp/*.service /etc/systemd/system/
 
 # cleanup
 sudo rm -rf /tmp
