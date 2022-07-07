@@ -6,7 +6,8 @@ StartLimitIntervalSec=60
 
 [Service]
 Type=simple
-Restart=always
+Restart=on-failure
+TimeoutStopSec=120
 RestartSec=5
 User=ubuntu
 WorkingDirectory=/home/ubuntu/games/eco

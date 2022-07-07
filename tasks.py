@@ -20,19 +20,14 @@ ssm = boto3.client("ssm")
 
 
 @invoke.task
-def ssh(ctx: invoke.Context, name="eco-server", user="ubuntu", cmd=""):
-    if cmd:
-        ctx.run(
-            f"ssh -t {user}@{name}.coilysiren.me '{cmd}'",
-            pty=True,
-            echo=True,
-        )
-    else:
-        ctx.run(
-            f"ssh {user}@{name}.coilysiren.me",
-            pty=True,
-            echo=True,
-        )
+def ssh(
+    ctx: invoke.Context, name="eco-server", user="ubuntu", cmd="cd games/eco/ && bash"
+):
+    ctx.run(
+        f"ssh -t {user}@{name}.coilysiren.me '{cmd}'",
+        pty=True,
+        echo=True,
+    )
 
 
 @invoke.task
@@ -310,6 +305,34 @@ def eco_push_config(
 
 
 @invoke.task
+def eco_push_savefile(
+    ctx: invoke.Context,
+    bucket="coilysiren-assets",
+):
+    ctx.run(
+        "rm -rf eco-savefile* && git clone git@github.com:coilysiren/eco-savefile.git",
+        pty=True,
+        echo=True,
+    )
+    ctx.run(
+        "cd eco-savefile && zip -r eco-savefile * && cd -",
+        pty=True,
+        echo=True,
+    )
+    ctx.run(
+        "mv eco-savefile/eco-savefile.zip ~/Downloads/",
+        pty=True,
+        echo=True,
+    )
+    push_asset(ctx, download="eco-savefile")
+    ssh(
+        ctx,
+        cmd=f"cd /home/ubuntu/games/eco/Storage && aws s3 cp s3://{bucket}/downloads/eco-savefile . && unzip -u -o eco-savefile",
+    )
+    eco_restart(ctx)
+
+
+@invoke.task
 def eco_tail(
     ctx: invoke.Context,
 ):
@@ -326,4 +349,15 @@ def eco_restart(
     ssh(
         ctx,
         cmd="sudo systemctl restart eco-server",
+    )
+
+
+@invoke.task
+def eco_reboot(
+    ctx: invoke.Context,
+):
+    eco_restart(ctx)
+    ssh(
+        ctx,
+        cmd="sudo reboot",
     )
