@@ -31,48 +31,7 @@ def ssh(
 
 
 @invoke.task
-def build(ctx: invoke.Context):
-    ctx.run(
-        "packer init .",
-        pty=True,
-        echo=True,
-    )
-    ctx.run(
-        "packer fmt .",
-        pty=True,
-        echo=True,
-    )
-    ctx.run(
-        "packer validate .",
-        pty=True,
-        echo=True,
-    )
-
-    # the packer build uses an IAM role deployed by the following stack
-    ctx.run(
-        textwrap.dedent(
-            f"""
-            aws cloudformation validate-template --template-body file://templates/iam.yaml && \
-            aws cloudformation deploy \
-                --template-file templates/iam.yaml \
-                --stack-name game-server-iam \
-                --parameter-overrides Name=game-server \
-                --capabilities CAPABILITY_NAMED_IAM
-            """
-        ),
-        pty=True,
-        echo=True,
-    )
-
-    ctx.run(
-        "packer build ubuntu.pkr.hcl",
-        pty=True,
-        echo=True,
-    )
-
-
-@invoke.task
-def deploy(ctx: invoke.Context, name="eco-server"):
+def deploy_shared(ctx: invoke.Context):
     ctx.run(
         textwrap.dedent(
             f"""
@@ -104,6 +63,38 @@ def deploy(ctx: invoke.Context, name="eco-server"):
         pty=True,
         echo=True,
     )
+
+
+@invoke.task
+def build(ctx: invoke.Context):
+    ctx.run(
+        "packer init .",
+        pty=True,
+        echo=True,
+    )
+    ctx.run(
+        "packer fmt .",
+        pty=True,
+        echo=True,
+    )
+    ctx.run(
+        "packer validate .",
+        pty=True,
+        echo=True,
+    )
+
+    deploy_shared(ctx)
+
+    ctx.run(
+        "packer build ubuntu.pkr.hcl",
+        pty=True,
+        echo=True,
+    )
+
+
+@invoke.task
+def deploy_server(ctx: invoke.Context, name="eco-server"):
+    deploy_shared(ctx)
 
     ctx.run(
         textwrap.dedent(
@@ -191,7 +182,7 @@ def deploy(ctx: invoke.Context, name="eco-server"):
 
 
 @invoke.task
-def delete(ctx: invoke.Context, name="eco-server"):
+def delete_server(ctx: invoke.Context, name="eco-server"):
     ctx.run(
         f"aws cloudformation delete-stack --stack-name {name}",
         pty=True,
@@ -206,8 +197,8 @@ def delete(ctx: invoke.Context, name="eco-server"):
 
 @invoke.task
 def redeploy(ctx: invoke.Context, name="eco-server"):
-    delete(ctx, name)
-    deploy(ctx, name)
+    delete_server(ctx, name)
+    deploy_server(ctx, name)
 
 
 @invoke.task
@@ -230,19 +221,6 @@ def push_asset(
 
     ctx.run(
         f"aws s3 cp {asset_path} s3://{bucket}/downloads/{download}",
-        pty=True,
-        echo=True,
-    )
-
-
-@invoke.task
-def pull_asset(
-    ctx: invoke.Context,
-    download,
-    bucket="coilysiren-assets",
-):
-    ctx.run(
-        f"aws s3 cp s3://{bucket}/downloads/{download} .",
         pty=True,
         echo=True,
     )
