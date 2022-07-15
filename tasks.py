@@ -46,9 +46,7 @@ ssm = boto3.client("ssm")
 
 
 @invoke.task
-def ssh(
-    ctx: invoke.Context, name="eco-server", user="ubuntu", cmd="cd games/ && bash"
-):
+def ssh(ctx: invoke.Context, name="eco-server", user="ubuntu", cmd="cd games/ && bash"):
     ctx.run(
         f"ssh  -o 'ConnectionAttempts 10' -t {user}@{name}.coilysiren.me '{cmd}'",
         pty=True,
@@ -284,6 +282,7 @@ def eco_push_mods(
         cmd=f"cd /home/ubuntu/games/eco/Mods/UserCode && aws s3 cp s3://{bucket}/downloads/eco-mod-cache . && unzip -u -o eco-mod-cache",
     )
     eco_restart(ctx)
+    eco_tail(ctx)
 
 
 @invoke.task
@@ -312,6 +311,7 @@ def eco_push_config(
         cmd=f"cd /home/ubuntu/games/eco/Configs && aws s3 cp s3://{bucket}/downloads/eco-configs . && unzip -u -o eco-configs",
     )
     eco_restart(ctx)
+    eco_tail(ctx)
 
 
 @invoke.task
