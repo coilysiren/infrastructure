@@ -35,8 +35,10 @@ chmod a+x /home/ubuntu/tasks.py
 cd /home/ubuntu/
 invoke --list
 
-# eco system service
-sudo mv /tmp/*.service /etc/systemd/system/
+# game server systemd services and startup scripts
+mkdir -p /home/ubuntu/games/_scripts
+sudo mv /tmp/*-server.sh /home/ubuntu/games/_scripts -v
+sudo mv /tmp/*-server.service /etc/systemd/system/ -v
 
 # cleanup
 sudo rm -rf /tmp

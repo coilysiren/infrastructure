@@ -46,9 +46,11 @@ ssm = boto3.client("ssm")
 
 
 @invoke.task
-def ssh(ctx: invoke.Context, name="eco-server", user="ubuntu", cmd="cd games/ && bash"):
+def ssh(
+    ctx: invoke.Context, name="terraria-server", user="ubuntu", cmd="cd games/ && bash"
+):
     ctx.run(
-        f"ssh  -o 'ConnectionAttempts 10' -t {user}@{name}.coilysiren.me '{cmd}'",
+        f"ssh -o 'ConnectionAttempts 10' -t {user}@{name}.coilysiren.me '{cmd}'",
         pty=True,
         echo=True,
     )
@@ -58,7 +60,7 @@ def ssh(ctx: invoke.Context, name="eco-server", user="ubuntu", cmd="cd games/ &&
 def deploy_shared(ctx: invoke.Context):
     ctx.run(
         textwrap.dedent(
-            f"""
+            """
             aws cloudformation validate-template --template-body file://templates/iam.yaml && \
             aws cloudformation deploy \
                 --template-file templates/iam.yaml \
@@ -123,7 +125,7 @@ def build(ctx: invoke.Context):
 
 
 @invoke.task
-def deploy_server(ctx: invoke.Context, name="eco-server"):
+def deploy_server(ctx: invoke.Context, name="terraria-server"):
     deploy_shared(ctx)
 
     ctx.run(
@@ -212,7 +214,7 @@ def deploy_server(ctx: invoke.Context, name="eco-server"):
 
 
 @invoke.task
-def delete_server(ctx: invoke.Context, name="eco-server"):
+def delete_server(ctx: invoke.Context, name="terraria-server"):
     ctx.run(
         f"aws cloudformation delete-stack --stack-name {name}",
         pty=True,
@@ -226,7 +228,7 @@ def delete_server(ctx: invoke.Context, name="eco-server"):
 
 
 @invoke.task
-def redeploy(ctx: invoke.Context, name="eco-server"):
+def redeploy(ctx: invoke.Context, name="terraria-server"):
     delete_server(ctx, name)
     deploy_server(ctx, name)
 
@@ -243,9 +245,7 @@ def push_asset(
     if len(options) == 0:
         raise Exception(f'could not find "{download}" download from {downloads}')
     elif len(options) > 1:
-        raise Exception(
-            f'found too many downloads called "{download}" from {downloads}'
-        )
+        raise Exception(f'found too many downloads called "{download}" from {options}')
 
     asset_path = os.path.join(os.path.expanduser("~"), "Downloads", options[0])
 
@@ -254,6 +254,16 @@ def push_asset(
         pty=True,
         echo=True,
     )
+
+
+#########################
+# TERRARIA SERVER STUFF #
+#########################
+
+
+####################
+# ECO SERVER STUFF #
+####################
 
 
 @invoke.task

@@ -40,7 +40,7 @@ Resources:
       ImageId: !Ref AMI
       SubnetId: !Ref Subnet
       UserData:
-        Fn::Base64: |
+        Fn::Base64: !Sub |
           #!/bin/bash
           set -eux
           exec > >(tee /var/log/user-data-1.log|logger -t user-data -s 2>/var/log/user-data-2.log) 2>&1
@@ -49,8 +49,8 @@ Resources:
             sudo chown ubuntu /home/ubuntu/games
             sudo blkid -o export /dev/nvme1n1
             echo "$(sudo blkid -o export /dev/nvme1n1 | grep ^UUID=) /home/ubuntu/games ext4 defaults,noatime" | sudo tee -a /etc/fstab
-            sudo systemctl enable eco-server
-            sudo systemctl start eco-server
+            sudo systemctl enable ${Name}
+            sudo systemctl start ${Name}
       Tags:
         - Key: Name
           Value: !Ref Name

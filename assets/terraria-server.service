@@ -1,0 +1,19 @@
+[Unit]
+Description=terraria-server
+After=syslog.target network.target nss-lookup.target network-online.target
+StartLimitBurst=5
+StartLimitIntervalSec=60
+
+[Service]
+Type=simple
+Restart=on-failure
+TimeoutStopSec=120
+RestartSec=5
+User=ubuntu
+Environment="TERM=xterm"
+WorkingDirectory=/home/ubuntu/games/terraria
+ExecStart=/home/ubuntu/games/_scripts/terraria.sh
+ExecStop=kill -TERM $MAINPID
+
+[Install]
+WantedBy=multi-user.target

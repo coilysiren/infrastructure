@@ -29,8 +29,18 @@ build {
   ]
 
   provisioner "file" {
+    source      = "assets/terraria.sh"
+    destination = "/tmp/terraria-server.sh"
+  }
+
+  provisioner "file" {
     source      = "assets/eco-server.service"
     destination = "/tmp/eco-server.service"
+  }
+
+  provisioner "file" {
+    source      = "assets/terraria-server.service"
+    destination = "/tmp/terraria-server.service"
   }
 
   provisioner "file" {
