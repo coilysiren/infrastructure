@@ -1,0 +1,20 @@
+[Unit]
+Description=terraria-server
+After=syslog.target network.target nss-lookup.target network-online.target
+StartLimitBurst=10
+StartLimitIntervalSec=120
+
+[Service]
+Type=simple
+Restart=on-failure
+RestartSec=10
+TimeoutSec=120
+User=ubuntu
+WorkingDirectory=/home/ubuntu/games/
+ExecStart=/home/ubuntu/scripts/terraria-start-server.sh
+ExecStop=/home/ubuntu/scripts/terraria-stop-server.sh
+StandardOutput=append:/var/log/terraria-systemd-stdout.log
+StandardError=append:/var/log/terraria-systemd-stderr.log
+
+[Install]
+WantedBy=multi-user.target

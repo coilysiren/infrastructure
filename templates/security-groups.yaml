@@ -1,0 +1,145 @@
+AWSTemplateFormatVersion: "2010-09-09"
+
+Parameters:
+  HomeIP:
+    Description: curl ifconfig.me
+    Type: String
+    NoEcho: true
+  VPC:
+    Type: String
+
+Resources:
+  # docs: https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-properties-ec2-security-group.html
+  BaseSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: general ec2 security group
+      VpcId: !Ref VPC
+      SecurityGroupIngress:
+        - Description: allow ssh
+          IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: !Ref HomeIP
+        - Description: allow ping
+          IpProtocol: icmp
+          FromPort: 8
+          ToPort: -1
+          CidrIp: !Ref HomeIP
+      SecurityGroupEgress:
+        - Description: egress everywhere IPv4
+          IpProtocol: -1
+          CidrIp: 0.0.0.0/0
+        - Description: egress everywhere IPv6
+          IpProtocol: -1
+          CidrIpv6: ::/0
+
+  # docs: https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-ssm-parameter.html
+  BaseSecurityGroupParam:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: /cfn/base-security-group
+      Type: String
+      Value: !GetAtt BaseSecurityGroup.GroupId
+
+  # docs: https://wiki.play.eco/en/Setting_Up_a_Server
+  EcoSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: eco security group
+      SecurityGroupIngress:
+        - Description: ingress tcp 3000 all IPv4
+          IpProtocol: tcp
+          FromPort: 3000
+          ToPort: 3000
+          CidrIp: 0.0.0.0/0
+        - Description: tcp 3000 ingress all IPv6
+          IpProtocol: tcp
+          FromPort: 3000
+          ToPort: 3000
+          CidrIpv6: ::/0
+        - Description: tcp 3001 ingress all IPv4
+          IpProtocol: tcp
+          FromPort: 3001
+          ToPort: 3001
+          CidrIp: 0.0.0.0/0
+        - Description: tcp 3001 ingress all IPv6
+          IpProtocol: tcp
+          FromPort: 3001
+          ToPort: 3001
+          CidrIpv6: ::/0
+        - Description: udp 3000 ingress all IPv4
+          IpProtocol: udp
+          FromPort: 3000
+          ToPort: 3000
+          CidrIp: 0.0.0.0/0
+        - Description: udp 3000 ingress all IPv6
+          IpProtocol: udp
+          FromPort: 3000
+          ToPort: 3000
+          CidrIpv6: ::/0
+        - Description: udp 3001 ingress all IPv4
+          IpProtocol: udp
+          FromPort: 3001
+          ToPort: 3001
+          CidrIp: 0.0.0.0/0
+        - Description: udp 3001 ingress all IPv6
+          IpProtocol: udp
+          FromPort: 3001
+          ToPort: 3001
+          CidrIpv6: ::/0
+      Tags:
+        - Key: Name
+          Value: eco-server
+
+  EcoSecurityGroupParam:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: /cfn/eco-server/security-group
+      Type: String
+      Value: !GetAtt EcoSecurityGroup.GroupId
+
+  # docs: https://terraria.fandom.com/wiki/Guide:Setting_up_a_Terraria_server#Linux_/_macOS
+  TerrariaSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: terraria security group
+      SecurityGroupIngress:
+        - Description: ingress tcp 7777 all IPv4
+          IpProtocol: tcp
+          FromPort: 7777
+          ToPort: 7777
+          CidrIp: 0.0.0.0/0
+        - Description: tcp 7777 ingress all IPv6
+          IpProtocol: tcp
+          FromPort: 7777
+          ToPort: 7777
+          CidrIpv6: ::/0
+        - Description: udp 7777 ingress all IPv4
+          IpProtocol: udp
+          FromPort: 7777
+          ToPort: 7777
+          CidrIp: 0.0.0.0/0
+        - Description: udp 7777 ingress all IPv6
+          IpProtocol: udp
+          FromPort: 7777
+          ToPort: 7777
+          CidrIpv6: ::/0
+      Tags:
+        - Key: Name
+          Value: terraria-server
+
+  TerrariaSecurityGroupParam:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: /cfn/terraria-server/security-group
+      Type: String
+      Value: !GetAtt TerrariaSecurityGroup.GroupId
+
+Outputs:
+  BaseSecurityGroup:
+    Value: !GetAtt BaseSecurityGroup.GroupId
+  EcoSecurityGroup:
+    Value: !GetAtt EcoSecurityGroup.GroupId
+  TerrariaSecurityGroup:
+    Value: !GetAtt TerrariaSecurityGroup.GroupId

@@ -1,0 +1,73 @@
+AWSTemplateFormatVersion: "2010-09-09"
+
+Parameters:
+  Name:
+    Type: String
+    Description: name of the server
+  KeyName:
+    Description: https://console.aws.amazon.com/ec2/v2/home?region=us-east-1#KeyPairs
+    Type: AWS::EC2::KeyPair::KeyName
+    Default: ssh
+    NoEcho: true
+    # TODO: regen with password, better name
+  InstanceType:
+    Description: https://aws.amazon.com/ec2/instance-types/
+    Type: String
+    Default: t3.small
+  AMI:
+    Type: AWS::EC2::Image::Id
+  Subnet:
+    Type: AWS::EC2::Subnet::Id
+    Description: us-east-1c
+    Default: subnet-08bcb7e889b485874
+  SecurityGroups:
+    Type: List<AWS::EC2::SecurityGroup::Id>
+  EIPAllocationId:
+    Type: String
+  Volume:
+    Type: String
+
+Resources:
+  # docs: https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-properties-ec2-instance.html
+  Instance:
+    Type: AWS::EC2::Instance
+    Properties:
+      IamInstanceProfile: game-server
+      InstanceType: !Ref InstanceType
+      PropagateTagsToVolumeOnCreation: True
+      SecurityGroupIds: !Ref SecurityGroups
+      KeyName: !Ref KeyName
+      ImageId: !Ref AMI
+      SubnetId: !Ref Subnet
+      UserData:
+        Fn::Base64: !Sub |
+          #!/bin/bash
+          set -eux
+          sudo chmod 777 /var/log/
+          sudo chown -R ubuntu /var/log/
+          exec > >(tee /var/log/user-data-1.log|logger -t user-data -s 2>/var/log/user-data-2.log) 2>&1
+            mkdir -p /home/ubuntu/games
+            sudo mount /dev/nvme1n1 /home/ubuntu/games
+            sudo chown -R ubuntu /home/ubuntu/games
+            sudo blkid -o export /dev/nvme1n1
+            echo "$(sudo blkid -o export /dev/nvme1n1 | grep ^UUID=) /home/ubuntu/games ext4 defaults,noatime" | sudo tee -a /etc/fstab
+            sudo systemctl enable ${Name}
+            sudo systemctl start ${Name}
+      Tags:
+        - Key: Name
+          Value: !Ref Name
+
+  # docs: https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-properties-ec2-eip-association.html
+  EIPAssociation:
+    Type: AWS::EC2::EIPAssociation
+    Properties:
+      AllocationId: !Ref EIPAllocationId
+      InstanceId: !Ref Instance
+
+  # docs: https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-properties-ec2-ebs-volumeattachment.html
+  VolumeAttachment:
+    Type: AWS::EC2::VolumeAttachment
+    Properties:
+      InstanceId: !Ref Instance
+      VolumeId: !Ref Volume
+      Device: sdg
