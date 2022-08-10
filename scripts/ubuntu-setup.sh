@@ -7,6 +7,7 @@ set -eux
 
 # make logs dir world writeable
 sudo chmod 777 /var/log/
+sudo chown -R ubuntu /var/log/
 
 # holding pen for bin scripts
 mkdir -p /home/ubuntu/.local/bin
