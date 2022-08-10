@@ -29,28 +29,12 @@ build {
   ]
 
   provisioner "file" {
-    source      = "assets/terraria.sh"
-    destination = "/tmp/terraria-server.sh"
-  }
-
-  provisioner "file" {
-    source      = "assets/eco-server.service"
-    destination = "/tmp/eco-server.service"
-  }
-
-  provisioner "file" {
-    source      = "assets/terraria-server.service"
-    destination = "/tmp/terraria-server.service"
-  }
-
-  provisioner "file" {
-    source      = "requirements.txt"
-    destination = "/tmp/requirements.txt"
-  }
-
-  provisioner "file" {
-    source      = "tasks.py"
-    destination = "/tmp/tasks.py"
+    sources = [
+      "tasks.py",
+      "requirements.txt",
+      "assets/",
+    ]
+    destination = "/tmp/"
   }
 
   provisioner "shell" {

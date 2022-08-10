@@ -47,12 +47,59 @@ ssm = boto3.client("ssm")
 
 @invoke.task
 def ssh(
-    ctx: invoke.Context, name="terraria-server", user="ubuntu", cmd="cd games/ && bash"
+    ctx: invoke.Context,
+    name="terraria-server",
+    user="ubuntu",
+    cmd="cd games/ && bash",
+    connection_attempts=5,
 ):
+    output = ec2.describe_instances(
+        Filters=[
+            {"Name": "tag:Name", "Values": [name]},
+            {"Name": "instance-state-name", "Values": ["running"]},
+        ]
+    )
+    ip_address = output["Reservations"][0]["Instances"][0]["PublicIpAddress"]
     ctx.run(
-        f"ssh -o 'ConnectionAttempts 10' -t {user}@{name}.coilysiren.me '{cmd}'",
+        f"ssh -o 'ConnectionAttempts {connection_attempts}' -t {user}@{ip_address} '{cmd}'",
         pty=True,
         echo=True,
+    )
+
+
+@invoke.task
+def scp(
+    ctx: invoke.Context,
+    name="terraria-server",
+    user="ubuntu",
+    source="",
+    destination="",
+):
+    source = source if source else os.path.join(os.getcwd(), "configs/")
+    destination = destination if destination else "/home/ubuntu/games/"
+    output = ec2.describe_instances(
+        Filters=[
+            {"Name": "tag:Name", "Values": [name]},
+            {"Name": "instance-state-name", "Values": ["running"]},
+        ]
+    )
+    ip_address = output["Reservations"][0]["Instances"][0]["PublicIpAddress"]
+    ctx.run(
+        f"scp -r {source}/* {user}@{ip_address}:{destination}",
+        pty=True,
+        echo=True,
+    )
+
+
+@invoke.task
+def tail(
+    ctx: invoke.Context,
+    name="terraria-server",
+):
+    ssh(
+        ctx,
+        name=name,
+        cmd='sudo multitail -c -ts -Q 1 "/var/log/*"',
     )
 
 
@@ -73,7 +120,7 @@ def deploy_shared(ctx: invoke.Context):
     )
 
     vpc = ec2.describe_vpcs()["Vpcs"][0]["VpcId"]
-    home_ip = requests.get("http://ifconfig.me").text  # TODO: ssm /cfn/home-ip-address
+    home_ip = requests.get("http://ifconfig.me").text
     ctx.run(
         textwrap.dedent(
             f"""
@@ -215,6 +262,19 @@ def deploy_server(ctx: invoke.Context, name="terraria-server"):
 
 @invoke.task
 def delete_server(ctx: invoke.Context, name="terraria-server"):
+    output = ec2.describe_instances(
+        Filters=[
+            {"Name": "tag:Name", "Values": [name]},
+            {"Name": "instance-state-name", "Values": ["running"]},
+        ]
+    )
+    ip_address = output["Reservations"][0]["Instances"][0]["PublicIpAddress"]
+    # reload ssh key - required until I figured out ssh identity pinning
+    ctx.run(
+        f"ssh-keygen -R {ip_address}",
+        pty=True,
+        echo=True,
+    )
     ctx.run(
         f"aws cloudformation delete-stack --stack-name {name}",
         pty=True,
@@ -256,9 +316,77 @@ def push_asset(
     )
 
 
+@invoke.task
+def pull_asset(
+    ctx: invoke.Context,
+    download,
+    bucket="coilysiren-assets",
+    name="terraria-server",
+):
+    ssh(
+        ctx,
+        name=name,
+        cmd=f"aws s3 cp s3://{bucket}/downloads/{download} /home/ubuntu/games/",
+    )
+
+
+@invoke.task
+def reboot(ctx: invoke.Context, name="terraria-server"):
+    ssh(
+        ctx,
+        name=name,
+        cmd="sudo reboot",
+    )
+    ssh(
+        ctx,
+        name=name,
+    )
+
+
 #########################
 # TERRARIA SERVER STUFF #
 #########################
+
+
+@invoke.task
+def terraria_push_code(
+    ctx: invoke.Context,
+    name="terraria-server",
+):
+    ssh(
+        ctx,
+        name=name,
+        cmd="aws s3 cp s3://coilysiren-assets/downloads/terraria-server /home/ubuntu/games/",
+    )
+    ssh(
+        ctx,
+        name=name,
+        cmd="cd /home/ubuntu/games/ && unzip -qq -u terraria-server",
+    )
+    ssh(
+        ctx,
+        name=name,
+        cmd="cd /home/ubuntu/games/ && mv terraria-server-*/Linux/* terraria",
+    )
+    ssh(
+        ctx,
+        name=name,
+        cmd="chmod a+x /home/ubuntu/games/terraria/TerrariaServer",
+    )
+    reboot(ctx, name=name)
+    ssh(ctx, name=name, connection_attempts=60)
+
+
+@invoke.task
+def terraria_clean_logs(
+    ctx: invoke.Context,
+    name="terraria-server",
+):
+    ssh(
+        ctx,
+        name=name,
+        cmd="rm -rf /home/ubuntu/games/terraria-logs/*",
+    )
 
 
 ####################
