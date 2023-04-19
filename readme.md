@@ -1,4 +1,20 @@
-# game-servers
+# infrastructure
+
+The infrastructure layer for my apps, websites.
+
+## Connects To
+
+## Platform 
+
+- GCP (TODO), as a pending replacement for AWS (RIP)
+- Datadog monitoring (TODO)
+- Docker base images hosted in Docker Hub
+- Github Actions
+---
+
+#############################
+/ # legacy readme follows # /
+#############################
 
 ## eco
 
