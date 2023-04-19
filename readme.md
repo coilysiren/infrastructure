@@ -2,19 +2,25 @@
 
 The infrastructure layer for my apps, websites.
 
-## Connects To
+## Related Repos
 
-## Platform 
+- coilysiren/infrastructure is the home of the DNS route that points to [coilysiren/website](https://github.com/coilysiren/website)
+- coilysiren/infrastructure uses docker images that are built inside of [coilysiren/images](https://github.com/coilysiren/images)
+
+## Platforms
+
+The following cloud platforms are represented here:
 
 - GCP (TODO), as a pending replacement for AWS (RIP)
 - Datadog monitoring (TODO)
 - Docker base images hosted in Docker Hub
-- Github Actions
+- Github Actions for all CI/CD
+
 ---
 
-#############################
-/ # legacy readme follows # /
-#############################
+/////////////////////////
+/ legacy readme follows /
+/////////////////////////
 
 ## eco
 
