@@ -1,0 +1,16 @@
+AWSTemplateFormatVersion: "2010-09-09"
+
+# Configures the apex domain to point to the Netlify load balancers
+# https://docs.netlify.com/domains-https/custom-domains/configure-external-dns/#configure-an-apex-domain
+
+Resources:
+  # docs: http://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-properties-route53-recordset.html
+  RecordSet:
+    Type: AWS::Route53::RecordSet
+    Properties:
+      Name: coilysiren.me.
+      HostedZoneName: coilysiren.me.
+      TTL: 60
+      Type: A
+      ResourceRecords:
+        - "75.2.60.5"
