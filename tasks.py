@@ -1,42 +1,14 @@
 #!/usr/bin/env python3
 
 # builtin
-import inspect
 import os
 import textwrap
-import unittest.mock
 
 # 3rd party
 import boto3
 import invoke
 import requests
 
-
-def __fix_annotations():
-    """
-    Pyinvoke doesnt accept annotations by default, this fix that
-    Based on: https://github.com/pyinvoke/invoke/pull/606
-
-    via this comment:
-    https://github.com/pyinvoke/invoke/issues/357#issuecomment-583851322
-    """
-
-    def patched_inspect_getargspec(func):
-        spec = inspect.getfullargspec(func)
-        return inspect.ArgSpec(*spec[0:4])
-
-    org_task_argspec = invoke.tasks.Task.argspec
-
-    def patched_task_argspec(*args, **kwargs):
-        with unittest.mock.patch(
-            target="inspect.getargspec", new=patched_inspect_getargspec
-        ):
-            return org_task_argspec(*args, **kwargs)
-
-    invoke.tasks.Task.argspec = patched_task_argspec
-
-
-__fix_annotations()
 
 # docs: https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/ec2.html
 ec2 = boto3.client("ec2")
@@ -166,6 +138,22 @@ def build(ctx: invoke.Context):
 
     ctx.run(
         "packer build ubuntu.pkr.hcl",
+        pty=True,
+        echo=True,
+    )
+
+
+@invoke.task
+def deploy_apex_dns(ctx: invoke.Context):
+    ctx.run(
+        textwrap.dedent(
+            """
+            aws cloudformation validate-template --template-body file://templates/apex-dns.yaml && \
+            aws cloudformation deploy \
+                --template-file templates/apex-dns.yaml \
+                --stack-name apex-dns
+            """
+        ),
         pty=True,
         echo=True,
     )
