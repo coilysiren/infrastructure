@@ -92,7 +92,7 @@ def deploy_shared(ctx: invoke.Context):
     )
 
     vpc = ec2.describe_vpcs()["Vpcs"][0]["VpcId"]
-    home_ip = requests.get("http://ifconfig.me").text
+    home_ip = requests.get("http://ifconfig.me", timeout=5).text
     ctx.run(
         textwrap.dedent(
             f"""
@@ -292,7 +292,7 @@ def push_asset(
 
     if len(options) == 0:
         raise Exception(f'could not find "{download}" download from {downloads}')
-    elif len(options) > 1:
+    if len(options) > 1:
         raise Exception(f'found too many downloads called "{download}" from {options}')
 
     asset_path = os.path.join(os.path.expanduser("~"), "Downloads", options[0])
