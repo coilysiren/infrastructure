@@ -16,15 +16,17 @@ The infrastructure layer for my apps, websites.
     - `sudo cp ~/Downloads/ssh.pem ~/.ssh/aws.pem`
     - `chmod 400 ~/.ssh/aws.pem`
     - `ssh-add ~/.ssh/aws.pem`
-3. `invoke deploy-shared` - This deploys simple shared infra
-4. `invoke build` - This will cut a new build of the AMI, and push it to AWS. This doesn't need to happen often. The primary reasons you would run this are 1. to add new game servers or 2. to install security updates. The bulk of the build configuration is in three places.
-    1. `ubuntu.pkr.hcl`
-    2. `scripts/ubuntu-setup.sh`
-    3. `assets/` <== which has game server specific files
-5. `invoke deploy-server` - Deploys an EC2 game server. Run `invoke deploy-server --name WHATEVER` to deploy a different type of server, although honestly you are better off with editing `tasks.py`.
+3. `invoke deploy-shared` - This deploys simple shared infra. Run it just to make sure everything is on the same page.
+4. `invoke build` - This will cut a new build of the AMI, and push it to AWS. This doesn't need to happen often. The primary reasons you would run this are 1. to add new game servers or 2. to install security updates. The bulk of the config for this build is in three places. You don't need to edit them unless you are starting a new game server. Those places are:
+    - `ubuntu.pkr.hcl`
+    - `scripts/ubuntu-setup.sh`
+    - `assets/` <== which has game server specific files
+5. `invoke deploy-server` - Deploys an EC2 game server. Run `invoke deploy-server --name WHATEVER` to deploy a different type of server, although honestly you are better off with editing `tasks.py`. Just make sure you only edit the `name="WHATEVER"` parts.
 6. `invoke ssh` - Hope into the server. Look around a bit. Everything beyond this point is iterative. Good luck have fun!
 
 ### eco
+
+See: [eco.md](eco.md)
 
 - https://store.steampowered.com/app/382310/Eco/
 - https://wiki.play.eco/en/Setting_Up_a_Server
