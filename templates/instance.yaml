@@ -9,7 +9,6 @@ Parameters:
     Type: AWS::EC2::KeyPair::KeyName
     Default: ssh
     NoEcho: true
-    # TODO: regen with password, better name
   InstanceType:
     Description: https://aws.amazon.com/ec2/instance-types/
     Type: String

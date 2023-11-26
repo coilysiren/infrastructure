@@ -20,7 +20,7 @@ ssm = boto3.client("ssm")
 @invoke.task
 def ssh(
     ctx: invoke.Context,
-    name="terraria-server",
+    name="eco-server",
     user="ubuntu",
     cmd="cd games/ && bash",
     connection_attempts=5,
@@ -42,7 +42,7 @@ def ssh(
 @invoke.task
 def scp(
     ctx: invoke.Context,
-    name="terraria-server",
+    name="eco-server",
     user="ubuntu",
     source="",
     destination="",
@@ -66,7 +66,7 @@ def scp(
 @invoke.task
 def tail(
     ctx: invoke.Context,
-    name="terraria-server",
+    name="eco-server",
 ):
     ssh(
         ctx,
@@ -160,7 +160,7 @@ def deploy_apex_dns(ctx: invoke.Context):
 
 
 @invoke.task
-def deploy_server(ctx: invoke.Context, name="terraria-server"):
+def deploy_server(ctx: invoke.Context, name="eco-server"):
     deploy_shared(ctx)
 
     ctx.run(
@@ -249,7 +249,7 @@ def deploy_server(ctx: invoke.Context, name="terraria-server"):
 
 
 @invoke.task
-def delete_server(ctx: invoke.Context, name="terraria-server"):
+def delete_server(ctx: invoke.Context, name="eco-server"):
     output = ec2.describe_instances(
         Filters=[
             {"Name": "tag:Name", "Values": [name]},
@@ -276,7 +276,7 @@ def delete_server(ctx: invoke.Context, name="terraria-server"):
 
 
 @invoke.task
-def redeploy(ctx: invoke.Context, name="terraria-server"):
+def redeploy(ctx: invoke.Context, name="eco-server"):
     delete_server(ctx, name)
     deploy_server(ctx, name)
 
@@ -309,7 +309,7 @@ def pull_asset(
     ctx: invoke.Context,
     download,
     bucket="coilysiren-assets",
-    name="terraria-server",
+    name="eco-server",
 ):
     ssh(
         ctx,
@@ -319,7 +319,7 @@ def pull_asset(
 
 
 @invoke.task
-def reboot(ctx: invoke.Context, name="terraria-server"):
+def reboot(ctx: invoke.Context, name="eco-server"):
     ssh(
         ctx,
         name=name,
@@ -339,7 +339,7 @@ def reboot(ctx: invoke.Context, name="terraria-server"):
 @invoke.task
 def terraria_push_code(
     ctx: invoke.Context,
-    name="terraria-server",
+    name="eco-server",
 ):
     ssh(
         ctx,
@@ -368,7 +368,7 @@ def terraria_push_code(
 @invoke.task
 def terraria_clean_logs(
     ctx: invoke.Context,
-    name="terraria-server",
+    name="eco-server",
 ):
     ssh(
         ctx,

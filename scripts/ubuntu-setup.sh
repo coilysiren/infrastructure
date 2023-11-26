@@ -27,28 +27,24 @@ sudo apt-get install -qq -y --no-install-recommends \
   moreutils
 
 # generate bashrc
-true > /home/ubuntu/.bashrc
-echo 'export PATH="/home/ubuntu/.local/bin:$PATH"' \
-  | sponge -a /home/ubuntu/.bashrc
-echo 'export TERM=xterm' \
-  | sponge -a /home/ubuntu/.bashrc
-echo 'export HISTCONTROL=ignoreboth' \
-  | sponge -a /home/ubuntu/.bashrc
-echo 'export export HISTSIZE=1000' \
-  | sponge -a /home/ubuntu/.bashrc
-echo 'export export HISTFILESIZE=2000' \
-  | sponge -a /home/ubuntu/.bashrc
-echo 'export GCC_COLORS="error=01;31:warning=01;35:note=01;36:caret=01;32:locus=01:quote=01"' \
-  | sponge -a /home/ubuntu/.bashrc
-echo 'alias ls="ls -GFh --color=auto"' \
-  | sponge -a /home/ubuntu/.bashrc
-echo 'export PS1="\n\u@\H \w [\t]\n\[$(tput sgr0)\]\$ "' \
-  | sponge -a /home/ubuntu/.bashrc
+true >/home/ubuntu/.bashrc
+echo 'export PATH="/home/ubuntu/.local/bin:$PATH"' |
+  sponge -a /home/ubuntu/.bashrc
+echo 'export TERM=xterm' |
+  sponge -a /home/ubuntu/.bashrc
+echo 'export HISTCONTROL=ignoreboth' |
+  sponge -a /home/ubuntu/.bashrc
+echo 'export export HISTSIZE=1000' |
+  sponge -a /home/ubuntu/.bashrc
+echo 'export export HISTFILESIZE=2000' |
+  sponge -a /home/ubuntu/.bashrc
+echo 'export GCC_COLORS="error=01;31:warning=01;35:note=01;36:caret=01;32:locus=01:quote=01"' |
+  sponge -a /home/ubuntu/.bashrc
+echo 'alias ls="ls -GFh --color=auto"' |
+  sponge -a /home/ubuntu/.bashrc
+echo 'export PS1="\n\u@\H \w [\t]\n\[$(tput sgr0)\]\$ "' |
+  sponge -a /home/ubuntu/.bashrc
 source /home/ubuntu/.bashrc
-
-# via https://forum.unity.com/threads/workaround-for-libssl-issue-on-ubuntu-22-04.1271405/
-sudo wget -P /tmp -q http://security.ubuntu.com/ubuntu/pool/main/o/openssl1.0/libssl1.0.0_1.0.2n-1ubuntu5.10_amd64.deb
-sudo apt-get install -qq -y --no-install-recommends /tmp/libssl1.0.0_1.0.2n-1ubuntu5.10_amd64.deb
 
 # aws cli
 curl -q 'https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip' -o 'awscliv2.zip'
