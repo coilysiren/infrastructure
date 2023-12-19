@@ -57,7 +57,7 @@ def scp(
     )
     ip_address = output["Reservations"][0]["Instances"][0]["PublicIpAddress"]
     ctx.run(
-        f"scp -r {source}/* {user}@{ip_address}:{destination}",
+        f"scp -r {source} {user}@{ip_address}:{destination}",
         pty=True,
         echo=True,
     )

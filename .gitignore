@@ -7,3 +7,4 @@ gha-creds-*.json
 .venv
 venv
 *.pem
+*.zip
