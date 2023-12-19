@@ -6,3 +6,4 @@ configs/
 gha-creds-*.json
 .venv
 venv
+*.pem

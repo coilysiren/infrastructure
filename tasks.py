@@ -84,7 +84,8 @@ def deploy_shared(ctx: invoke.Context):
             aws cloudformation deploy \
                 --template-file templates/iam.yaml \
                 --capabilities CAPABILITY_NAMED_IAM \
-                --stack-name game-server-iam
+                --stack-name game-server-iam \
+                --no-fail-on-empty-changeset
             """
         ),
         pty=True,
@@ -102,7 +103,8 @@ def deploy_shared(ctx: invoke.Context):
                 --parameter-overrides \
                     HomeIP='{home_ip}/32' \
                     VPC={vpc} \
-                --stack-name game-server-security-groups
+                --stack-name game-server-security-groups \
+                --no-fail-on-empty-changeset
             """
         ),
         pty=True,
@@ -171,7 +173,8 @@ def deploy_server(ctx: invoke.Context, name="eco-server"):
                 --template-file templates/dns.yaml \
                 --parameter-overrides \
                     Name={name} \
-                --stack-name {name}-dns
+                --stack-name {name}-dns \
+                --no-fail-on-empty-changeset
             """
         ),
         pty=True,
@@ -186,7 +189,8 @@ def deploy_server(ctx: invoke.Context, name="eco-server"):
                 --template-file templates/volume.yaml \
                 --parameter-overrides \
                     Name={name} \
-                --stack-name {name}-volume
+                --stack-name {name}-volume \
+                --no-fail-on-empty-changeset
             """
         ),
         pty=True,
@@ -240,7 +244,8 @@ def deploy_server(ctx: invoke.Context, name="eco-server"):
                     AMI={ubuntu_ami} \
                     EIPAllocationId={eip_ip} \
                     SecurityGroups={",".join(security_groups)} \
-                --stack-name {name}
+                --stack-name {name} \
+                --no-fail-on-empty-changeset
             """
         ),
         pty=True,
