@@ -54,6 +54,7 @@ chmod a+x install.sh
 
 ```bash
 invoke eco-restart
+invoke eco-tail
 ```
 
-Note that the above command may take a while! 5 ~ 20 minutes.
+Note that the above command may take a while! 5 ~ 20 minutes before it fully stablizes.
