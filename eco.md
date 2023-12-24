@@ -58,3 +58,10 @@ invoke eco-tail
 ```
 
 Note that the above command may take a while! 5 ~ 20 minutes before it fully stablizes.
+
+## 5. Syncing Mods
+
+```bash
+unzip bigfastshovel.v10-1.0.1-ezqq.zip -d eco-mod-cache
+invoke scp --source eco-mod-cache/ShovelItem.override.cs --destination /home/ubuntu/games/eco/Mods/UserCode/Tools
+```
