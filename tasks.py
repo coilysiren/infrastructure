@@ -23,8 +23,10 @@ def ssh(
     name="eco-server",
     user="ubuntu",
     cmd="cd games/ && bash",
+    ssh_add="ssh-add ~/.ssh/aws.pem",
     connection_attempts=5,
 ):
+    ctx.run(ssh_add, echo=False)
     output = ec2.describe_instances(
         Filters=[
             {"Name": "tag:Name", "Values": [name]},
@@ -37,7 +39,6 @@ def ssh(
         pty=True,
         echo=True,
     )
-
 
 @invoke.task
 def scp(
@@ -62,7 +63,6 @@ def scp(
         echo=True,
     )
 
-
 @invoke.task
 def tail(
     ctx: invoke.Context,
@@ -73,7 +73,6 @@ def tail(
         name=name,
         cmd='sudo multitail -c -ts -Q 1 "/var/log/*"',
     )
-
 
 @invoke.task
 def deploy_shared(ctx: invoke.Context):
@@ -111,7 +110,6 @@ def deploy_shared(ctx: invoke.Context):
         echo=True,
     )
 
-
 @invoke.task
 def build(ctx: invoke.Context):
     ctx.run(
@@ -144,7 +142,6 @@ def build(ctx: invoke.Context):
         echo=True,
     )
 
-
 @invoke.task
 def deploy_apex_dns(ctx: invoke.Context):
     ctx.run(
@@ -159,7 +156,6 @@ def deploy_apex_dns(ctx: invoke.Context):
         pty=True,
         echo=True,
     )
-
 
 @invoke.task
 def deploy_server(ctx: invoke.Context, name="eco-server"):
@@ -252,7 +248,6 @@ def deploy_server(ctx: invoke.Context, name="eco-server"):
         echo=True,
     )
 
-
 @invoke.task
 def delete_server(ctx: invoke.Context, name="eco-server"):
     output = ec2.describe_instances(
@@ -279,34 +274,30 @@ def delete_server(ctx: invoke.Context, name="eco-server"):
         echo=True,
     )
 
-
 @invoke.task
 def redeploy(ctx: invoke.Context, name="eco-server"):
     delete_server(ctx, name)
     deploy_server(ctx, name)
-
 
 @invoke.task
 def push_asset_local(
     ctx: invoke.Context,
     download,
     bucket="coilysiren-assets",
+    cd="",
 ):
-    downloads = os.listdir(os.path.join(os.path.expanduser("~"), "Downloads"))
-    options = [filename for filename in downloads if download in filename]
+    def cmd():
+        ctx.run(
+            f"aws s3 cp {download} s3://{bucket}/downloads/{download}",
+            pty=True,
+            echo=True,
+        )
 
-    if len(options) == 0:
-        raise Exception(f'could not find "{download}" download from {downloads}')
-    if len(options) > 1:
-        raise Exception(f'found too many downloads called "{download}" from {options}')
-
-    asset_path = os.path.join(os.path.expanduser("~"), "Downloads", options[0])
-
-    ctx.run(
-        f"aws s3 cp {asset_path} s3://{bucket}/downloads/{download}",
-        pty=True,
-        echo=True,
-    )
+    if cd:
+        with ctx.cd(cd):
+            cmd()
+    else:
+        cmd()
 
 @invoke.task
 def push_asset_remote(
@@ -325,12 +316,20 @@ def pull_asset_remote(
     download,
     bucket="coilysiren-assets",
     name="eco-server",
+    cd="",
 ):
-    ssh(
-        ctx,
-        name=name,
-        cmd=f"aws s3 cp s3://{bucket}/downloads/{download} /home/ubuntu/games/",
-    )
+    if cd:
+        ssh(
+            ctx,
+            name=name,
+            cmd=f"cd {cd} && aws s3 cp s3://{bucket}/downloads/{download} .",
+        )
+    else:
+        ssh(
+            ctx,
+            name=name,
+            cmd=f"aws s3 cp s3://{bucket}/downloads/{download} /home/ubuntu/games/",
+        )
 
 @invoke.task
 def pull_asset_local(
@@ -343,7 +342,6 @@ def pull_asset_local(
         pty=True,
         echo=True,
     )
-
 
 @invoke.task
 def reboot(ctx: invoke.Context, name="eco-server"):
@@ -410,117 +408,10 @@ def terraria_clean_logs(
 
 
 @invoke.task
-def eco_push_mods(
-    ctx: invoke.Context,
-    bucket="coilysiren-assets",
-):
-    ctx.run(
-        "rm -rf eco-mod-cache* && git clone git@github.com:coilysiren/eco-mod-cache.git",
-        pty=True,
-        echo=True,
-    )
-    ctx.run(
-        "cd eco-mod-cache && zip -r eco-mod-cache * && cd -",
-        pty=True,
-        echo=True,
-    )
-    ctx.run(
-        "mv eco-mod-cache/eco-mod-cache.zip ~/Downloads/",
-        pty=True,
-        echo=True,
-    )
-    push_asset_local(ctx, download="eco-mod-cache")
-    ssh(
-        ctx,
-        cmd=f"cd /home/ubuntu/games/eco/Mods/UserCode && aws s3 cp s3://{bucket}/downloads/eco-mod-cache . && unzip -u -o eco-mod-cache",
-    )
-    eco_restart(ctx)
-    eco_tail(ctx)
-
-
-@invoke.task
-def eco_push_config(
-    ctx: invoke.Context,
-    bucket="coilysiren-assets",
-):
-    ctx.run(
-        "rm -rf eco-configs* && git clone git@github.com:coilysiren/eco-configs.git",
-        pty=True,
-        echo=True,
-    )
-    ctx.run(
-        "cd eco-configs && zip -r eco-configs * && cd -",
-        pty=True,
-        echo=True,
-    )
-    ctx.run(
-        "mv eco-configs/eco-configs.zip ~/Downloads/",
-        pty=True,
-        echo=True,
-    )
-    push_asset_local(ctx, download="eco-configs")
-    ssh(
-        ctx,
-        cmd=f"cd /home/ubuntu/games/eco/Configs && aws s3 cp s3://{bucket}/downloads/eco-configs . && unzip -u -o eco-configs",
-    )
-    eco_restart(ctx)
-    eco_tail(ctx)
-
-
-@invoke.task
-def eco_push_savefile(
-    ctx: invoke.Context,
-    bucket="coilysiren-assets",
-):
-    ctx.run(
-        "rm -rf eco-savefile* && git clone git@github.com:coilysiren/eco-savefile.git",
-        pty=True,
-        echo=True,
-    )
-    ctx.run(
-        "cd eco-savefile && zip -r eco-savefile * && cd -",
-        pty=True,
-        echo=True,
-    )
-    ctx.run(
-        "mv eco-savefile/eco-savefile.zip ~/Downloads/",
-        pty=True,
-        echo=True,
-    )
-    push_asset_local(ctx, download="eco-savefile")
-    ssh(
-        ctx,
-        cmd=f"cd /home/ubuntu/games/eco/Storage && aws s3 cp s3://{bucket}/downloads/eco-savefile . && unzip -u -o eco-savefile",
-    )
-    eco_restart(ctx)
-
-
-@invoke.task
 def eco_tail(
     ctx: invoke.Context,
 ):
     ssh(
         ctx,
         cmd='multitail -Q 1 "/home/ubuntu/games/eco/Logs/*"',
-    )
-
-
-@invoke.task
-def eco_restart(
-    ctx: invoke.Context,
-):
-    ssh(
-        ctx,
-        cmd="sudo systemctl restart eco-server",
-    )
-
-
-@invoke.task
-def eco_reboot(
-    ctx: invoke.Context,
-):
-    eco_restart(ctx)
-    ssh(
-        ctx,
-        cmd="sudo reboot",
     )

@@ -3,3 +3,4 @@ gha-creds-*.json
 venv
 *.pem
 *.zip
+home/

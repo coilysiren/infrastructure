@@ -31,12 +31,10 @@ invoke pull-asset-remote EcoServer.zip # pulls from s3 bucket into the remote se
 Inside Ubuntu on WSL that would be:
 
 ```bash
-# run on your local machine:
 mkdir -p ~/Downloads
 cp /mnt/c/Users/$username/Downloads/EcoServerLinux_v0.11.0.6-beta.zip ~/Downloads/EcoServer.zip
-invoke push-asset-local EcoServer.zip # from local into an s3 bucket
-invoke pull-asset-remote EcoServer.zip # pulls from s3 bucket into the remote server
-# Why doesn't this use scp? There's a scp command in the same invoke file.
+invoke push-asset-local EcoServer.zip
+invoke pull-asset-remote --cd /home/ubuntu/games/eco/ EcoServer.zip
 ```
 
 ## 2. Clear out old Eco installation
@@ -44,26 +42,19 @@ invoke pull-asset-remote EcoServer.zip # pulls from s3 bucket into the remote se
 If this is isn't the first time you're deploying an Eco game server, you might have a filesystem  version of Eco stored on it. You'll want to remove the old server application code, and the old mods, and saves (RIP).
 
 ```bash
-# run on your local machine:
-invoke ssh
-rm -rf /home/ubuntu/games/eco/Mods/__core__/* # remove old application code
-rm -rf /home/ubuntu/games/eco/Mods/UserCode/* # mods
-rm -rf /home/ubuntu/games/eco/Logs/* # logs
-rm -rf /home/ubuntu/games/eco/Storage/* # save file (RIP)
+invoke ssh --cmd "rm -rf /home/ubuntu/games/eco/Mods/__core__/*"
+invoke ssh --cmd "rm -rf /home/ubuntu/games/eco/Mods/UserCode/*"
+invoke ssh --cmd "rm -rf /home/ubuntu/games/eco/Logs/*"
+invoke ssh --cmd "rm -rf /home/ubuntu/games/eco/Storage/*"
 ```
 
 ## 3. Install new Eco code
 
 ```bash
-# run on your local machine:
-invoke ssh
-rm -rf tmp/
-unzip EcoServer.zip -d tmp # unzip new code
-cp -rv tmp/* eco # copy it over
-rm -rf tmp/
-cd eco
-chmod a+x EcoServer
-chmod a+x install.sh
+invoke ssh --cmd "cd /home/ubuntu/games/eco/ && unzip EcoServer.zip"
+invoke ssh --cmd "chmod a+x EcoServer"
+invoke ssh --cmd "chmod a+x install.sh"
+invoke ssh --cmd "cd ~/games/eco && ./install.sh"
 ```
 
 ## 4. Configure Eco
@@ -81,7 +72,6 @@ Here we go! The following commands were written for WSL and VSCode, the best tex
 
 ```bash
 # TODO: Add zip command into the AMI, and ripgrep while you are at it
-# run on your local machine:
 invoke ssh --cmd "cd ~/games && zip -r EcoCoreFolder.zip /home/ubuntu/games/eco/Mods/__core__/"
 invoke ssh --cmd "cd ~/games && zip -r EcoUserFolder.zip /home/ubuntu/games/eco/Mods/UserCode/"
 invoke ssh --cmd "cd ~/games && zip -r EcoConfigFolder.zip /home/ubuntu/games/eco/Configs/"
@@ -103,31 +93,85 @@ code home/ubuntu/games/eco/
 Make your edits, again, consulting the wiki and online tutorials as needed. And then...
 
 ```bash
-# run on your local machine:
-invoke ssh
-rm -rf /home/ubuntu/games/eco/Mods/__core__/* # remove old application code
-rm -rf /home/ubuntu/games/eco/Mods/UserCode/* # mods
-# then you exit the server, and again on your local machine, run:
-# TODO...
+invoke ssh --cmd "rm -rf /home/ubuntu/games/eco/Configs"
+invoke ssh --cmd "rm -rf /home/ubuntu/games/eco/Mods/__core__/*"
+invoke ssh --cmd "rm -rf /home/ubuntu/games/eco/Mods/UserCode/*"
+
+(cd home/ubuntu/games/eco/ && zip -r EcoCoreFolder.zip Mods/__core__)
+(cd home/ubuntu/games/eco/ && zip -r EcoUserFolder.zip Mods/UserCode)
+(cd home/ubuntu/games/eco/ && zip -r EcoConfigFolder.zip Configs)
+
+invoke push-asset-local --cd home/ubuntu/games/eco/ EcoCoreFolder.zip
+invoke push-asset-local --cd home/ubuntu/games/eco/ EcoUserFolder.zip
+invoke push-asset-local --cd home/ubuntu/games/eco/ EcoConfigFolder.zip
+
+invoke pull-asset-remote --cd /home/ubuntu/games/eco/ EcoCoreFolder.zip
+invoke pull-asset-remote --cd /home/ubuntu/games/eco/ EcoUserFolder.zip
+invoke pull-asset-remote --cd /home/ubuntu/games/eco/ EcoConfigFolder.zip
+
+invoke ssh --cmd "cd ~/games/eco && unzip -o EcoCoreFolder.zip"
+invoke ssh --cmd "cd ~/games/eco && unzip -o EcoUserFolder.zip"
+invoke ssh --cmd "cd ~/games/eco && unzip -o EcoConfigFolder.zip"
 ```
 
 ## 5. Start the Eco Server
 
+As of late 2024 Eco servers require an API key to run. This is a good change on their
+part! For our next step, we configure the server to use the API key.
+
 ```bash
-# run on your local machine:
 invoke ssh
-cd eco
-./install.sh
-# then you exit the server, and again on your local machine, run:
-invoke eco-restart
+# TDOD add invoke ssh --comment to output the ssh command with some helpful text,
+#   instead of actually trying to ssh.
+```
+
+Take note of the command above. One line will start with "sso -o...". Exit your server,
+copy that line, and then run it yourself. This is necessary because we need to "manually"
+ssh into the server in order to get a terminal with edit privileges.
+
+After you run `ssh -o ...`, you run
+
+```bash
+sudo nano /etc/systemd/system/eco-server.service
+```
+
+Which will open a file editor. Delete the whole file, and fill it in with the following:
+
+```bash
+[Unit]
+Description=eco-server
+After=syslog.target network.target nss-lookup.target network-online.target
+StartLimitBurst=5
+StartLimitIntervalSec=60
+
+[Service]
+Type=simple
+Restart=on-failure
+TimeoutStopSec=120
+RestartSec=5
+User=ubuntu
+WorkingDirectory=/home/ubuntu/games/eco
+ExecStart=/home/ubuntu/games/eco/EcoServer -userToken=YOUR_TOKEN_FROM_THE_WEBSITE
+ExecStop=kill -TERM $MAINPID
+
+[Install]
+WantedBy=multi-user.target
+```
+
+Where `YOUR_TOKEN_FROM_THE_WEBSITE` above is your token filled in from the website
+https://play.eco/account.
+
+After doing this, you'll want to reboot the eco server so that it starts with your token.
+
+```bash
+invoke reboot
+```
+
+Run the following command 5 ~ 10 times, each 1 minute apart, while you wait for the
+server to restart.
+
+```bash
 invoke eco-tail
 ```
 
-Note that the above command may take a while! 5 ~ 20 minutes before it fully stablizes.
-
-## 6. Syncing Mods
-
-```bash
-# TODO
-invoke scp --source eco-mod-cache/ShovelItem.override.cs --destination /home/ubuntu/games/eco/Mods/UserCode/Tools
-```
+Eventually it will succeed, and you'll start seeing Eco logs!
