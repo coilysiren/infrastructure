@@ -51,10 +51,10 @@ invoke ssh --cmd "rm -rf /home/ubuntu/games/eco/Storage/*"
 ## 3. Install new Eco code
 
 ```bash
-invoke ssh --cmd "cd /home/ubuntu/games/eco/ && unzip EcoServer.zip"
-invoke ssh --cmd "chmod a+x EcoServer"
-invoke ssh --cmd "chmod a+x install.sh"
-invoke ssh --cmd "cd ~/games/eco && ./install.sh"
+invoke ssh --cmd "cd /home/ubuntu/games/eco/ && unzip -o EcoServer.zip"
+invoke ssh --cmd "chmod a+x /home/ubuntu/games/eco/EcoServer"
+invoke ssh --cmd "chmod a+x /home/ubuntu/games/eco/install.sh"
+invoke ssh --cmd "cd ~/games/eco && sudo ./install.sh"
 ```
 
 ## 4. Configure Eco
@@ -84,32 +84,27 @@ invoke pull-asset-local EcoUserFolder.zip
 invoke pull-asset-local EcoConfigFolder.zip
 
 rm -rf home/ubuntu/games/eco
-unzip ~/Downloads/EcoCoreFolder.zip
-unzip ~/Downloads/EcoUserFolder.zip
-unzip ~/Downloads/EcoConfigFolder.zip
+unzip -o ~/Downloads/EcoCoreFolder.zip
+unzip -o ~/Downloads/EcoUserFolder.zip
+unzip -o ~/Downloads/EcoConfigFolder.zip
 code home/ubuntu/games/eco/
 ```
 
 Make your edits, again, consulting the wiki and online tutorials as needed. And then...
 
 ```bash
+invoke ssh --cmd "rm -rf /home/ubuntu/games/eco/Mods/UserCode"
 invoke ssh --cmd "rm -rf /home/ubuntu/games/eco/Configs"
-invoke ssh --cmd "rm -rf /home/ubuntu/games/eco/Mods/__core__/*"
-invoke ssh --cmd "rm -rf /home/ubuntu/games/eco/Mods/UserCode/*"
 
-(cd home/ubuntu/games/eco/ && zip -r EcoCoreFolder.zip Mods/__core__)
 (cd home/ubuntu/games/eco/ && zip -r EcoUserFolder.zip Mods/UserCode)
 (cd home/ubuntu/games/eco/ && zip -r EcoConfigFolder.zip Configs)
 
-invoke push-asset-local --cd home/ubuntu/games/eco/ EcoCoreFolder.zip
 invoke push-asset-local --cd home/ubuntu/games/eco/ EcoUserFolder.zip
 invoke push-asset-local --cd home/ubuntu/games/eco/ EcoConfigFolder.zip
 
-invoke pull-asset-remote --cd /home/ubuntu/games/eco/ EcoCoreFolder.zip
 invoke pull-asset-remote --cd /home/ubuntu/games/eco/ EcoUserFolder.zip
 invoke pull-asset-remote --cd /home/ubuntu/games/eco/ EcoConfigFolder.zip
 
-invoke ssh --cmd "cd ~/games/eco && unzip -o EcoCoreFolder.zip"
 invoke ssh --cmd "cd ~/games/eco && unzip -o EcoUserFolder.zip"
 invoke ssh --cmd "cd ~/games/eco && unzip -o EcoConfigFolder.zip"
 ```
