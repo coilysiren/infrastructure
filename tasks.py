@@ -287,7 +287,7 @@ def redeploy(ctx: invoke.Context, name="eco-server"):
 
 
 @invoke.task
-def push_asset(
+def push_asset_local(
     ctx: invoke.Context,
     download,
     bucket="coilysiren-assets",
@@ -308,9 +308,19 @@ def push_asset(
         echo=True,
     )
 
+@invoke.task
+def push_asset_remote(
+    ctx: invoke.Context,
+    download,
+    bucket="coilysiren-assets",
+):
+    ssh(
+        ctx,
+        cmd=f"aws s3 cp /home/ubuntu/games/{download} s3://{bucket}/downloads/",
+    )
 
 @invoke.task
-def pull_asset(
+def pull_asset_remote(
     ctx: invoke.Context,
     download,
     bucket="coilysiren-assets",
@@ -320,6 +330,18 @@ def pull_asset(
         ctx,
         name=name,
         cmd=f"aws s3 cp s3://{bucket}/downloads/{download} /home/ubuntu/games/",
+    )
+
+@invoke.task
+def pull_asset_local(
+    ctx: invoke.Context,
+    download,
+    bucket="coilysiren-assets",
+):
+    ctx.run(
+        f"aws s3 cp s3://{bucket}/downloads/{download} ~/Downloads/",
+        pty=True,
+        echo=True,
     )
 
 
@@ -407,7 +429,7 @@ def eco_push_mods(
         pty=True,
         echo=True,
     )
-    push_asset(ctx, download="eco-mod-cache")
+    push_asset_local(ctx, download="eco-mod-cache")
     ssh(
         ctx,
         cmd=f"cd /home/ubuntu/games/eco/Mods/UserCode && aws s3 cp s3://{bucket}/downloads/eco-mod-cache . && unzip -u -o eco-mod-cache",
@@ -436,7 +458,7 @@ def eco_push_config(
         pty=True,
         echo=True,
     )
-    push_asset(ctx, download="eco-configs")
+    push_asset_local(ctx, download="eco-configs")
     ssh(
         ctx,
         cmd=f"cd /home/ubuntu/games/eco/Configs && aws s3 cp s3://{bucket}/downloads/eco-configs . && unzip -u -o eco-configs",
@@ -465,7 +487,7 @@ def eco_push_savefile(
         pty=True,
         echo=True,
     )
-    push_asset(ctx, download="eco-savefile")
+    push_asset_local(ctx, download="eco-savefile")
     ssh(
         ctx,
         cmd=f"cd /home/ubuntu/games/eco/Storage && aws s3 cp s3://{bucket}/downloads/eco-savefile . && unzip -u -o eco-savefile",
