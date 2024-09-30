@@ -303,3 +303,13 @@ code home/ubuntu/games/eco/Configs/NidToolbox/PlayerManager.json
 ```
 
 Then we sync all of the configs, via the "Sync Configs" instructions above.
+
+## 8. Resets
+
+### Reset Game State But Keep Map
+
+Modify `GenerateRandomWorld` in `Difficulty.eco` to `false`, backup the `WorldGenerator.eco` file, then delete the `Storage` directory.
+
+### Reset Game State And Get Random Map
+
+Modify `GenerateRandomWorld` in `Difficulty.eco` to `true`, then delete the `Storage` directory.

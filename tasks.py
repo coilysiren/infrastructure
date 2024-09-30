@@ -415,3 +415,12 @@ def eco_tail(
         ctx,
         cmd='multitail -Q 1 "/home/ubuntu/games/eco/Logs/*"',
     )
+
+@invoke.task
+def eco_restart(
+    ctx: invoke.Context,
+):
+    ssh(
+        ctx,
+        cmd="sudo systemctl restart eco-server",
+    )
