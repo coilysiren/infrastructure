@@ -32,16 +32,17 @@ Inside Ubuntu on WSL that would be:
 
 ```bash
 mkdir -p ~/Downloads
-cp /mnt/c/Users/$username/Downloads/EcoServerLinux_v0.11.0.6-beta.zip ~/Downloads/EcoServer.zip
+cp /mnt/c/Users/$WINDOWSUSERNAME/Downloads/EcoServerLinux_v0.11.0.6-beta.zip ~/Downloads/EcoServer.zip
 invoke push-asset-local EcoServer.zip
 invoke pull-asset-remote --cd /home/ubuntu/games/eco/ EcoServer.zip
 ```
 
 ## 2. Clear out old Eco installation
 
-If this is isn't the first time you're deploying an Eco game server, you might have a filesystem  version of Eco stored on it. You'll want to remove the old server application code, and the old mods, and saves (RIP).
+If this is isn't the first time you're deploying an Eco game server, you might have a filesystem version of Eco stored on it. You'll want to remove the old server application code, and the old mods, and saves (RIP).
 
 ```bash
+invoke ssh --cmd "rm -rf /home/ubuntu/games/eco/*"
 invoke ssh --cmd "rm -rf /home/ubuntu/games/eco/Mods/__core__/*"
 invoke ssh --cmd "rm -rf /home/ubuntu/games/eco/Mods/UserCode/*"
 invoke ssh --cmd "rm -rf /home/ubuntu/games/eco/Logs/*"
@@ -92,6 +93,8 @@ code home/ubuntu/games/eco/
 
 Make your edits, again, consulting the wiki and online tutorials as needed. And then...
 
+### Sync Configs
+
 ```bash
 # to sync just the configs
 (cd home/ubuntu/games/eco/ && zip -r EcoConfigFolder.zip Configs)
@@ -102,6 +105,8 @@ invoke ssh --cmd "cd ~/games/eco && unzip -o EcoConfigFolder.zip"
 invoke ssh --cmd "rm -rf ~/games/eco/Config/.git*"
 invoke reboot
 ```
+
+### Sync Mods
 
 ```bash
 # to sync just the mods
@@ -185,7 +190,7 @@ Its download will look like: mightymoosecore_121-kzpm.zip
 We want to push that to our Eco server, and unzip it. Like so:
 
 ```bash
-cp /mnt/c/Users/$username/Downloads/mightymoosecore_121-kzpm.zip ~/Downloads/mightymoosecore.zip
+cp /mnt/c/Users/$WINDOWSUSERNAME/Downloads/mightymoosecore_121-kzpm.zip ~/Downloads/mightymoosecore.zip
 invoke push-asset-local --cd ~/Downloads mightymoosecore.zip
 invoke pull-asset-remote --cd /home/ubuntu/games/eco mightymoosecore.zip
 invoke ssh --cmd "cd /home/ubuntu/games/eco && unzip -o mightymoosecore.zip"
@@ -196,8 +201,105 @@ Then we download discord link, from here: https://mod.io/g/eco/m/discordlink
 We push that to our Eco server as well:
 
 ```bash
-cp /mnt/c/Users/firem/Downloads/discordlink_351-0ehu.zip ~/Downloads/discordlink.zip
+cp /mnt/c/Users/$WINDOWSUSERNAME/Downloads/discordlink_351-0ehu.zip ~/Downloads/discordlink.zip
 invoke push-asset-local --cd ~/Downloads discordlink.zip
 invoke pull-asset-remote --cd /home/ubuntu/games/eco discordlink.zip
 invoke ssh --cmd "cd /home/ubuntu/games/eco && unzip -o discordlink.zip"
 ```
+
+## 7. Configure NidToolBox
+
+The mod and its desired modules are available here:
+
+- https://mod.io/g/eco/m/nidtoolbox
+- https://mod.io/g/eco/m/nidtoolbox-clean-server-module
+- https://mod.io/g/eco/m/nidtoolbox-player-manager-module
+
+```bash
+cp /mnt/c/Users/$WINDOWSUSERNAME/Downloads/nid-core_2112-1kc8.zip ~/Downloads/nid-core.zip
+cp /mnt/c/Users/$WINDOWSUSERNAME/Downloads/nid-cleanserver_2111-c3i4.zip ~/Downloads/nid-cleanserver.zip
+cp /mnt/c/Users/$WINDOWSUSERNAME/Downloads/nid-playermanager_2112-ee7a.zip ~/Downloads/nidtoolbox-playermanager.zip
+invoke push-asset-local --cd ~/Downloads nid-core.zip
+invoke push-asset-local --cd ~/Downloads nid-cleanserver.zip
+invoke push-asset-local --cd ~/Downloads nidtoolbox-playermanager.zip
+invoke pull-asset-remote --cd /home/ubuntu/games/eco nid-core.zip
+invoke pull-asset-remote --cd /home/ubuntu/games/eco nid-cleanserver.zip
+invoke pull-asset-remote --cd /home/ubuntu/games/eco nidtoolbox-playermanager.zip
+invoke ssh --cmd "cd /home/ubuntu/games/eco && unzip -o nid-core.zip"
+invoke ssh --cmd "cd /home/ubuntu/games/eco && unzip -o nid-cleanserver.zip"
+invoke ssh --cmd "cd /home/ubuntu/games/eco && unzip -o nidtoolbox-playermanager.zip"
+```
+
+Then we need to create the configuration files. I'll post mine here for your reference:
+
+```bash
+mkdir -p home/ubuntu/games/eco/Configs/NidToolbox
+```
+
+```bash
+code home/ubuntu/games/eco/Configs/NidToolbox/GeneralSettings.json
+```
+
+```json
+// GeneralSettings.json
+{
+  "Info1": "NidToolbox Light: General settings.",
+  "Info2": "CommandFeedbackString appears in between brackets: [NidToolbox]: Some text.",
+  "Info3": "ServerTag is used in announcements as server name: SERVER: Some text. ",
+  "Info4": "ServerIconId is identifies server icon in assets. It shows in mail.",
+  "Info5": "ServerIconId can also be used on objects like signs and messages text in popups.",
+  "Info6": "-----------------------------------------------------------------------------------",
+  "CommandFeedbackString": "<color=#50C878>[NidToolbox]: ",
+  "ServerTag": "SERVER",
+  "ServerIconId": "NidToolbox",
+  "ForceTimezone": "Pacific Standard Time",
+  "BlackListed": false
+}
+```
+
+```bash
+code home/ubuntu/games/eco/Configs/NidToolbox/ServerCleaner.json
+```
+
+```json
+// ServerCleaner.json
+{
+  "Info1": "NidToolbox Light: Server Cleaner Settings.",
+  "Info2": "------------------------------------------",
+  "CleanPeriodically": false,
+  "CleanEveryMinutes": 1440.0,
+  "CleanAtScheduledTime": true,
+  "ScheduledTime": ["3:00"],
+  "CleanMiningRubble": true,
+  "CleanTreeDebris": true,
+  "CleanFallenTrees": false,
+  "CleanStumps": false,
+  "CleanTailingsNotContained": false,
+  "CleanTailingsInStorages": false,
+  "CleanWetTailingsNotContained": false,
+  "CleanWetTailingsInStorages": false,
+  "ReportInConsole": true,
+  "ReportInLog": true,
+  "BlackListed": false
+}
+```
+
+```bash
+code home/ubuntu/games/eco/Configs/NidToolbox/PlayerManager.json
+```
+
+```json
+// PlayerManager.json
+{
+  "Info1": "NidToolbox Light: Player Manager settings.",
+  "ShowIPinTooltip": true,
+  "ShowSteamIdinTooltip": true,
+  "ShowSlgIdInTooltip": true,
+  "ShowShopsInTooltip": true,
+  "EnableUserVehicleRescueCommand": true,
+  "UserVehicleCommandCooldownMinutes": 120.0,
+  "BlackListed": false
+}
+```
+
+Then we sync all of the configs, via the "Sync Configs" instructions above.
