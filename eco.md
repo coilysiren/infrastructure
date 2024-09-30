@@ -93,20 +93,26 @@ code home/ubuntu/games/eco/
 Make your edits, again, consulting the wiki and online tutorials as needed. And then...
 
 ```bash
-invoke ssh --cmd "rm -rf /home/ubuntu/games/eco/Mods/UserCode"
-invoke ssh --cmd "rm -rf /home/ubuntu/games/eco/Configs"
-
-(cd home/ubuntu/games/eco/ && zip -r EcoUserFolder.zip Mods/UserCode)
+# to sync just the configs
 (cd home/ubuntu/games/eco/ && zip -r EcoConfigFolder.zip Configs)
-
-invoke push-asset-local --cd home/ubuntu/games/eco/ EcoUserFolder.zip
 invoke push-asset-local --cd home/ubuntu/games/eco/ EcoConfigFolder.zip
-
-invoke pull-asset-remote --cd /home/ubuntu/games/eco/ EcoUserFolder.zip
 invoke pull-asset-remote --cd /home/ubuntu/games/eco/ EcoConfigFolder.zip
-
-invoke ssh --cmd "cd ~/games/eco && unzip -o EcoUserFolder.zip"
 invoke ssh --cmd "cd ~/games/eco && unzip -o EcoConfigFolder.zip"
+# TODO: something better than this
+invoke ssh --cmd "rm -rf ~/games/eco/Config/.git*"
+invoke reboot
+```
+
+```bash
+# to sync just the mods
+invoke ssh --cmd "rm -rf /home/ubuntu/games/eco/Mods/UserCode"
+(cd home/ubuntu/games/eco/ && zip -r EcoUserFolder.zip Mods/UserCode)
+invoke push-asset-local --cd home/ubuntu/games/eco/ EcoUserFolder.zip
+invoke pull-asset-remote --cd /home/ubuntu/games/eco/ EcoUserFolder.zip
+invoke ssh --cmd "cd ~/games/eco && unzip -o EcoUserFolder.zip"
+# TODO: something better than this
+invoke ssh --cmd "rm -rf ~/games/eco/Mods/UserCode/.git*"
+invoke reboot
 ```
 
 ## 5. Start the Eco Server
@@ -116,8 +122,7 @@ part! For our next step, we configure the server to use the API key.
 
 ```bash
 invoke ssh
-# TDOD add invoke ssh --comment to output the ssh command with some helpful text,
-#   instead of actually trying to ssh.
+# TDOD add invoke ssh --comment to output the ssh command with some helpful text, instead of actually trying to ssh.
 ```
 
 Take note of the command above. One line will start with "sso -o...". Exit your server,
@@ -170,3 +175,29 @@ invoke eco-tail
 ```
 
 Eventually it will succeed, and you'll start seeing Eco logs!
+
+## 6. Configure Discord Link
+
+Get the MightyMoose core library from here: https://mod.io/g/eco/m/mightymoosecore
+
+Its download will look like: mightymoosecore_121-kzpm.zip
+
+We want to push that to our Eco server, and unzip it. Like so:
+
+```bash
+cp /mnt/c/Users/$username/Downloads/mightymoosecore_121-kzpm.zip ~/Downloads/mightymoosecore.zip
+invoke push-asset-local --cd ~/Downloads mightymoosecore.zip
+invoke pull-asset-remote --cd /home/ubuntu/games/eco mightymoosecore.zip
+invoke ssh --cmd "cd /home/ubuntu/games/eco && unzip -o mightymoosecore.zip"
+```
+
+Then we download discord link, from here: https://mod.io/g/eco/m/discordlink
+
+We push that to our Eco server as well:
+
+```bash
+cp /mnt/c/Users/firem/Downloads/discordlink_351-0ehu.zip ~/Downloads/discordlink.zip
+invoke push-asset-local --cd ~/Downloads discordlink.zip
+invoke pull-asset-remote --cd /home/ubuntu/games/eco discordlink.zip
+invoke ssh --cmd "cd /home/ubuntu/games/eco && unzip -o discordlink.zip"
+```
