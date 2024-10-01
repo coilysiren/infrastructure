@@ -21,16 +21,6 @@ dm
 This will go into your `~/Downloads` folder. You'll want to rename it to something more reliable. Then push it into s3, then pull it onto your game server.
 
 ```bash
-# run on your local machine:
-mv ~/Downloads/EcoServerLinux_v0.11.0.6-beta.zip ~/Downloads/EcoServer.zip
-invoke push-asset-local EcoServer.zip # from local into an s3 bucket
-invoke pull-asset-remote EcoServer.zip # pulls from s3 bucket into the remote server
-# Why doesn't this use scp? There's a scp command in the same invoke file.
-```
-
-Inside Ubuntu on WSL that would be:
-
-```bash
 mkdir -p ~/Downloads
 cp /mnt/c/Users/$WINDOWSUSERNAME/Downloads/EcoServerLinux_v0.11.0.6-beta.zip ~/Downloads/EcoServer.zip
 invoke push-asset-local EcoServer.zip
@@ -55,7 +45,7 @@ invoke ssh --cmd "rm -rf /home/ubuntu/games/eco/Storage/*"
 invoke ssh --cmd "cd /home/ubuntu/games/eco/ && unzip -o EcoServer.zip"
 invoke ssh --cmd "chmod a+x /home/ubuntu/games/eco/EcoServer"
 invoke ssh --cmd "chmod a+x /home/ubuntu/games/eco/install.sh"
-invoke ssh --cmd "cd ~/games/eco && sudo ./install.sh"
+invoke ssh --cmd "cd /home/ubuntu/games/eco/ && sudo ./install.sh"
 ```
 
 ## 4. Configure Eco
@@ -66,7 +56,7 @@ various online tutorials to consult how to modify the files themselves. This doc
 only shows you how to push and pull the files back and forth.
 
 AT NOT POINT SHOULD YOU BE SHOWING PEOPLE THE FILES YOU ARE ABOUT TO SEE. ITS ILLEGAL.
-Which is to say, it is against Eco's license. You would be opening yourself up to
+which is to say, it is against Eco's license. You would be opening yourself up to
 lawsuits, and also you would just generally be a bad person.
 
 Here we go! The following commands were written for WSL and VSCode, the best text editor.
@@ -74,19 +64,19 @@ Here we go! The following commands were written for WSL and VSCode, the best tex
 ```bash
 # TODO: Add zip command into the AMI, and ripgrep while you are at it
 invoke ssh --cmd "cd ~/games && zip -r EcoCoreFolder.zip /home/ubuntu/games/eco/Mods/__core__/"
-invoke ssh --cmd "cd ~/games && zip -r EcoUserFolder.zip /home/ubuntu/games/eco/Mods/UserCode/"
+invoke ssh --cmd "cd ~/games && zip -r EcoUserModsFolder.zip /home/ubuntu/games/eco/Mods/UserCode/"
 invoke ssh --cmd "cd ~/games && zip -r EcoConfigFolder.zip /home/ubuntu/games/eco/Configs/"
 
 invoke push-asset-remote EcoCoreFolder.zip
-invoke push-asset-remote EcoUserFolder.zip
+invoke push-asset-remote EcoUserModsFolder.zip
 invoke push-asset-remote EcoConfigFolder.zip
 invoke pull-asset-local EcoCoreFolder.zip
-invoke pull-asset-local EcoUserFolder.zip
+invoke pull-asset-local EcoUserModsFolder.zip
 invoke pull-asset-local EcoConfigFolder.zip
 
 rm -rf home/ubuntu/games/eco
 unzip -o ~/Downloads/EcoCoreFolder.zip
-unzip -o ~/Downloads/EcoUserFolder.zip
+unzip -o ~/Downloads/EcoUserModsFolder.zip
 unzip -o ~/Downloads/EcoConfigFolder.zip
 code home/ubuntu/games/eco/
 ```
@@ -97,27 +87,24 @@ Make your edits, again, consulting the wiki and online tutorials as needed. And 
 
 ```bash
 # to sync just the configs
-(cd home/ubuntu/games/eco/ && zip -r EcoConfigFolder.zip Configs)
-invoke push-asset-local --cd home/ubuntu/games/eco/ EcoConfigFolder.zip
-invoke pull-asset-remote --cd /home/ubuntu/games/eco/ EcoConfigFolder.zip
-invoke ssh --cmd "cd ~/games/eco && unzip -o EcoConfigFolder.zip"
-# TODO: something better than this
-invoke ssh --cmd "rm -rf ~/games/eco/Config/.git*"
-invoke reboot
+  (cd home/ubuntu/games/eco/ && rm EcoConfigFolder.zip)
+  (cd home/ubuntu/games/eco/ && zip -r EcoConfigFolder.zip Configs -x "*.git*")
+  invoke push-asset-local --cd home/ubuntu/games/eco/ EcoConfigFolder.zip
+  invoke pull-asset-remote --cd /home/ubuntu/games/eco/ EcoConfigFolder.zip
+  invoke ssh --cmd "cd /home/ubuntu/games/eco/ && unzip -o EcoConfigFolder.zip"
+invoke eco-restart
 ```
 
 ### Sync Mods
 
 ```bash
 # to sync just the mods
-invoke ssh --cmd "rm -rf /home/ubuntu/games/eco/Mods/UserCode"
-(cd home/ubuntu/games/eco/ && zip -r EcoUserFolder.zip Mods/UserCode)
-invoke push-asset-local --cd home/ubuntu/games/eco/ EcoUserFolder.zip
-invoke pull-asset-remote --cd /home/ubuntu/games/eco/ EcoUserFolder.zip
-invoke ssh --cmd "cd ~/games/eco && unzip -o EcoUserFolder.zip"
-# TODO: something better than this
-invoke ssh --cmd "rm -rf ~/games/eco/Mods/UserCode/.git*"
-invoke reboot
+(cd home/ubuntu/games/eco/ && rm EcoUserModsFolder.zip)
+(cd home/ubuntu/games/eco/ && zip -r EcoUserModsFolder.zip Mods/UserCode -x "*.git*")
+invoke push-asset-local --cd home/ubuntu/games/eco/ EcoUserModsFolder.zip
+invoke pull-asset-remote --cd /home/ubuntu/games/eco/ EcoUserModsFolder.zip
+invoke ssh --cmd "cd /home/ubuntu/games/eco/ && unzip -o EcoUserModsFolder.zip"
+invoke eco-restart
 ```
 
 ## 5. Start the Eco Server
