@@ -116,8 +116,7 @@ As of late 2024 Eco servers require an API key to run. This is a good change on 
 part! For our next step, we configure the server to use the API key.
 
 ```bash
-invoke ssh
-# TDOD add invoke ssh --comment to output the ssh command with some helpful text, instead of actually trying to ssh.
+invoke ssh --comment
 ```
 
 Take note of the command above. One line will start with "sso -o...". Exit your server,

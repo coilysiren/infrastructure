@@ -25,6 +25,7 @@ def ssh(
     cmd="cd games/ && bash",
     ssh_add="ssh-add ~/.ssh/aws.pem",
     connection_attempts=5,
+    comment=False,
 ):
     ctx.run(ssh_add, echo=False)
     output = ec2.describe_instances(
@@ -34,11 +35,17 @@ def ssh(
         ]
     )
     ip_address = output["Reservations"][0]["Instances"][0]["PublicIpAddress"]
-    ctx.run(
-        f"ssh -o 'ConnectionAttempts {connection_attempts}' -t {user}@{ip_address} '{cmd}'",
-        pty=True,
-        echo=True,
-    )
+    if comment:
+        print("")
+        print("\tRun the following command to ssh into the server:")
+        print(f"\tssh -o 'ConnectionAttempts {connection_attempts}' -t {user}@{ip_address} '{cmd}'")
+        print("")
+    else:
+        ctx.run(
+            f"ssh -o 'ConnectionAttempts {connection_attempts}' -t {user}@{ip_address} '{cmd}'",
+            pty=True,
+            echo=True,
+        )
 
 @invoke.task
 def scp(
