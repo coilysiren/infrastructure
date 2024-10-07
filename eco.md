@@ -87,7 +87,7 @@ Make your edits, again, consulting the wiki and online tutorials as needed. And 
 
 ```bash
 # to sync just the configs
-(cd home/ubuntu/games/eco/ && rm -rf EcoConfigFolder.zip)
+rm -rf home/ubuntu/games/eco/EcoConfigFolder.zip
 (cd home/ubuntu/games/eco/ && zip -r EcoConfigFolder.zip Configs -x "*.git*")
 invoke push-asset-local --cd home/ubuntu/games/eco/ EcoConfigFolder.zip
 invoke pull-asset-remote --cd /home/ubuntu/games/eco/ EcoConfigFolder.zip
@@ -99,7 +99,7 @@ invoke eco-restart
 
 ```bash
 # to sync just the mods
-(cd home/ubuntu/games/eco/ && rm -rf EcoUserModsFolder.zip)
+rm -rf home/ubuntu/games/eco/EcoUserModsFolder.zip
 (cd home/ubuntu/games/eco/ && zip -r EcoUserModsFolder.zip Mods/UserCode -x "*.git*")
 invoke push-asset-local --cd home/ubuntu/games/eco/ EcoUserModsFolder.zip
 invoke pull-asset-remote --cd /home/ubuntu/games/eco/ EcoUserModsFolder.zip
