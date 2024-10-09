@@ -22,7 +22,7 @@ def ssh(
     ctx: invoke.Context,
     name="eco-server",
     user="ubuntu",
-    cmd="cd games/ && bash",
+    cmd="bash",
     ssh_add="ssh-add ~/.ssh/aws.pem",
     connection_attempts=5,
     comment=False,

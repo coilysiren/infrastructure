@@ -59,3 +59,11 @@ exactly once, when configuring a new game type, to format its EBS volume
 this command is dangerous because if can wipe your drive if there's already data in it!
 
 via https://unix.stackexchange.com/questions/315063/mount-wrong-fs-type-bad-option-bad-superblock
+
+TODO: add to AMI build inotify changes, eg:
+
+  /etc/sysctl.conf
+    fs.inotify.max_user_instances = 1024
+
+  /proc/sys/fs/inotify/max_user_instances
+    1024

@@ -74,11 +74,10 @@ invoke pull-asset-local EcoCoreFolder.zip
 invoke pull-asset-local EcoUserModsFolder.zip
 invoke pull-asset-local EcoConfigFolder.zip
 
-rm -rf home/ubuntu/games/eco
+cd home/ubuntu/games/eco
 unzip -o ~/Downloads/EcoCoreFolder.zip
 unzip -o ~/Downloads/EcoUserModsFolder.zip
 unzip -o ~/Downloads/EcoConfigFolder.zip
-code home/ubuntu/games/eco/
 ```
 
 Make your edits, again, consulting the wiki and online tutorials as needed. And then...
@@ -194,6 +193,50 @@ cp /mnt/c/Users/$WINDOWSUSERNAME/Downloads/discordlink_351-0ehu.zip ~/Downloads/
 invoke push-asset-local --cd ~/Downloads discordlink.zip
 invoke pull-asset-remote --cd /home/ubuntu/games/eco discordlink.zip
 invoke ssh --cmd "cd /home/ubuntu/games/eco && unzip -o discordlink.zip"
+```
+
+## 6. Configure Chronicler
+
+Get the MightyMoose core library from here: https://mod.io/g/eco/m/mightymoosecore
+
+Its download will look like: mightymoosecore_121-kzpm.zip
+
+We want to push that to our Eco server, and unzip it. Like so:
+
+```bash
+cp /mnt/c/Users/$WINDOWSUSERNAME/Downloads/mightymoosecore_121-kzpm.zip ~/Downloads/mightymoosecore.zip
+invoke push-asset-local --cd ~/Downloads mightymoosecore.zip
+invoke pull-asset-remote --cd /home/ubuntu/games/eco mightymoosecore.zip
+invoke ssh --cmd "cd /home/ubuntu/games/eco && unzip -o mightymoosecore.zip"
+```
+
+Then we download Chronicler, from here: https://mod.io/g/eco/m/chronicler
+
+We push that to our Eco server as well:
+
+```bash
+cp /mnt/c/Users/$WINDOWSUSERNAME/Downloads/chronicler_181-bldy.zip ~/Downloads/chronicler.zip
+invoke push-asset-local --cd ~/Downloads chronicler.zip
+invoke pull-asset-remote --cd /home/ubuntu/games/eco chronicler.zip
+invoke ssh --cmd "cd /home/ubuntu/games/eco && unzip -o chronicler.zip"
+```
+
+Chronicler requires SQLite. The instructions for that are here: https://forum.play.eco/thread/2217-guide-sqlite-chronicler-on-linux/
+
+The commands are replicated here for ease of use.
+
+TODO: install gcc on AMI
+
+```bash
+cp /mnt/c/Users/$WINDOWSUSERNAME/Downloads/sqlite-netFx-full-source-1.0.116.0.zip ~/Downloads/sqlite.zip
+invoke push-asset-local --cd ~/Downloads sqlite.zip
+invoke ssh --cmd "mkdir -p /home/ubuntu/software/sqlite"
+invoke pull-asset-remote --cd /home/ubuntu/software/sqlite sqlite.zip
+invoke ssh --cmd "cd /home/ubuntu/software/sqlite && unzip -o sqlite.zip"
+invoke ssh --cmd "cd /home/ubuntu/software/sqlite/Setup && chmod a+x ./compile-interop-assembly-release.sh"
+invoke ssh --cmd "cd /home/ubuntu/software/sqlite/Setup && ./compile-interop-assembly-release.sh"
+invoke ssh --cmd "sudo cp /home/ubuntu/software/sqlite/bin/2013/Release/bin/libSQLite.Interop.so /usr/lib"
+invoke ssh --cmd "rm /home/ubuntu/games/eco/Mods/MightyMoose/Chronicler/SQLite.Interop.dll"
 ```
 
 ## 7. Configure NidToolBox
