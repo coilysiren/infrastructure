@@ -69,65 +69,30 @@ Resources:
           ToPort: 3000
           CidrIpv6: ::/0
 
-        - Description: tcp 3001 ingress all IPv4
-          IpProtocol: tcp
+        - Description: 3001 ingress all IPv4
+          IpProtocol: -1
           FromPort: 3001
           ToPort: 3001
           CidrIp: 0.0.0.0/0
-        - Description: tcp 3001 ingress all IPv6
-          IpProtocol: tcp
-          FromPort: 3001
-          ToPort: 3001
-          CidrIpv6: ::/0
-        - Description: udp 3001 ingress all IPv4
-          IpProtocol: udp
-          FromPort: 3001
-          ToPort: 3001
-          CidrIp: 0.0.0.0/0
-        - Description: udp 3001 ingress all IPv6
-          IpProtocol: udp
+        - Description: 3001 ingress all IPv6
+          IpProtocol: -1
           FromPort: 3001
           ToPort: 3001
           CidrIpv6: ::/0
 
-        - Description: tcp 3001 ingress all IPv4
-          IpProtocol: tcp
+        - Description: 3002 ingress home IP
+          IpProtocol: -1
           FromPort: 3002
           ToPort: 3002
-          CidrIp: 0.0.0.0/0
-        - Description: tcp 3002 ingress all IPv6
-          IpProtocol: tcp
-          FromPort: 3002
-          ToPort: 3002
-          CidrIpv6: ::/0
-        - Description: udp 3002 ingress all IPv4
-          IpProtocol: udp
-          FromPort: 3002
-          ToPort: 3002
-          CidrIp: 0.0.0.0/0
-        - Description: udp 3002 ingress all IPv6
-          IpProtocol: udp
-          FromPort: 3002
-          ToPort: 3002
-          CidrIpv6: ::/0
+          CidrIp: !Ref HomeIP
 
-        - Description: tcp 3003 ingress all IPv4
-          IpProtocol: tcp
+        - Description: 3003 ingress all IPv4
+          IpProtocol: -1
           FromPort: 3003
           ToPort: 3003
           CidrIp: 0.0.0.0/0
-        - Description: tcp 3003 ingress all IPv6
-          IpProtocol: tcp
-          FromPort: 3003
-          ToPort: 3003
-          CidrIpv6: ::/0
-        - Description: udp 3003 ingress all IPv4
-          IpProtocol: udp
-          FromPort: 3003
-          ToPort: 3003
-          CidrIp: 0.0.0.0/0
-        - Description: udp 3003 ingress all IPv6
-          IpProtocol: udp
+        - Description: 3003 ingress all IPv6
+          IpProtocol: -1
           FromPort: 3003
           ToPort: 3003
           CidrIpv6: ::/0
