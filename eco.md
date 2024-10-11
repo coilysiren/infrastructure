@@ -109,6 +109,17 @@ invoke ssh --cmd "cd /home/ubuntu/games/eco/ && unzip -o EcoUserModsFolder.zip"
 invoke eco-restart
 ```
 
+### Sync Mods to mod.io
+
+```bash
+rm -rf home/ubuntu/games/eco/BunWulfBioChemical.zip
+(cd home/ubuntu/games/eco/ && zip -r BunWulfBioChemical.zip Mods/UserCode/BunWulfBioChemical/ -x "*.git*")
+rm -rf /mnt/c/Users/$WINDOWSUSERNAME/Downloads/BunWulfBioChemical.zip
+cp home/ubuntu/games/eco/BunWulfBioChemical.zip /mnt/c/Users/$WINDOWSUSERNAME/Downloads/BunWulfBioChemical.zip
+```
+
+https://mod.io/g/eco/m/bunwulf-biochemical/admin/settings
+
 ## 5. Start the Eco Server
 
 As of late 2024 Eco servers require an API key to run. This is a good change on their
