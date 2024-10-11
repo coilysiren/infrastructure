@@ -102,8 +102,8 @@ rm -rf home/ubuntu/games/eco/EcoUserModsFolder.zip
 (cd home/ubuntu/games/eco/ && zip -r EcoUserModsFolder.zip Mods/UserCode -x "*.git*")
 invoke push-asset-local --cd home/ubuntu/games/eco/ EcoUserModsFolder.zip
 invoke pull-asset-remote --cd /home/ubuntu/games/eco/ EcoUserModsFolder.zip
-# TODO: auto remove custom mods folders (eg. BunWulfChemical and DirtDecomposition etc)
-invoke ssh --cmd "rm -rf /home/ubuntu/games/eco/Mods/UserCode/BunWulfChemical/"
+# TODO: auto remove custom mods folders (eg. BunWulfBioChemical and DirtDecomposition etc)
+invoke ssh --cmd "rm -rf /home/ubuntu/games/eco/Mods/UserCode/DirtDecomposition/"
 invoke ssh --cmd "rm -rf /home/ubuntu/games/eco/Mods/UserCode/DirtDecomposition/"
 invoke ssh --cmd "cd /home/ubuntu/games/eco/ && unzip -o EcoUserModsFolder.zip"
 invoke eco-restart
