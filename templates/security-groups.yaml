@@ -16,15 +16,8 @@ Resources:
       GroupDescription: general ec2 security group
       VpcId: !Ref VPC
       SecurityGroupIngress:
-        - Description: allow ssh
-          IpProtocol: tcp
-          FromPort: 22
-          ToPort: 22
-          CidrIp: !Ref HomeIP
-        - Description: allow ping
-          IpProtocol: icmp
-          FromPort: 8
-          ToPort: -1
+        - Description: Allow all home access
+          IpProtocol: -1
           CidrIp: !Ref HomeIP
       SecurityGroupEgress:
         - Description: egress everywhere IPv4
@@ -78,23 +71,6 @@ Resources:
           IpProtocol: -1
           FromPort: 3001
           ToPort: 3001
-          CidrIpv6: ::/0
-
-        - Description: 3002 ingress home IP
-          IpProtocol: -1
-          FromPort: 3002
-          ToPort: 3002
-          CidrIp: !Ref HomeIP
-
-        - Description: 3003 ingress all IPv4
-          IpProtocol: -1
-          FromPort: 3003
-          ToPort: 3003
-          CidrIp: 0.0.0.0/0
-        - Description: 3003 ingress all IPv6
-          IpProtocol: -1
-          FromPort: 3003
-          ToPort: 3003
           CidrIpv6: ::/0
 
       Tags:

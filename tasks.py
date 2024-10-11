@@ -8,6 +8,7 @@ import textwrap
 import boto3
 import invoke
 import requests
+import rcon
 
 
 # docs: https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/ec2.html
@@ -16,6 +17,15 @@ ec2 = boto3.client("ec2")
 # docs: https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/ssm.html
 ssm = boto3.client("ssm")
 
+def get_ip_address(name: str):
+    output = ec2.describe_instances(
+        Filters=[
+            {"Name": "tag:Name", "Values": [name]},
+            {"Name": "instance-state-name", "Values": ["running"]},
+        ]
+    )
+    ip_address = output["Reservations"][0]["Instances"][0]["PublicIpAddress"]
+    return ip_address
 
 @invoke.task
 def ssh(
@@ -28,13 +38,7 @@ def ssh(
     comment=False,
 ):
     ctx.run(ssh_add, echo=False)
-    output = ec2.describe_instances(
-        Filters=[
-            {"Name": "tag:Name", "Values": [name]},
-            {"Name": "instance-state-name", "Values": ["running"]},
-        ]
-    )
-    ip_address = output["Reservations"][0]["Instances"][0]["PublicIpAddress"]
+    ip_address = get_ip_address(name)
     if comment:
         print("")
         print("\tRun the following command to ssh into the server:")
@@ -57,13 +61,7 @@ def scp(
 ):
     source = source if source else os.path.join(os.getcwd(), "configs/")
     destination = destination if destination else "/home/ubuntu/games/"
-    output = ec2.describe_instances(
-        Filters=[
-            {"Name": "tag:Name", "Values": [name]},
-            {"Name": "instance-state-name", "Values": ["running"]},
-        ]
-    )
-    ip_address = output["Reservations"][0]["Instances"][0]["PublicIpAddress"]
+    ip_address = get_ip_address(name)
     ctx.run(
         f"scp -r {source} {user}@{ip_address}:{destination}",
         pty=True,
@@ -257,13 +255,7 @@ def deploy_server(ctx: invoke.Context, name="eco-server"):
 
 @invoke.task
 def delete_server(ctx: invoke.Context, name="eco-server"):
-    output = ec2.describe_instances(
-        Filters=[
-            {"Name": "tag:Name", "Values": [name]},
-            {"Name": "instance-state-name", "Values": ["running"]},
-        ]
-    )
-    ip_address = output["Reservations"][0]["Instances"][0]["PublicIpAddress"]
+    ip_address = get_ip_address(name)
     # reload ssh key - required until I figured out ssh identity pinning
     ctx.run(
         f"ssh-keygen -R {ip_address}",
@@ -413,6 +405,11 @@ def terraria_clean_logs(
 # ECO SERVER STUFF #
 ####################
 
+def eco_rcon(args: list[str]):
+    ip_address = get_ip_address("eco-server")
+    with rcon.source.Client(ip_address, 3002, passwd=os.getenv("RCONPASSWORD")) as client:
+        response = client.run(*args)
+    print(response)
 
 @invoke.task
 def eco_tail(
@@ -431,3 +428,47 @@ def eco_restart(
         ctx,
         cmd="sudo systemctl restart eco-server",
     )
+
+@invoke.task
+def eco_announce(
+    ctx: invoke.Context,
+    msg: str,
+):
+    # https://wiki.play.eco/en/Chat_Commands
+    eco_rcon(["manage", "announce", msg])
+
+@invoke.task
+def eco_alert(
+    ctx: invoke.Context,
+    msg: str,
+):
+    # https://wiki.play.eco/en/Chat_Commands
+    eco_rcon(["manage", "alert", msg])
+
+@invoke.task
+def eco_players(
+    ctx: invoke.Context,
+):
+    # https://wiki.play.eco/en/Chat_Commands
+    eco_rcon(["manage", "players"])
+
+@invoke.task
+def eco_listusers(
+    ctx: invoke.Context,
+):
+    # https://wiki.play.eco/en/Chat_Commands
+    eco_rcon(["manage", "listusers"])
+
+@invoke.task
+def eco_listadmins(
+    ctx: invoke.Context,
+):
+    # https://wiki.play.eco/en/Chat_Commands
+    eco_rcon(["manage", "listadmins"])
+
+@invoke.task
+def eco_save(
+    ctx: invoke.Context,
+):
+    # https://wiki.play.eco/en/Chat_Commands
+    eco_rcon(["manage", "save"])
