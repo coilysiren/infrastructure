@@ -63,12 +63,12 @@ Resources:
           CidrIpv6: ::/0
 
         - Description: 3001 ingress all IPv4
-          IpProtocol: -1
+          IpProtocol: "-1"
           FromPort: 3001
           ToPort: 3001
           CidrIp: 0.0.0.0/0
         - Description: 3001 ingress all IPv6
-          IpProtocol: -1
+          IpProtocol: "-1"
           FromPort: 3001
           ToPort: 3001
           CidrIpv6: ::/0
