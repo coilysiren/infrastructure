@@ -71,7 +71,7 @@ build {
     script = "./scripts/setup-ami-p1.sh"
   }
 
-  # run scripts that are repeatable
+  # run scripts that are repeatable and failure prone
   provisioner "shell" {
     max_retries = 5
     environment_vars = [
