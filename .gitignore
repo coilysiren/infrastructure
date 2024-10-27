@@ -5,8 +5,8 @@ venv
 *.zip
 home/
 
-eco/configs/*
-eco/data/*
-eco/downloads/*
-eco/mods/*
-eco/source/*
+eco-server/configs/*
+eco-server/data/*
+eco-server/downloads/*
+eco-server/mods/*
+eco-server/source/*

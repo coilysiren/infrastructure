@@ -11,4 +11,16 @@ RUN chmod +x ./scripts/*
 # we don't need sudo, but it provides compatibility with the AMI build script
 RUN apt-get update && apt-get -y install sudo
 
-RUN ./scripts/setup-shared.sh docker
+RUN ./scripts/setup-shared.sh
+
+RUN mkdir -p eco
+
+WORKDIR /home/ubuntu/eco
+
+COPY --from=source . .
+
+RUN rm EcoServerLinux*.zip
+
+RUN chmod a+x install.sh
+
+RUN ./install.sh

@@ -20,6 +20,8 @@ ssm = boto3.client("ssm")
 # https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/sts.html#sts
 sts = boto3.client("sts")
 
+WINDOWS_USERNAME = "firem"
+
 def get_ip_address(name: str):
     output = ec2.describe_instances(
         Filters=[
@@ -119,6 +121,80 @@ def deploy_shared(ctx: invoke.Context, name="eco-server"):
     )
 
 @invoke.task
+def copy_build_assets(ctx: invoke.Context):
+    ctx.run(
+        textwrap.dedent(
+            f"""
+            rm -rf ./eco-server/source/EcoServerLinux.zip
+            """
+        ),
+        pty=True,
+        echo=True,
+    )
+
+    ctx.run(
+        textwrap.dedent(
+            f"""
+            rm -rf /mnt/c/Users/{WINDOWS_USERNAME}/Downloads/EcoServerLinux*.zip
+            """
+        ),
+        pty=True,
+        echo=True,
+    )
+
+    ctx.run(
+        textwrap.dedent(
+            f"""
+            rm -rf ./eco-server/source/*
+            """
+        ),
+        pty=True,
+        echo=True,
+    )
+
+    input("Go download the Eco linux server from play.eco, then press enter to continue.")
+
+    ctx.run(
+        textwrap.dedent(
+            f"""
+            cp /mnt/c/Users/{WINDOWS_USERNAME}/Downloads/EcoServerLinux*.zip ./eco-server/source
+            """
+        ),
+        pty=True,
+        echo=True,
+    )
+
+    ctx.run(
+        textwrap.dedent(
+            f"""
+            cp /mnt/c/Users/{WINDOWS_USERNAME}/Downloads/EcoServerLinux*.zip ./eco-server/source/EcoServerLinux.zip
+            """
+        ),
+        pty=True,
+        echo=True,
+    )
+
+    ctx.run(
+        textwrap.dedent(
+            f"""
+            unzip ./eco-server/source/EcoServerLinux.zip -d ./eco-server/source/
+            """
+        ),
+        pty=True,
+        echo=True,
+    )
+
+    ctx.run(
+        textwrap.dedent(
+            f"""
+            rm -rf ./eco-server/source/EcoServerLinux.zip
+            """
+        ),
+        pty=True,
+        echo=True,
+    )
+
+@invoke.task
 def build_image(ctx: invoke.Context, env="dev", name="eco-server"):
     account_id = sts.get_caller_identity()["Account"]
 
@@ -141,6 +217,7 @@ def build_image(ctx: invoke.Context, env="dev", name="eco-server"):
         docker buildx build \
             --progress plain \
             --build-context scripts=scripts \
+            --build-context source={name}/source \
             --tag {account_id}.dkr.ecr.us-east-1.amazonaws.com/{name}-ecr:{env} \
             ./{name}/.
         """,
