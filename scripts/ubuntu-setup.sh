@@ -24,11 +24,16 @@ sudo apt-get install -qq -y --no-install-recommends \
   unattended-upgrades \
   multitail \
   screen \
+  ripgrep \
+  unzip \
+  gcc \
   moreutils
 
 # generate bashrc
 true >/home/ubuntu/.bashrc
 echo 'export PATH="/home/ubuntu/.local/bin:$PATH"' |
+  sponge -a /home/ubuntu/.bashrc
+echo 'alias python=python3' |
   sponge -a /home/ubuntu/.bashrc
 echo 'export TERM=xterm' |
   sponge -a /home/ubuntu/.bashrc
@@ -52,16 +57,6 @@ unzip -qq -u awscliv2.zip
 sudo ./aws/install --update
 aws --version
 aws configure set default.region us-east-1
-
-# python packages
-sudo mv -vn /tmp/requirements.txt /home/ubuntu/requirements.txt
-python3 -m pip install -q -r /home/ubuntu/requirements.txt
-
-# invoke / tasks.py
-sudo mv -vn /tmp/tasks.py /home/ubuntu/tasks.py
-chmod a+x /home/ubuntu/tasks.py
-cd /home/ubuntu/
-invoke --list
 
 # game server systemd services and startup scripts
 sudo mkdir -p /home/ubuntu/scripts
