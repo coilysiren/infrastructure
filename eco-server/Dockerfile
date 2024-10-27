@@ -1,6 +1,4 @@
-ARG UBUNTU_VERSION
-
-FROM ubuntu:$UBUNTU_VERSION
+FROM ubuntu:22.04
 
 ENV DEBIAN_FRONTEND=noninteractive
 

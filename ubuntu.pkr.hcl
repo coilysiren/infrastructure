@@ -22,7 +22,7 @@ source "amazon-ebs" "ubuntu-packer" {
   // view subscriptions here:
   // https://us-east-1.console.aws.amazon.com/marketplace/home?region=us-east-1#/subscriptions
   source_ami            = "ami-011079f19d63f2405"
-  ami_name              = "ubuntu-packer"
+  ami_name              = "ubuntu-packer-${var.env}"
   instance_type         = "t3.micro"
   region                = "us-east-1"
   ssh_username          = "ubuntu"
