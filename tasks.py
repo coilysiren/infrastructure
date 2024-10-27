@@ -85,7 +85,7 @@ def tail(
     )
 
 @invoke.task
-def deploy_shared(ctx: invoke.Context):
+def deploy_shared(ctx: invoke.Context, name="eco-server"):
     ctx.run(
         textwrap.dedent(
             """
@@ -121,8 +121,22 @@ def deploy_shared(ctx: invoke.Context):
     )
 
 @invoke.task
-def build_image(ctx: invoke.Context, name="eco-server", env="dev"):
+def build_image(ctx: invoke.Context, env="dev", name="eco-server"):
     account_id = sts.get_caller_identity()["Account"]
+
+    ctx.run(
+        textwrap.dedent(
+            f"""
+            aws cloudformation validate-template --template-body file://templates/ecr.yaml && \
+            aws cloudformation deploy \
+                --template-file templates/ecr.yaml \
+                --stack-name {name}-ecr \
+                --no-fail-on-empty-changeset
+            """
+        ),
+        pty=True,
+        echo=True,
+    )
 
     ctx.run(
         f"""
@@ -195,23 +209,7 @@ def deploy_apex_dns(ctx: invoke.Context):
     )
 
 @invoke.task
-def deploy_assets(ctx: invoke.Context, name="eco-server"):
-    ctx.run(
-        textwrap.dedent(
-            f"""
-            aws cloudformation validate-template --template-body file://templates/ecr.yaml && \
-            aws cloudformation deploy \
-                --template-file templates/ecr.yaml \
-                --stack-name {name}-ecr \
-                --no-fail-on-empty-changeset
-            """
-        ),
-        pty=True,
-        echo=True,
-    )
-
-@invoke.task
-def deploy_server(ctx: invoke.Context, name="eco-server"):
+def deploy_server(ctx: invoke.Context, env="dev", name="eco-server"):
     deploy_shared(ctx)
 
     ctx.run(
@@ -221,8 +219,8 @@ def deploy_server(ctx: invoke.Context, name="eco-server"):
             aws cloudformation deploy \
                 --template-file templates/dns.yaml \
                 --parameter-overrides \
-                    Name={name} \
-                --stack-name {name}-dns \
+                    Name={name}-{env} \
+                --stack-name {name}-{env}-dns \
                 --no-fail-on-empty-changeset
             """
         ),
@@ -237,8 +235,8 @@ def deploy_server(ctx: invoke.Context, name="eco-server"):
             aws cloudformation deploy \
                 --template-file templates/volume.yaml \
                 --parameter-overrides \
-                    Name={name} \
-                --stack-name {name}-volume \
+                    Name={name}-{env} \
+                --stack-name {name}-{env}-volume \
                 --no-fail-on-empty-changeset
             """
         ),
@@ -249,21 +247,21 @@ def deploy_server(ctx: invoke.Context, name="eco-server"):
     # get AMI
     response = ec2.describe_images(
         Filters=[
-            {"Name": "name", "Values": ["ubuntu-packer"]},
+            {"Name": "name", "Values": [f"ubuntu-packer-{env}"]},
         ],
     )
     ubuntu_ami = response["Images"][0]["ImageId"]
 
     # get EBS volume
     response = ssm.get_parameter(
-        Name=f"/cfn/{name}/ebs-vol",
+        Name=f"/cfn/{name}-{env}/ebs-vol",
         WithDecryption=True,
     )
     ebs_volume = response["Parameter"]["Value"]
 
     # get EIP id
     response = ssm.get_parameter(
-        Name=f"/cfn/{name}/eip-id",
+        Name=f"/cfn/{name}-{env}/eip-id",
         WithDecryption=True,
     )
     eip_ip = response["Parameter"]["Value"]
@@ -281,6 +279,11 @@ def deploy_server(ctx: invoke.Context, name="eco-server"):
     )
     security_groups.append(response["Parameter"]["Value"])
 
+    if env == "dev":
+        InstanceType = "t3.medium"
+    else:
+        InstanceType = "t3.large"
+
     ctx.run(
         textwrap.dedent(
             f"""
@@ -288,45 +291,19 @@ def deploy_server(ctx: invoke.Context, name="eco-server"):
             aws cloudformation deploy \
                 --template-file templates/instance.yaml \
                 --parameter-overrides \
-                    Name={name} \
+                    Name={name}-{env} \
                     Volume={ebs_volume} \
                     AMI={ubuntu_ami} \
                     EIPAllocationId={eip_ip} \
                     SecurityGroups={",".join(security_groups)} \
-                --stack-name {name} \
+                    InstanceType={InstanceType} \
+                --stack-name {name}-{env}-instance \
                 --no-fail-on-empty-changeset
             """
         ),
         pty=True,
         echo=True,
     )
-
-@invoke.task
-def delete_server(ctx: invoke.Context, name="eco-server"):
-    ip_address = get_ip_address(name)
-    # reload ssh key - required until I figured out ssh identity pinning
-    ctx.run(
-        f"ssh-keygen -R {ip_address}",
-        pty=True,
-        echo=True,
-    )
-    ctx.run(
-        f"aws cloudformation delete-stack --stack-name {name}",
-        pty=True,
-        echo=True,
-    )
-    ctx.run(
-        f"aws cloudformation wait stack-delete-complete --stack-name {name}",
-        pty=True,
-        echo=True,
-    )
-
-@invoke.task
-def redeploy(ctx: invoke.Context, name="eco-server"):
-    delete_server(ctx, name)
-    deploy_shared(ctx)
-    deploy_assets(ctx, name)
-    deploy_server(ctx, name)
 
 @invoke.task
 def push_asset_local(

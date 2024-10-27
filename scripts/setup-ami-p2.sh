@@ -32,6 +32,7 @@ sudo apt-get install -qq -y --no-install-recommends \
 sudo usermod -aG docker ubuntu
 newgrp docker
 sudo su ubuntu
+mkdir -p /home/ubuntu/.docker
 sudo chown ubuntu:ubuntu /home/ubuntu/.docker -R
 sudo chmod g+rwx /home/ubuntu/.docker -R
 
