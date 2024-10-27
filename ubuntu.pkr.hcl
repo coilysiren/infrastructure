@@ -68,11 +68,18 @@ build {
   }
 
   provisioner "shell" {
+    environment_vars = [
+      "DEBIAN_FRONTEND=noninteractive",
+    ]
+    script = "./scripts/setup-ami-p1.sh"
+  }
+
+  provisioner "shell" {
     max_retries = 5
     environment_vars = [
       "DEBIAN_FRONTEND=noninteractive",
     ]
-    script = "./scripts/setup-ami.sh"
+    script = "./scripts/setup-ami-p2.sh"
   }
 
   # warms up the docker cache

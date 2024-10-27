@@ -4,22 +4,13 @@
 
 set -eux
 
-# make logs dir world writeable
-sudo chmod 777 /var/log/
-sudo chown -R ubuntu /var/log/
-
-# move scripts files
-mkdir -p /home/ubuntu/scripts
-mv -vn /tmp/scripts/* /home/ubuntu/scripts/
-
-# move systemd service files
-sudo mv -vn /tmp/systemd/* /etc/systemd/system/
-
-# allow running scripts
-chmod a+x /home/ubuntu/scripts/*
-
 # runs docker + AMI shared install scripts
 /home/ubuntu/scripts/setup-shared.sh
+
+# setup docker permissions for ubuntu user
+sudo groupadd docker
+sudo usermod -aG docker ubuntu
+newgrp docker
 
 # Add Docker's official GPG key:
 sudo apt-get update -qq
@@ -42,3 +33,7 @@ sudo apt-get install -qq -y --no-install-recommends \
   containerd.io \
   docker-buildx-plugin \
   docker-compose-plugin
+
+# start docker on boot
+sudo systemctl enable docker.service
+sudo systemctl enable containerd.service
