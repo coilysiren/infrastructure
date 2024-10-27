@@ -11,6 +11,14 @@ packer {
   }
 }
 
+variable "env" {
+  type = string
+}
+
+variable "ubuntu_version" {
+  type = string
+}
+
 source "amazon-ebs" "ubuntu-packer" {
   // latest x86 64 bit ubuntu LTS AMI from Canonical:
   // https://aws.amazon.com/marketplace/search/results?CREATOR=565feec9-3d43-413e-9760-c651546613f2&AMI_ARCHITECTURE=x86_64&REGION=us-east-1&FULFILLMENT_OPTION_TYPE=AMAZON_MACHINE_IMAGE&AMI_OPERATING_SYSTEM=UBUNTU&filters=CREATOR%2CAMI_ARCHITECTURE%2CREGION%2CFULFILLMENT_OPTION_TYPE%2CAMI_OPERATING_SYSTEM
@@ -28,24 +36,35 @@ source "amazon-ebs" "ubuntu-packer" {
 }
 
 build {
-  name = "ubuntu-packer"
+  name = "ubuntu-packer-${var.env}"
   sources = [
     "source.amazon-ebs.ubuntu-packer"
   ]
 
+  provisioner "shell" {
+    inline = [
+      "mkdir -p /tmp/scripts",
+    ]
+  }
+
   provisioner "file" {
     sources = [
-      "assets/",
+      "scripts/",
     ]
-    destination = "/tmp/"
+    destination = "/tmp/scripts/"
   }
 
   provisioner "shell" {
-    max_retries = 5
-    environment_vars = [
-      "DEBIAN_FRONTEND=noninteractive",
+    inline = [
+      "mkdir -p /tmp/systemd",
     ]
-    script = "ls"
+  }
+
+  provisioner "file" {
+    sources = [
+      "systemd/",
+    ]
+    destination = "/tmp/systemd/"
   }
 
   provisioner "shell" {
@@ -54,5 +73,12 @@ build {
       "DEBIAN_FRONTEND=noninteractive",
     ]
     script = "./scripts/setup-ami.sh"
+  }
+
+  # warms up the docker cache
+  provisioner "shell" {
+    inline = [
+      "docker pull ubuntu:${var.ubuntu_version}",
+    ]
   }
 }

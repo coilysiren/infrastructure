@@ -20,6 +20,8 @@ ssm = boto3.client("ssm")
 # https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/sts.html#sts
 sts = boto3.client("sts")
 
+UBUNTU_VERSION = "22.04"
+
 def get_ip_address(name: str):
     output = ec2.describe_instances(
         Filters=[
@@ -125,6 +127,7 @@ def build_image(ctx: invoke.Context, name="eco-server", env="dev"):
     ctx.run(
         f"""
         docker buildx build \
+            --build-arg UBUNTU_VERSION={UBUNTU_VERSION} \
             --progress plain \
             --build-context scripts=scripts \
             --tag {account_id}.dkr.ecr.us-east-1.amazonaws.com/{name}-ecr:{env} \
@@ -151,25 +154,27 @@ def build_image(ctx: invoke.Context, name="eco-server", env="dev"):
     )
 
 @invoke.task
-def build_ami(ctx: invoke.Context, name="eco-server", env="dev"):
+def build_ami(ctx: invoke.Context, env="dev"):
     ctx.run(
-        "packer init .",
-        pty=True,
-        echo=True,
-    )
-    ctx.run(
-        "packer fmt .",
-        pty=True,
-        echo=True,
-    )
-    ctx.run(
-        "packer validate .",
+        "packer init ubuntu.pkr.hcl",
         pty=True,
         echo=True,
     )
 
     ctx.run(
-        "packer build ubuntu.pkr.hcl",
+        "packer fmt ubuntu.pkr.hcl",
+        pty=True,
+        echo=True,
+    )
+
+    ctx.run(
+        f"packer validate -var ubuntu_version={UBUNTU_VERSION} -var env={env} ubuntu.pkr.hcl",
+        pty=True,
+        echo=True,
+    )
+
+    ctx.run(
+        f"packer build -var ubuntu_version={UBUNTU_VERSION} -var env={env} ubuntu.pkr.hcl",
         pty=True,
         echo=True,
     )
