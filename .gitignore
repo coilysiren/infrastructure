@@ -6,7 +6,5 @@ venv
 home/
 
 eco-server/configs/*
-eco-server/data/*
-eco-server/downloads/*
-eco-server/mods/*
+# eco-server/mods/*
 eco-server/source/*
