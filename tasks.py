@@ -219,7 +219,9 @@ def deploy_server(ctx: invoke.Context, env="dev", name="eco-server"):
             aws cloudformation deploy \
                 --template-file templates/dns.yaml \
                 --parameter-overrides \
-                    Name={dns_name}{env_suffix} \
+                    Name={name} \
+                    Env={env} \
+                    DnsName={dns_name}{env_suffix} \
                 --stack-name {name}-{env}-dns \
                 --no-fail-on-empty-changeset
             """

@@ -3,7 +3,10 @@ AWSTemplateFormatVersion: "2010-09-09"
 Parameters:
   Name:
     Type: String
-    Description: name of the server
+  DnsName:
+    Type: String
+  Env:
+    Type: String
 
 Resources:
   # docs: https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-properties-ec2-eip.html
@@ -18,7 +21,7 @@ Resources:
   RecordSet:
     Type: AWS::Route53::RecordSet
     Properties:
-      Name: !Sub ${Name}.coilysiren.me.
+      Name: !Sub ${DnsName}.coilysiren.me.
       HostedZoneName: coilysiren.me.
       TTL: 60
       Type: A
@@ -28,7 +31,7 @@ Resources:
   EIPParam:
     Type: AWS::SSM::Parameter
     Properties:
-      Name: !Sub /cfn/${Name}/eip-id
+      Name: !Sub /cfn/${Name}-${Env}/eip-id
       Type: String
       Value: !GetAtt EIP.AllocationId
 
