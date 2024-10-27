@@ -45,6 +45,6 @@ build {
     environment_vars = [
       "DEBIAN_FRONTEND=noninteractive",
     ]
-    script = "./scripts/ubuntu-setup.sh"
+    script = "./scripts/setup-ami.sh"
   }
 }

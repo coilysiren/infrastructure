@@ -17,6 +17,9 @@ ec2 = boto3.client("ec2")
 # docs: https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/ssm.html
 ssm = boto3.client("ssm")
 
+# https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/sts.html#sts
+sts = boto3.client("sts")
+
 def get_ip_address(name: str):
     output = ec2.describe_instances(
         Filters=[
@@ -116,7 +119,37 @@ def deploy_shared(ctx: invoke.Context):
     )
 
 @invoke.task
-def build(ctx: invoke.Context):
+def build(ctx: invoke.Context, name="eco-server", env="dev"):
+    account_id = sts.get_caller_identity()["Account"]
+
+    ctx.run(
+        f"""
+        docker buildx build \
+            --progress plain \
+            --build-context cwd=. \
+            --tag {account_id}.dkr.ecr.us-east-1.amazonaws.com/{name}-ecr:{env} \
+            ./{name}/.
+        """,
+        pty=True,
+        echo=True,
+    )
+
+    ctx.run(
+        f"""
+        aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin {account_id}.dkr.ecr.us-east-1.amazonaws.com
+        """,
+        pty=True,
+        echo=True,
+    )
+
+    ctx.run(
+        f"""
+        docker push {account_id}.dkr.ecr.us-east-1.amazonaws.com/{name}-ecr:{env}
+        """,
+        pty=True,
+        echo=True,
+    )
+
     ctx.run(
         "shellcheck ./scripts/*",
         pty=True,
