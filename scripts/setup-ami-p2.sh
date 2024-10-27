@@ -7,11 +7,6 @@ set -eux
 # runs docker + AMI shared install scripts
 /home/ubuntu/scripts/setup-shared.sh
 
-# setup docker permissions for ubuntu user
-sudo groupadd docker
-sudo usermod -aG docker ubuntu
-newgrp docker
-
 # Add Docker's official GPG key:
 sudo apt-get update -qq
 sudo apt-get install ca-certificates curl
@@ -33,6 +28,10 @@ sudo apt-get install -qq -y --no-install-recommends \
   containerd.io \
   docker-buildx-plugin \
   docker-compose-plugin
+
+# setup docker permissions for ubuntu user
+sudo usermod -aG docker ubuntu
+newgrp docker
 
 # start docker on boot
 sudo systemctl enable docker.service

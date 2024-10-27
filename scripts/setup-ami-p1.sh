@@ -16,8 +16,3 @@ sudo mv -vn /tmp/systemd/* /etc/systemd/system/
 # allow running scripts
 chmod a+x /home/ubuntu/scripts/*
 
-# setup docker permissions for ubuntu user
-sudo groupadd docker
-sudo usermod -aG docker ubuntu
-newgrp docker
-
