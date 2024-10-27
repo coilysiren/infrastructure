@@ -62,7 +62,6 @@ lawsuits, and also you would just generally be a bad person.
 Here we go! The following commands were written for WSL and VSCode, the best text editor.
 
 ```bash
-# TODO: Add zip command into the AMI, and ripgrep while you are at it
 invoke ssh --cmd "cd ~/games && zip -r EcoCoreFolder.zip /home/ubuntu/games/eco/Mods/__core__/"
 invoke ssh --cmd "cd ~/games && zip -r EcoUserModsFolder.zip /home/ubuntu/games/eco/Mods/UserCode/"
 invoke ssh --cmd "cd ~/games && zip -r EcoConfigFolder.zip /home/ubuntu/games/eco/Configs/"
@@ -236,8 +235,6 @@ invoke ssh --cmd "cd /home/ubuntu/games/eco && unzip -o chronicler.zip"
 Chronicler requires SQLite. The instructions for that are here: https://forum.play.eco/thread/2217-guide-sqlite-chronicler-on-linux/
 
 The commands are replicated here for ease of use.
-
-TODO: install gcc on AMI
 
 ```bash
 cp /mnt/c/Users/$WINDOWSUSERNAME/Downloads/sqlite-netFx-full-source-1.0.116.0.zip ~/Downloads/sqlite.zip
