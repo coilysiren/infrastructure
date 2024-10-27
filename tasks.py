@@ -47,6 +47,7 @@ def ssh(
     else:
         ctx.run(
             f"ssh -o 'ConnectionAttempts {connection_attempts}' -t {user}@{ip_address} '{cmd}'",
+            pty=True,
             echo=True,
         )
 
@@ -63,6 +64,7 @@ def scp(
     ip_address = get_ip_address(name)
     ctx.run(
         f"scp -r {source} {user}@{ip_address}:{destination}",
+        pty=True,
         echo=True,
     )
 
@@ -90,6 +92,7 @@ def deploy_shared(ctx: invoke.Context):
                 --no-fail-on-empty-changeset
             """
         ),
+        pty=True,
         echo=True,
     )
 
@@ -108,6 +111,7 @@ def deploy_shared(ctx: invoke.Context):
                 --no-fail-on-empty-changeset
             """
         ),
+        pty=True,
         echo=True,
     )
 
@@ -115,19 +119,23 @@ def deploy_shared(ctx: invoke.Context):
 def build(ctx: invoke.Context):
     ctx.run(
         "shellcheck ./scripts/*",
+        pty=True,
         echo=True,
     )
 
     ctx.run(
         "packer init .",
+        pty=True,
         echo=True,
     )
     ctx.run(
         "packer fmt .",
+        pty=True,
         echo=True,
     )
     ctx.run(
         "packer validate .",
+        pty=True,
         echo=True,
     )
 
@@ -135,6 +143,7 @@ def build(ctx: invoke.Context):
 
     ctx.run(
         "packer build ubuntu.pkr.hcl",
+        pty=True,
         echo=True,
     )
 
@@ -149,6 +158,7 @@ def deploy_apex_dns(ctx: invoke.Context):
                 --stack-name apex-dns
             """
         ),
+        pty=True,
         echo=True,
     )
 
@@ -164,6 +174,7 @@ def deploy_assets(ctx: invoke.Context, name="eco-server"):
                 --no-fail-on-empty-changeset
             """
         ),
+        pty=True,
         echo=True,
     )
 
@@ -183,6 +194,7 @@ def deploy_server(ctx: invoke.Context, name="eco-server"):
                 --no-fail-on-empty-changeset
             """
         ),
+        pty=True,
         echo=True,
     )
 
@@ -198,6 +210,7 @@ def deploy_server(ctx: invoke.Context, name="eco-server"):
                 --no-fail-on-empty-changeset
             """
         ),
+        pty=True,
         echo=True,
     )
 
@@ -252,6 +265,7 @@ def deploy_server(ctx: invoke.Context, name="eco-server"):
                 --no-fail-on-empty-changeset
             """
         ),
+        pty=True,
         echo=True,
     )
 
@@ -261,14 +275,17 @@ def delete_server(ctx: invoke.Context, name="eco-server"):
     # reload ssh key - required until I figured out ssh identity pinning
     ctx.run(
         f"ssh-keygen -R {ip_address}",
+        pty=True,
         echo=True,
     )
     ctx.run(
         f"aws cloudformation delete-stack --stack-name {name}",
+        pty=True,
         echo=True,
     )
     ctx.run(
         f"aws cloudformation wait stack-delete-complete --stack-name {name}",
+        pty=True,
         echo=True,
     )
 
@@ -289,6 +306,7 @@ def push_asset_local(
     def cmd():
         ctx.run(
             f"aws s3 cp {download} s3://{bucket}/downloads/{download}",
+            pty=True,
             echo=True,
         )
 
@@ -338,6 +356,7 @@ def pull_asset_local(
 ):
     ctx.run(
         f"aws s3 cp s3://{bucket}/downloads/{download} ~/Downloads/",
+        pty=True,
         echo=True,
     )
 
