@@ -67,6 +67,7 @@ build {
     destination = "/tmp/systemd/"
   }
 
+  # run scripts that aren't repeatable
   provisioner "shell" {
     environment_vars = [
       "DEBIAN_FRONTEND=noninteractive",
@@ -74,6 +75,7 @@ build {
     script = "./scripts/setup-ami-p1.sh"
   }
 
+  # run scripts that are repeatable
   provisioner "shell" {
     max_retries = 5
     environment_vars = [

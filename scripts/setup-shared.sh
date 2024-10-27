@@ -21,6 +21,7 @@ sudo apt-get install -qq -y --no-install-recommends \
   unzip \
   gcc \
   curl \
+  ca-certificates \
   moreutils
 
 # generate bashrc

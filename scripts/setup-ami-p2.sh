@@ -9,7 +9,6 @@ set -eux
 
 # Add Docker's official GPG key:
 sudo apt-get update -qq
-sudo apt-get install ca-certificates curl
 sudo install -m 0755 -d /etc/apt/keyrings
 sudo curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
 sudo chmod a+r /etc/apt/keyrings/docker.asc
@@ -32,6 +31,9 @@ sudo apt-get install -qq -y --no-install-recommends \
 # setup docker permissions for ubuntu user
 sudo usermod -aG docker ubuntu
 newgrp docker
+sudo su ubuntu
+sudo chown ubuntu:ubuntu /home/ubuntu/.docker -R
+sudo chmod g+rwx /home/ubuntu/.docker -R
 
 # start docker on boot
 sudo systemctl enable docker.service
