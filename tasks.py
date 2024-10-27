@@ -209,6 +209,9 @@ def deploy_apex_dns(ctx: invoke.Context):
 def deploy_server(ctx: invoke.Context, env="dev", name="eco-server"):
     deploy_shared(ctx)
 
+    dns_name = name.split("-")[0]
+    env_suffix = "-dev" if env == "dev" else ""
+
     ctx.run(
         textwrap.dedent(
             f"""
@@ -216,7 +219,7 @@ def deploy_server(ctx: invoke.Context, env="dev", name="eco-server"):
             aws cloudformation deploy \
                 --template-file templates/dns.yaml \
                 --parameter-overrides \
-                    Name={name}-{env} \
+                    Name={dns_name}{env_suffix} \
                 --stack-name {name}-{env}-dns \
                 --no-fail-on-empty-changeset
             """
