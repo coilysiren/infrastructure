@@ -45,6 +45,14 @@ build {
     environment_vars = [
       "DEBIAN_FRONTEND=noninteractive",
     ]
+    script = "ls"
+  }
+
+  provisioner "shell" {
+    max_retries = 5
+    environment_vars = [
+      "DEBIAN_FRONTEND=noninteractive",
+    ]
     script = "./scripts/setup-ami.sh"
   }
 }

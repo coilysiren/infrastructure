@@ -119,14 +119,14 @@ def deploy_shared(ctx: invoke.Context):
     )
 
 @invoke.task
-def build(ctx: invoke.Context, name="eco-server", env="dev"):
+def build_image(ctx: invoke.Context, name="eco-server", env="dev"):
     account_id = sts.get_caller_identity()["Account"]
 
     ctx.run(
         f"""
         docker buildx build \
             --progress plain \
-            --build-context cwd=. \
+            --build-context scripts=scripts \
             --tag {account_id}.dkr.ecr.us-east-1.amazonaws.com/{name}-ecr:{env} \
             ./{name}/.
         """,
@@ -150,12 +150,8 @@ def build(ctx: invoke.Context, name="eco-server", env="dev"):
         echo=True,
     )
 
-    ctx.run(
-        "shellcheck ./scripts/*",
-        pty=True,
-        echo=True,
-    )
-
+@invoke.task
+def build_ami(ctx: invoke.Context, name="eco-server", env="dev"):
     ctx.run(
         "packer init .",
         pty=True,
@@ -171,8 +167,6 @@ def build(ctx: invoke.Context, name="eco-server", env="dev"):
         pty=True,
         echo=True,
     )
-
-    deploy_shared(ctx)
 
     ctx.run(
         "packer build ubuntu.pkr.hcl",

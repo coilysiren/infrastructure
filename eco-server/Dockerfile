@@ -4,7 +4,7 @@ ENV DEBIAN_FRONTEND=noninteractive
 
 WORKDIR /home/ubuntu
 
-COPY --from=cwd . .
+COPY --from=scripts . scripts
 
 RUN chmod +x ./scripts/*
 
