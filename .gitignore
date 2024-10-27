@@ -4,3 +4,9 @@ venv
 *.pem
 *.zip
 home/
+
+eco/configs/*
+eco/data/*
+eco/downloads/*
+eco/mods/*
+eco/source/*
