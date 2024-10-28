@@ -315,6 +315,7 @@ def build_image(ctx: invoke.Context, env="dev", name="eco-server"):
             --progress plain \
             --build-context scripts=scripts \
             --build-context mods={name}/mods \
+            --build-context configs={name}/configs \
             --build-context source={name}/source \
             --tag {account_id}.dkr.ecr.us-east-1.amazonaws.com/{name}-ecr:{env} \
             ./{name}/.
@@ -334,6 +335,18 @@ def build_image(ctx: invoke.Context, env="dev", name="eco-server"):
     ctx.run(
         f"""
         docker push {account_id}.dkr.ecr.us-east-1.amazonaws.com/{name}-ecr:{env}
+        """,
+        pty=True,
+        echo=True,
+    )
+
+@invoke.task
+def run_image(ctx: invoke.Context, env="dev", name="eco-server"):
+    account_id = sts.get_caller_identity()["Account"]
+
+    ctx.run(
+        f"""
+        docker run {account_id}.dkr.ecr.us-east-1.amazonaws.com/{name}-ecr:{env}
         """,
         pty=True,
         echo=True,

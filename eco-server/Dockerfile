@@ -17,5 +17,6 @@ RUN chmod a+x install.sh
 RUN ./install.sh
 
 COPY --from=mods . /home/ubuntu/eco
+COPY --from=configs . /home/ubuntu/eco
 
-CMD ["EcoServer", "--offline"]
+CMD ["/home/ubuntu/eco/EcoServer", "--offline"]
