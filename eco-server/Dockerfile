@@ -16,6 +16,6 @@ RUN rm EcoServerLinux*.zip
 RUN chmod a+x install.sh
 RUN ./install.sh
 
-COPY --from=mods . /home/ubuntu/eco/Mods/UserCode
+COPY --from=mods . /home/ubuntu/eco
 
 CMD ["EcoServer", "--offline"]

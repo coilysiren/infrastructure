@@ -121,38 +121,51 @@ def deploy_shared(ctx: invoke.Context, name="eco-server"):
     )
 
 @invoke.task
-def copy_build_assets(ctx: invoke.Context):
-    ctx.run(
-        textwrap.dedent(
-            f"""
-            rm -rf ./eco-server/source/EcoServerLinux.zip
-            """
-        ),
-        pty=True,
-        echo=True,
-    )
+def copy_source(ctx: invoke.Context, redownload=False):
 
-    ctx.run(
-        textwrap.dedent(
-            f"""
-            rm -rf /mnt/c/Users/{WINDOWS_USERNAME}/Downloads/EcoServerLinux*.zip
-            """
-        ),
-        pty=True,
-        echo=True,
-    )
+    if redownload:
 
-    ctx.run(
-        textwrap.dedent(
-            f"""
-            rm -rf ./eco-server/source/*
-            """
-        ),
-        pty=True,
-        echo=True,
-    )
+        ctx.run(
+            textwrap.dedent(
+                f"""
+                rm -rf ./eco-server/source/EcoServerLinux.zip
+                """
+            ),
+            pty=True,
+            echo=True,
+        )
 
-    input("Go download the Eco linux server from play.eco, then press enter to continue.")
+        ctx.run(
+            textwrap.dedent(
+                f"""
+                rm -rf /mnt/c/Users/{WINDOWS_USERNAME}/Downloads/EcoServerLinux*.zip
+                """
+            ),
+            pty=True,
+            echo=True,
+        )
+
+        ctx.run(
+            textwrap.dedent(
+                f"""
+                rm -rf ./eco-server/source/*
+                """
+            ),
+            pty=True,
+            echo=True,
+        )
+
+        ctx.run(
+            textwrap.dedent(
+                f"""
+                mkdir ./eco-server/source/*
+                """
+            ),
+            pty=True,
+            echo=True,
+        )
+
+        input("Go download the Eco linux server from play.eco, then press enter to continue.")
 
     ctx.run(
         textwrap.dedent(
@@ -195,6 +208,48 @@ def copy_build_assets(ctx: invoke.Context):
     )
 
 @invoke.task
+def copy_build_mods(ctx: invoke.Context):
+    ctx.run(
+        textwrap.dedent(
+            f"""
+            rm -rf ./eco-server/mods
+            """
+        ),
+        pty=True,
+        echo=True,
+    )
+
+    ctx.run(
+        textwrap.dedent(
+            f"""
+            mkdir -p ./eco-server/source/
+            """
+        ),
+        pty=True,
+        echo=True,
+    )
+
+    ctx.run(
+        textwrap.dedent(
+            f"""
+            git clone git@github.com:coilysiren/eco-mods.git ./eco-server/mods
+            """
+        ),
+        pty=True,
+        echo=True,
+    )
+
+    ctx.run(
+        textwrap.dedent(
+            f"""
+            rm -rf ./eco-server/mods/.git*
+            """
+        ),
+        pty=True,
+        echo=True,
+    )
+
+@invoke.task
 def build_image(ctx: invoke.Context, env="dev", name="eco-server"):
     account_id = sts.get_caller_identity()["Account"]
 
@@ -217,6 +272,7 @@ def build_image(ctx: invoke.Context, env="dev", name="eco-server"):
         docker buildx build \
             --progress plain \
             --build-context scripts=scripts \
+            --build-context mods={name}/mods \
             --build-context source={name}/source \
             --tag {account_id}.dkr.ecr.us-east-1.amazonaws.com/{name}-ecr:{env} \
             ./{name}/.
