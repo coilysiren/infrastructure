@@ -121,7 +121,7 @@ def deploy_shared(ctx: invoke.Context, name="eco-server"):
     )
 
 @invoke.task
-def copy_source(ctx: invoke.Context, redownload=False):
+def copy_build_source(ctx: invoke.Context, redownload=False):
 
     if redownload:
 
@@ -243,6 +243,48 @@ def copy_build_mods(ctx: invoke.Context):
         textwrap.dedent(
             f"""
             rm -rf ./eco-server/mods/.git*
+            """
+        ),
+        pty=True,
+        echo=True,
+    )
+
+@invoke.task
+def copy_build_configs(ctx: invoke.Context):
+    ctx.run(
+        textwrap.dedent(
+            f"""
+            rm -rf ./eco-server/configs
+            """
+        ),
+        pty=True,
+        echo=True,
+    )
+
+    ctx.run(
+        textwrap.dedent(
+            f"""
+            mkdir -p ./eco-server/configs/
+            """
+        ),
+        pty=True,
+        echo=True,
+    )
+
+    ctx.run(
+        textwrap.dedent(
+            f"""
+            git clone git@github.com:coilysiren/eco-configs.git ./eco-server/configs
+            """
+        ),
+        pty=True,
+        echo=True,
+    )
+
+    ctx.run(
+        textwrap.dedent(
+            f"""
+            rm -rf ./eco-server/configs/.git*
             """
         ),
         pty=True,
