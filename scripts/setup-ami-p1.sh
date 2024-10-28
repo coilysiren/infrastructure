@@ -16,3 +16,6 @@ sudo mv -vn /tmp/systemd/* /etc/systemd/system/
 # allow running scripts
 chmod a+x /home/ubuntu/scripts/*
 
+# persistent storage mount points
+mkdir -p /home/ubuntu/data/Storage
+mkdir -p /home/ubuntu/data/Logs

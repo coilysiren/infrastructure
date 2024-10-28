@@ -346,7 +346,7 @@ def run_image(ctx: invoke.Context, env="dev", name="eco-server"):
 
     ctx.run(
         f"""
-        docker run {account_id}.dkr.ecr.us-east-1.amazonaws.com/{name}-ecr:{env}
+        docker run --network host {account_id}.dkr.ecr.us-east-1.amazonaws.com/{name}-ecr:{env}
         """,
         pty=True,
         echo=True,
@@ -482,6 +482,7 @@ def deploy_server(ctx: invoke.Context, env="dev", name="eco-server"):
                 --template-file templates/instance.yaml \
                 --parameter-overrides \
                     Name={name}-{env} \
+                    Service={name} \
                     Volume={ebs_volume} \
                     AMI={ubuntu_ami} \
                     EIPAllocationId={eip_ip} \
