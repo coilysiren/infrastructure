@@ -10,9 +10,15 @@ Restart=on-failure
 TimeoutStopSec=120
 RestartSec=5
 User=ubuntu
-WorkingDirectory=/home/ubuntu/games/eco
-ExecStart=/home/ubuntu/games/eco/EcoServer
-ExecStop=kill -TERM $MAINPID
+WorkingDirectory=/home/ubuntu
+ExecStart=/usr/bin/docker pull \
+              "{{ aws_account_id }}.dkr.ecr.us-east-1.amazonaws.com/eco-server-ecr:{{ env }}"; \
+          /usr/bin/docker run --rm --name eco-server \
+              --network host \
+              "{{ aws_account_id }}.dkr.ecr.us-east-1.amazonaws.com/eco-server-ecr:{{ env }}"; \
+ExecStop=/usr/bin/docker image prune --all --force; \
+         /usr/bin/docker stop eco-server; \
+         /usr/bin/docker rm eco-server
 
 [Install]
 WantedBy=multi-user.target

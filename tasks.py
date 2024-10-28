@@ -355,7 +355,21 @@ def run_image(ctx: invoke.Context, env="dev", name="eco-server"):
 
 @invoke.task
 def build_ami(ctx: invoke.Context, name="eco-server", env="dev"):
+    account_id = sts.get_caller_identity()["Account"]
 
+    response = ssm.get_parameter(
+        Name="/eco/server-api-token",
+        WithDecryption=True,
+    )
+
+    jinja_env = jinja2.Environment(loader=jinja2.PackageLoader(__name__, "./systemd"))
+    template = jinja_env.get_template(f"{name}.template.sevice")
+    content = template.render(
+        aws_account_id=account_id,
+        env=env
+    )
+    with open(f"systemd/{name}.service", mode="w", encoding="utf-8") as file:
+        file.write(content)
 
     ctx.run(
         "packer init ubuntu.pkr.hcl",
@@ -370,16 +384,16 @@ def build_ami(ctx: invoke.Context, name="eco-server", env="dev"):
     )
 
     ctx.run(
-        f"packer validate -var env={env} ubuntu.pkr.hcl",
+        f"packer validate -var env={env} -var name={name} ubuntu.pkr.hcl",
         pty=True,
         echo=True,
     )
 
-    ctx.run(
-        f"packer build -var env={env} ubuntu.pkr.hcl",
-        pty=True,
-        echo=True,
-    )
+    # ctx.run(
+    #     f"packer build -var env={env} -var name={name} ubuntu.pkr.hcl",
+    #     pty=True,
+    #     echo=True,
+    # )
 
 @invoke.task
 def deploy_apex_dns(ctx: invoke.Context):

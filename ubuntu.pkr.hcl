@@ -11,6 +11,10 @@ packer {
   }
 }
 
+variable "name" {
+  type = string
+}
+
 variable "env" {
   type = string
 }
@@ -58,7 +62,7 @@ build {
 
   provisioner "file" {
     sources = [
-      "systemd/",
+      "systemd/${var.name}.service",
     ]
     destination = "/tmp/systemd/"
   }
