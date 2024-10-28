@@ -361,12 +361,14 @@ def build_ami(ctx: invoke.Context, name="eco-server", env="dev"):
         Name="/eco/server-api-token",
         WithDecryption=True,
     )
+    eco_server_api_token = response["Parameter"]["Value"]
 
     jinja_env = jinja2.Environment(loader=jinja2.PackageLoader(__name__, "./systemd"))
     template = jinja_env.get_template(f"{name}.template.sevice")
     content = template.render(
         aws_account_id=account_id,
-        env=env
+        eco_server_api_token=eco_server_api_token,
+        env=env,
     )
     with open(f"systemd/{name}.service", mode="w", encoding="utf-8") as file:
         file.write(content)
