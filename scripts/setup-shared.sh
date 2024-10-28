@@ -33,12 +33,6 @@ echo 'alias python=python3' |
   sponge -a /home/ubuntu/.bashrc
 echo 'export TERM=xterm' |
   sponge -a /home/ubuntu/.bashrc
-echo 'export HISTCONTROL=ignoreboth' |
-  sponge -a /home/ubuntu/.bashrc
-echo 'export export HISTSIZE=1000' |
-  sponge -a /home/ubuntu/.bashrc
-echo 'export export HISTFILESIZE=2000' |
-  sponge -a /home/ubuntu/.bashrc
 echo 'export GCC_COLORS="error=01;31:warning=01;35:note=01;36:caret=01;32:locus=01:quote=01"' |
   sponge -a /home/ubuntu/.bashrc
 echo 'alias ls="ls -GFh --color=auto"' |

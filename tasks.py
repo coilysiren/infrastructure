@@ -484,6 +484,7 @@ def deploy_server(ctx: invoke.Context, env="dev", name="eco-server"):
                     Name={name}-{env} \
                     Service={name} \
                     Volume={ebs_volume} \
+                    Env={env} \
                     AMI={ubuntu_ami} \
                     EIPAllocationId={eip_ip} \
                     SecurityGroups={",".join(security_groups)} \

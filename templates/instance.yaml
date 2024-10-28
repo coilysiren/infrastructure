@@ -12,6 +12,9 @@ Parameters:
     Type: AWS::EC2::KeyPair::KeyName
     Default: ssh
     NoEcho: true
+  Env:
+    Type: String
+    Description: environment
   InstanceType:
     Description: https://aws.amazon.com/ec2/instance-types/
     Type: String
@@ -48,6 +51,7 @@ Resources:
           sudo chmod 777 /var/log/
           sudo chown -R ubuntu /var/log/
           exec > >(tee /var/log/user-data-1.log|logger -t user-data -s 2>/var/log/user-data-2.log) 2>&1
+            echo 'export ENV=${Env}' sponge -a /home/ubuntu/.bashrc
             mkdir -p /home/ubuntu/data
             sudo mount /dev/nvme1n1 /home/ubuntu/data
             sudo chown -R ubuntu /home/ubuntu/data
