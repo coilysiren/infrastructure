@@ -9,5 +9,6 @@ eco-server/configs/*
 eco-server/mods/*
 eco-server/source/*
 
+# allow systemd templates, but not generated files
 systemd/!*template.service
-systemd/.service
+systemd/*.service

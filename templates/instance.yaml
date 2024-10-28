@@ -52,6 +52,8 @@ Resources:
           sudo chown -R ubuntu /var/log/
           exec > >(tee /var/log/user-data-1.log|logger -t user-data -s 2>/var/log/user-data-2.log) 2>&1
             echo 'export ENV=${Env}' sponge -a /home/ubuntu/.bashrc
+            aws ecr get-login-password | docker login -u AWS --password-stdin "${AWS::AccountId}.dkr.ecr.us-east-1.amazonaws.com"
+            docker pull "${AWS::AccountId}.dkr.ecr.us-east-1.amazonaws.com/${Service}-ecr:${Env}"
             mkdir -p /home/ubuntu/data
             sudo mount /dev/nvme1n1 /home/ubuntu/data
             sudo chown -R ubuntu /home/ubuntu/data
