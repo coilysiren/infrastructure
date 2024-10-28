@@ -22,6 +22,7 @@ sudo apt-get install -qq -y --no-install-recommends \
   gcc \
   curl \
   ca-certificates \
+  jq \
   moreutils
 
 # generate bashrc
