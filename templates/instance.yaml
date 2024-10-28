@@ -53,8 +53,8 @@ Resources:
             sudo chown -R ubuntu /home/ubuntu/data
             sudo blkid -o export /dev/nvme1n1
             echo "$(sudo blkid -o export /dev/nvme1n1 | grep ^UUID=) /home/ubuntu/data ext4 defaults,noatime" | sudo tee -a /etc/fstab
-            sudo systemctl enable ${Name}
-            sudo systemctl start ${Name}
+            sudo systemctl enable ${Service}
+            sudo systemctl start ${Service}
       Tags:
         - Key: Name
           Value: !Ref Name
