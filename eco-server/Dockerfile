@@ -12,7 +12,7 @@ RUN ./scripts/setup-shared.sh
 RUN mkdir -p eco
 WORKDIR /home/ubuntu/eco
 COPY --from=source . .
-RUN rm EcoServerLinux*.zip
+RUN rm -rf EcoServerLinux*.zip
 RUN chmod a+x install.sh
 RUN ./install.sh
 
