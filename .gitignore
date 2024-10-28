@@ -8,3 +8,6 @@ home/
 eco-server/configs/*
 eco-server/mods/*
 eco-server/source/*
+
+systemd/!*template.service
+systemd/.service

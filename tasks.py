@@ -9,6 +9,7 @@ import boto3
 import invoke
 import requests
 import rcon
+import jinja2
 
 
 # docs: https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/ec2.html
@@ -353,7 +354,9 @@ def run_image(ctx: invoke.Context, env="dev", name="eco-server"):
     )
 
 @invoke.task
-def build_ami(ctx: invoke.Context, env="dev"):
+def build_ami(ctx: invoke.Context, name="eco-server", env="dev"):
+
+
     ctx.run(
         "packer init ubuntu.pkr.hcl",
         pty=True,
