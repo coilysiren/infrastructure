@@ -12,5 +12,6 @@ eco-server/logs/*
 eco-server/storage/*
 
 # allow script templates, but not generated files
-scripts/!*template.sh
-scripts/*.sh
+# should push these generated files into another folder
+scripts/eco-server-start.sh
+scripts/eco-server-stop.sh
