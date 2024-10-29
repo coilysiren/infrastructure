@@ -12,7 +12,11 @@ RestartSec=5
 User=ubuntu
 WorkingDirectory=/home/ubuntu
 
-ExecStart=/usr/bin/docker pull \
+ExecStart=aws ecr get-login-password \
+        | /usr/bin/docker login \
+              -u AWS \
+              --password-stdin "{{ aws_account_id }}.dkr.ecr.us-east-1.amazonaws.com" && \
+          /usr/bin/docker pull \
               "{{ aws_account_id }}.dkr.ecr.us-east-1.amazonaws.com/eco-server-ecr:{{ env }}" && \
           /usr/bin/docker run --rm \
               --name eco-server \

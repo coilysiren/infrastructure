@@ -374,7 +374,7 @@ def run_image(ctx: invoke.Context, env="dev", name="eco-server"):
     )
 
 @invoke.task
-def build_ami(ctx: invoke.Context, name="eco-server", env="dev"):
+def build_ami(ctx: invoke.Context, name="eco-server", env="dev", only_validate=False):
     account_id = sts.get_caller_identity()["Account"]
 
     response = ssm.get_parameter(
@@ -411,11 +411,12 @@ def build_ami(ctx: invoke.Context, name="eco-server", env="dev"):
         echo=True,
     )
 
-    ctx.run(
-        f"packer build -var env={env} -var name={name} ubuntu.pkr.hcl",
-        pty=True,
-        echo=True,
-    )
+    if not only_validate:
+        ctx.run(
+            f"packer build -var env={env} -var name={name} ubuntu.pkr.hcl",
+            pty=True,
+            echo=True,
+        )
 
 @invoke.task
 def deploy_apex_dns(ctx: invoke.Context):
