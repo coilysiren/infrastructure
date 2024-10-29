@@ -545,6 +545,31 @@ def deploy_server(ctx: invoke.Context, env="dev", name="eco-server"):
     )
 
 @invoke.task
+def delete_server(ctx: invoke.Context, env="dev", name="eco-server"):
+    ip_address = get_ip_address(name=name, env=env)
+    # reload ssh key - required until I figured out ssh identity pinning
+    ctx.run(
+        f"ssh-keygen -R {ip_address}",
+        pty=True,
+        echo=True,
+    )
+    ctx.run(
+        f"aws cloudformation delete-stack --stack-name {name}-{env}-instance",
+        pty=True,
+        echo=True,
+    )
+    ctx.run(
+        f"aws cloudformation wait stack-delete-complete --stack-name {name}-{env}-instance",
+        pty=True,
+        echo=True,
+    )
+
+@invoke.task
+def redeploy(ctx: invoke.Context, env="dev", name="eco-server"):
+    delete_server(ctx, env=env, name=name)
+    deploy_server(ctx, env=env, name=name)
+
+@invoke.task
 def push_asset_local(
     ctx: invoke.Context,
     download,
