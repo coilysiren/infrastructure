@@ -8,6 +8,8 @@ home/
 eco-server/configs/*
 eco-server/mods/*
 eco-server/source/*
+eco-server/logs/*
+eco-server/storage/*
 
 # allow systemd templates, but not generated files
 systemd/!*template.service

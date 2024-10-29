@@ -56,6 +56,8 @@ Resources:
             docker pull "${AWS::AccountId}.dkr.ecr.us-east-1.amazonaws.com/${Service}-ecr:${Env}"
             mkdir -p /home/ubuntu/data
             sudo mount /dev/nvme1n1 /home/ubuntu/data
+            mkdir -p /home/ubuntu/data/storage
+            mkdir -p /home/ubuntu/data/logs
             sudo chown -R ubuntu /home/ubuntu/data
             sudo blkid -o export /dev/nvme1n1
             echo "$(sudo blkid -o export /dev/nvme1n1 | grep ^UUID=) /home/ubuntu/data ext4 defaults,noatime" | sudo tee -a /etc/fstab

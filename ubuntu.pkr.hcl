@@ -63,6 +63,7 @@ build {
   provisioner "file" {
     sources = [
       "systemd/${var.name}.service",
+
     ]
     destination = "/tmp/systemd/"
   }

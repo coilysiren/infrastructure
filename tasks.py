@@ -346,8 +346,28 @@ def run_image(ctx: invoke.Context, env="dev", name="eco-server"):
     account_id = sts.get_caller_identity()["Account"]
 
     ctx.run(
+        "mkdir -p eco-server/storage",
+        pty=True,
+        echo=True,
+    )
+
+    ctx.run(
+        "mkdir -p eco-server/logs",
+        pty=True,
+        echo=True,
+    )
+
+    ctx.run(
         f"""
-        docker run --network host {account_id}.dkr.ecr.us-east-1.amazonaws.com/{name}-ecr:{env}
+        docker run --rm \
+            -p 3000:3000 \
+            -p 3001:3001 \
+            -p 3002:3002 \
+            -p 3003:3003 \
+            --name {name} \
+            --volume {os.getcwd()}/eco-server/storage:/home/ubuntu/eco/Storage \
+            --volume {os.getcwd()}/eco-server/logs:/home/ubuntu/eco/Logs \
+            {account_id}.dkr.ecr.us-east-1.amazonaws.com/{name}-ecr:{env}
         """,
         pty=True,
         echo=True,
@@ -361,7 +381,7 @@ def build_ami(ctx: invoke.Context, name="eco-server", env="dev"):
         Name="/eco/server-api-token",
         WithDecryption=True,
     )
-    eco_server_api_token = response["Parameter"]["Value"]
+    eco_server_api_token = response["Parameter"]["Value"].strip()
 
     jinja_env = jinja2.Environment(loader=jinja2.PackageLoader(__name__, "./systemd"))
     template = jinja_env.get_template(f"{name}.template.sevice")
@@ -391,11 +411,11 @@ def build_ami(ctx: invoke.Context, name="eco-server", env="dev"):
         echo=True,
     )
 
-    # ctx.run(
-    #     f"packer build -var env={env} -var name={name} ubuntu.pkr.hcl",
-    #     pty=True,
-    #     echo=True,
-    # )
+    ctx.run(
+        f"packer build -var env={env} -var name={name} ubuntu.pkr.hcl",
+        pty=True,
+        echo=True,
+    )
 
 @invoke.task
 def deploy_apex_dns(ctx: invoke.Context):

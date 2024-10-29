@@ -19,4 +19,9 @@ RUN ./install.sh
 COPY --from=mods . /home/ubuntu/eco
 COPY --from=configs . /home/ubuntu/eco
 
+EXPOSE 3000
+EXPOSE 3001
+EXPOSE 3002
+EXPOSE 3003
+
 CMD ["/home/ubuntu/eco/EcoServer", "--offline"]
