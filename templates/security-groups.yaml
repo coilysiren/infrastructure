@@ -73,6 +73,17 @@ Resources:
           ToPort: 3001
           CidrIpv6: ::/0
 
+        - Description: 3003 ingress all IPv4
+          IpProtocol: "-1"
+          FromPort: 3003
+          ToPort: 3003
+          CidrIp: 0.0.0.0/0
+        - Description: 3003 ingress all IPv6
+          IpProtocol: "-1"
+          FromPort: 3003
+          ToPort: 3003
+          CidrIpv6: ::/0
+
       Tags:
         - Key: Name
           Value: eco-server
