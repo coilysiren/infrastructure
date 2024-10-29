@@ -1,0 +1,18 @@
+[Unit]
+Description=eco-server
+After=syslog.target network.target nss-lookup.target network-online.target
+StartLimitBurst=5
+StartLimitIntervalSec=60
+
+[Service]
+Type=simple
+Restart=on-failure
+TimeoutStopSec=120
+RestartSec=5
+User=ubuntu
+WorkingDirectory=/home/ubuntu
+ExecStart=/home/ubuntu/scripts/eco-server-start.sh
+ExecStop=/home/ubuntu/scripts/eco-server-stop.sh
+
+[Install]
+WantedBy=multi-user.target

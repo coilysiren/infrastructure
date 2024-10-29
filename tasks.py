@@ -383,14 +383,21 @@ def build_ami(ctx: invoke.Context, name="eco-server", env="dev", only_validate=F
     )
     eco_server_api_token = response["Parameter"]["Value"].strip()
 
-    jinja_env = jinja2.Environment(loader=jinja2.PackageLoader(__name__, "./systemd"))
-    template = jinja_env.get_template(f"{name}.template.sevice")
+    # render start template
+    jinja_env = jinja2.Environment(loader=jinja2.PackageLoader(__name__, "./scripts"))
+    template = jinja_env.get_template(f"{name}-start.template.sh")
     content = template.render(
         aws_account_id=account_id,
         eco_server_api_token=eco_server_api_token,
         env=env,
     )
-    with open(f"systemd/{name}.service", mode="w", encoding="utf-8") as file:
+    with open(f"./scripts/{name}-start.sh", mode="w", encoding="utf-8") as file:
+        file.write(content)
+
+    # render stop template, which doesn't need any variables at the moment
+    template = jinja_env.get_template(f"{name}-stop.template.sh")
+    content = template.render()
+    with open(f"./scripts/{name}-stop.sh", mode="w", encoding="utf-8") as file:
         file.write(content)
 
     ctx.run(

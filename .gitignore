@@ -11,6 +11,6 @@ eco-server/source/*
 eco-server/logs/*
 eco-server/storage/*
 
-# allow systemd templates, but not generated files
-systemd/!*template.service
-systemd/*.service
+# allow script templates, but not generated files
+scripts/!*template.sh
+scripts/*.sh
