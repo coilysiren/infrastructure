@@ -12,7 +12,7 @@ RestartSec=5
 User=ubuntu
 WorkingDirectory=/home/ubuntu
 ExecStart=/home/ubuntu/scripts/eco-server-start.sh
-ExecStop=/home/ubuntu/scripts/eco-server-stop.sh
+ExecStop=kill -TERM $MAINPID
 
 [Install]
 WantedBy=multi-user.target

@@ -9,7 +9,6 @@ import boto3
 import invoke
 import requests
 import rcon
-import jinja2
 
 
 # docs: https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/ec2.html
@@ -23,6 +22,10 @@ sts = boto3.client("sts")
 
 WINDOWS_USERNAME = "firem"
 
+class Context(invoke.Context):
+    def run(self, command):
+        super().run(command, echo=True, pty=True)
+
 def get_ip_address(name: str):
     output = ec2.describe_instances(
         Filters=[
@@ -35,7 +38,7 @@ def get_ip_address(name: str):
 
 @invoke.task
 def ssh(
-    ctx: invoke.Context,
+    ctx: Context,
     name="eco-server",
     user="ubuntu",
     cmd="bash",
@@ -59,7 +62,7 @@ def ssh(
 
 @invoke.task
 def scp(
-    ctx: invoke.Context,
+    ctx: Context,
     name="eco-server",
     user="ubuntu",
     source="",
@@ -76,7 +79,7 @@ def scp(
 
 @invoke.task
 def tail(
-    ctx: invoke.Context,
+    ctx: Context,
     name="eco-server",
 ):
     ssh(
@@ -86,7 +89,7 @@ def tail(
     )
 
 @invoke.task
-def deploy_shared(ctx: invoke.Context, name="eco-server"):
+def deploy_shared(ctx: Context, name="eco-server"):
     ctx.run(
         textwrap.dedent(
             """
@@ -122,7 +125,7 @@ def deploy_shared(ctx: invoke.Context, name="eco-server"):
     )
 
 @invoke.task
-def copy_build_source(ctx: invoke.Context, redownload=False):
+def copy_source(ctx: Context, redownload=False):
 
     if redownload:
 
@@ -209,232 +212,61 @@ def copy_build_source(ctx: invoke.Context, redownload=False):
     )
 
 @invoke.task
-def copy_build_mods(ctx: invoke.Context):
-    ctx.run(
-        textwrap.dedent(
-            f"""
-            rm -rf ./eco-server/mods
-            """
-        ),
-        pty=True,
-        echo=True,
-    )
+def copy_source(ctx: Context, redownload=False):
+    ctx.run("rm -rf ./eco-server/source")
+    ctx.run("mkdir ./eco-server/source")
 
-    ctx.run(
-        textwrap.dedent(
-            f"""
-            mkdir -p ./eco-server/source/
-            """
-        ),
-        pty=True,
-        echo=True,
-    )
+    if redownload:
+        ctx.run("rm -rf ./eco-server/source/EcoServerLinux.zip")
+        ctx.run(f"rm -rf /mnt/c/Users/{WINDOWS_USERNAME}/Downloads/EcoServerLinux*.zip")
+        input("Go download the Eco linux server from play.eco, then press enter to continue.")
 
-    ctx.run(
-        textwrap.dedent(
-            f"""
-            git clone --depth 1 git@github.com:coilysiren/eco-mods.git ./eco-server/mods
-            """
-        ),
-        pty=True,
-        echo=True,
-    )
-
-    ctx.run(
-        textwrap.dedent(
-            f"""
-            rm -rf ./eco-server/mods/.git*
-            """
-        ),
-        pty=True,
-        echo=True,
-    )
+    ctx.run(f"cp /mnt/c/Users/{WINDOWS_USERNAME}/Downloads/EcoServerLinux*.zip ./eco-server/source/EcoServerLinux.zip")
+    ctx.run("unzip ./eco-server/source/EcoServerLinux.zip -d ./eco-server/source/")
+    ctx.run("rm -rf ./eco-server/source/EcoServerLinux.zip")
 
 @invoke.task
-def copy_build_configs(ctx: invoke.Context):
-    ctx.run(
-        textwrap.dedent(
-            f"""
-            rm -rf ./eco-server/configs
-            """
-        ),
-        pty=True,
-        echo=True,
-    )
-
-    ctx.run(
-        textwrap.dedent(
-            f"""
-            mkdir -p ./eco-server/configs/
-            """
-        ),
-        pty=True,
-        echo=True,
-    )
-
-    ctx.run(
-        textwrap.dedent(
-            f"""
-            git clone --depth 1 git@github.com:coilysiren/eco-configs.git ./eco-server/configs
-            """
-        ),
-        pty=True,
-        echo=True,
-    )
-
-    ctx.run(
-        textwrap.dedent(
-            f"""
-            rm -rf ./eco-server/configs/.git*
-            """
-        ),
-        pty=True,
-        echo=True,
-    )
+def copy_mods(ctx: Context):
+    ctx.run("rm -rf ./eco-server/mods")
+    ctx.run("mkdir -p ./eco-server/mods")
+    ctx.run("git clone --depth 1 git@github.com:coilysiren/eco-mods.git ./eco-server/mods")
+    ctx.run("rm -rf ./eco-server/mods/.git")
+    ctx.run("cp -r ./eco-server/mods/. ./eco-server/source/Mods/")
 
 @invoke.task
-def build_image(ctx: invoke.Context, env="dev", name="eco-server", publish=False):
-    account_id = sts.get_caller_identity()["Account"]
-
-    ctx.run(
-        f"""
-        docker buildx build \
-            --progress plain \
-            --build-context scripts=scripts \
-            --build-context mods={name}/mods \
-            --build-context configs={name}/configs \
-            --build-context source={name}/source \
-            --tag {account_id}.dkr.ecr.us-east-1.amazonaws.com/{name}-ecr:{env} \
-            ./{name}/.
-        """,
-        pty=True,
-        echo=True,
-    )
-
-    if publish:
-
-        ctx.run(
-            textwrap.dedent(
-                f"""
-                aws cloudformation validate-template --template-body file://templates/ecr.yaml && \
-                aws cloudformation deploy \
-                    --template-file templates/ecr.yaml \
-                    --stack-name {name}-ecr \
-                    --no-fail-on-empty-changeset
-                """
-            ),
-            pty=True,
-            echo=True,
-        )
-
-        ctx.run(
-            f"""
-            aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin {account_id}.dkr.ecr.us-east-1.amazonaws.com
-            """,
-            pty=True,
-            echo=True,
-        )
-
-        ctx.run(
-            f"""
-            docker push {account_id}.dkr.ecr.us-east-1.amazonaws.com/{name}-ecr:{env}
-            """,
-            pty=True,
-            echo=True,
-        )
+def copy_configs(ctx: Context):
+    ctx.run("rm -rf ./eco-server/configs")
+    ctx.run("mkdir -p ./eco-server/configs/")
+    ctx.run("git clone --depth 1 git@github.com:coilysiren/eco-configs.git ./eco-server/configs")
+    ctx.run("rm -rf ./eco-server/configs/.git")
+    ctx.run("cp -r ./eco-server/configs/. ./eco-server/source/Configs/")
 
 @invoke.task
-def run_image(ctx: invoke.Context, env="dev", name="eco-server"):
-    account_id = sts.get_caller_identity()["Account"]
+def copy_all(ctx: Context, redownload=False):
+    copy_source(ctx, redownload=redownload)
+    copy_mods(ctx)
+    copy_configs(ctx)
+
+@invoke.task
+def run_server(ctx: Context):
     response = ssm.get_parameter(
         Name="/eco/server-api-token",
         WithDecryption=True,
     )
     eco_server_api_token = response["Parameter"]["Value"].strip()
-
-    ctx.run(
-        "mkdir -p eco-server/storage",
-        pty=True,
-        echo=True,
-    )
-
-    ctx.run(
-        "mkdir -p eco-server/logs",
-        pty=True,
-        echo=True,
-    )
-
-    ctx.run(
-        f"""
-        docker run --rm \
-            -p 3000:3000/udp \
-            -p 3001:3001 \
-            -p 3002:3002 \
-            -p 3003:3003 \
-            --name {name} \
-            --volume {os.getcwd()}/eco-server/storage:/home/ubuntu/eco/Storage \
-            --volume {os.getcwd()}/eco-server/logs:/home/ubuntu/eco/Logs \
-            {account_id}.dkr.ecr.us-east-1.amazonaws.com/{name}-ecr:{env} \
-            /home/ubuntu/eco/EcoServer -userToken="{eco_server_api_token}"
-        """,
-        pty=True,
-        echo=True,
-    )
+    ctx.run(f"./eco-server/source/EcoServer -userToken=\"{eco_server_api_token}\"")
 
 @invoke.task
-def build_ami(ctx: invoke.Context, name="eco-server", env="dev", only_validate=False):
-    account_id = sts.get_caller_identity()["Account"]
-
-    response = ssm.get_parameter(
-        Name="/eco/server-api-token",
-        WithDecryption=True,
-    )
-    eco_server_api_token = response["Parameter"]["Value"].strip()
-
-    # render start template
-    jinja_env = jinja2.Environment(loader=jinja2.PackageLoader(__name__, "./scripts"))
-    template = jinja_env.get_template(f"{name}-start.template.sh")
-    content = template.render(
-        aws_account_id=account_id,
-        eco_server_api_token=eco_server_api_token,
-        env=env,
-    )
-    with open(f"./scripts/{name}-start.sh", mode="w", encoding="utf-8") as file:
-        file.write(content)
-
-    # render stop template, which doesn't need any variables at the moment
-    template = jinja_env.get_template(f"{name}-stop.template.sh")
-    content = template.render()
-    with open(f"./scripts/{name}-stop.sh", mode="w", encoding="utf-8") as file:
-        file.write(content)
-
-    ctx.run(
-        "packer init ubuntu.pkr.hcl",
-        pty=True,
-        echo=True,
-    )
-
-    ctx.run(
-        "packer fmt ubuntu.pkr.hcl",
-        pty=True,
-        echo=True,
-    )
-
-    ctx.run(
-        f"packer validate -var env={env} -var name={name} ubuntu.pkr.hcl",
-        pty=True,
-        echo=True,
-    )
+def build_ami(ctx: Context, only_validate=False):
+    ctx.run("packer init ubuntu.pkr.hcl")
+    ctx.run("packer fmt ubuntu.pkr.hcl")
+    ctx.run("packer validate ubuntu.pkr.hcl")
 
     if not only_validate:
-        ctx.run(
-            f"packer build -var env={env} -var name={name} ubuntu.pkr.hcl",
-            pty=True,
-            echo=True,
-        )
+        ctx.run(f"packer build ubuntu.pkr.hcl")
 
 @invoke.task
-def deploy_apex_dns(ctx: invoke.Context):
+def deploy_apex_dns(ctx: Context):
     ctx.run(
         textwrap.dedent(
             """
@@ -449,7 +281,7 @@ def deploy_apex_dns(ctx: invoke.Context):
     )
 
 @invoke.task
-def deploy_server(ctx: invoke.Context, env="dev", name="eco-server"):
+def deploy_server(ctx: Context, env="dev", name="eco-server"):
     deploy_shared(ctx)
 
     dns_name = name.split("-")[0]
@@ -553,7 +385,7 @@ def deploy_server(ctx: invoke.Context, env="dev", name="eco-server"):
     )
 
 @invoke.task
-def delete_server(ctx: invoke.Context, env="dev", name="eco-server"):
+def delete_server(ctx: Context, env="dev", name="eco-server"):
     ip_address = get_ip_address(name=name, env=env)
     # reload ssh key - required until I figured out ssh identity pinning
     ctx.run(
@@ -573,13 +405,13 @@ def delete_server(ctx: invoke.Context, env="dev", name="eco-server"):
     )
 
 @invoke.task
-def redeploy(ctx: invoke.Context, env="dev", name="eco-server"):
+def redeploy(ctx: Context, env="dev", name="eco-server"):
     delete_server(ctx, env=env, name=name)
     deploy_server(ctx, env=env, name=name)
 
 @invoke.task
 def push_asset_local(
-    ctx: invoke.Context,
+    ctx: Context,
     download,
     bucket="coilysiren-assets",
     cd="",
@@ -599,7 +431,7 @@ def push_asset_local(
 
 @invoke.task
 def push_asset_remote(
-    ctx: invoke.Context,
+    ctx: Context,
     download,
     bucket="coilysiren-assets",
 ):
@@ -610,7 +442,7 @@ def push_asset_remote(
 
 @invoke.task
 def pull_asset_remote(
-    ctx: invoke.Context,
+    ctx: Context,
     download,
     bucket="coilysiren-assets",
     name="eco-server",
@@ -631,7 +463,7 @@ def pull_asset_remote(
 
 @invoke.task
 def pull_asset_local(
-    ctx: invoke.Context,
+    ctx: Context,
     download,
     bucket="coilysiren-assets",
 ):
@@ -642,7 +474,7 @@ def pull_asset_local(
     )
 
 @invoke.task
-def reboot(ctx: invoke.Context, name="eco-server"):
+def reboot(ctx: Context, name="eco-server"):
     ssh(
         ctx,
         name=name,
@@ -661,7 +493,7 @@ def reboot(ctx: invoke.Context, name="eco-server"):
 
 @invoke.task
 def terraria_push_code(
-    ctx: invoke.Context,
+    ctx: Context,
     name="eco-server",
 ):
     ssh(
@@ -690,7 +522,7 @@ def terraria_push_code(
 
 @invoke.task
 def terraria_clean_logs(
-    ctx: invoke.Context,
+    ctx: Context,
     name="eco-server",
 ):
     ssh(
@@ -712,7 +544,7 @@ def eco_rcon(args: list[str]):
 
 @invoke.task
 def eco_tail(
-    ctx: invoke.Context,
+    ctx: Context,
 ):
     ssh(
         ctx,
@@ -721,7 +553,7 @@ def eco_tail(
 
 @invoke.task
 def eco_restart(
-    ctx: invoke.Context,
+    ctx: Context,
 ):
     ssh(
         ctx,
@@ -730,7 +562,7 @@ def eco_restart(
 
 @invoke.task
 def eco_announce(
-    ctx: invoke.Context,
+    ctx: Context,
     msg: str,
 ):
     # https://wiki.play.eco/en/Chat_Commands
@@ -738,7 +570,7 @@ def eco_announce(
 
 @invoke.task
 def eco_alert(
-    ctx: invoke.Context,
+    ctx: Context,
     msg: str,
 ):
     # https://wiki.play.eco/en/Chat_Commands
@@ -746,28 +578,28 @@ def eco_alert(
 
 @invoke.task
 def eco_players(
-    ctx: invoke.Context,
+    ctx: Context,
 ):
     # https://wiki.play.eco/en/Chat_Commands
     eco_rcon(["manage", "players"])
 
 @invoke.task
 def eco_listusers(
-    ctx: invoke.Context,
+    ctx: Context,
 ):
     # https://wiki.play.eco/en/Chat_Commands
     eco_rcon(["manage", "listusers"])
 
 @invoke.task
 def eco_listadmins(
-    ctx: invoke.Context,
+    ctx: Context,
 ):
     # https://wiki.play.eco/en/Chat_Commands
     eco_rcon(["manage", "listadmins"])
 
 @invoke.task
 def eco_save(
-    ctx: invoke.Context,
+    ctx: Context,
 ):
     # https://wiki.play.eco/en/Chat_Commands
     eco_rcon(["manage", "save"])
