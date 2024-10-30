@@ -29,7 +29,7 @@ SERVER_PATH = os.path.join("C:\\", "Program Files (x86)", "Steam", "steamapps", 
 PROJECT_PATH = os.path.join("C:\\", "Users", USERNAME, "projects")
 
 
-def handleRemoveReadonly(func, path, exc):
+def handleRemoveReadonly(func, path, _):
     if not os.access(path, os.W_OK):
         os.chmod(path, stat.S_IWUSR)
         func(path)
@@ -41,7 +41,10 @@ def zipdir(path, ziph):
     print(f"Zipping {path}")
     for root, _, files in os.walk(path):
         for file in files:
-            if file.split(".")[-1] != "zip":
+            not_eco_zip = file.startswith("EcoServer.zip") is False
+            not_logs = file.startswith(".\\Logs\\") is False
+            not_storage = file.startswith(".\\Storage\\") is False
+            if not_eco_zip and not_storage and not_logs:
                 print("zipping", os.path.join(root, file))
                 ziph.write(
                     os.path.join(root, file), os.path.relpath(os.path.join(root, file), os.path.join(path, ".."))
@@ -226,8 +229,11 @@ def local_run(ctx: invoke.Context):
 
 @invoke.task
 def local_zip(ctx: invoke.Context):
-    local_copy_configs(ctx)
-    local_copy_mods(ctx)
+    # # get fresh configs and mods
+    # local_copy_configs(ctx)
+    # local_copy_mods(ctx)
+
+    # zip server folder
     os.chdir(SERVER_PATH)
     if os.path.exists("EcoServer.zip"):
         os.remove("EcoServer.zip")
@@ -241,27 +247,6 @@ def build_ami(ctx: invoke.Context):
     ctx.run("packer fmt ubuntu.pkr.hcl")
     ctx.run("packer validate ubuntu.pkr.hcl")
     ctx.run("packer build ubuntu.pkr.hcl")
-
-
-@invoke.task
-def local_to_remote(ctx: invoke.Context):
-    # resync configs and mods to blow away any changes made locally
-    local_copy_configs(ctx)
-    local_copy_mods(ctx)
-    # remove storage and logs from local
-    ctx.run("rm -rf ./eco-server/source/Storage")
-    ctx.run("rm -rf ./eco-server/source/Logs")
-    # zip source folder
-    with ctx.cd("./eco-server/source/"):
-        ctx.run("rm -rf EcoSource.zip")
-        ctx.run("zip -r EcoSource.zip .")
-    # backup storage (game save)
-    ssh(ctx, cmd="rm -rf /home/ubuntu/eco/EcoStorage.zip")
-    ssh(ctx, cmd="cd /home/ubuntu/eco/ && zip -r EcoStorage.zip Storage")
-    ssh(ctx, cmd="aws s3 cp /home/ubuntu/eco/EcoStorage.zip s3://coilysiren-assets/downloads/")
-    # sync new data to remote
-    scp(ctx, source="./eco-server/source/EcoSource.zip", destination="/home/ubuntu/eco/")
-    ssh(ctx, cmd="unzip -o /home/ubuntu/eco/EcoSource.zip -d /home/ubuntu/eco/")
 
 
 @invoke.task
