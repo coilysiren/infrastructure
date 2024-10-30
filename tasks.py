@@ -297,20 +297,6 @@ def build_image(ctx: invoke.Context, env="dev", name="eco-server", publish=False
     account_id = sts.get_caller_identity()["Account"]
 
     ctx.run(
-        textwrap.dedent(
-            f"""
-            aws cloudformation validate-template --template-body file://templates/ecr.yaml && \
-            aws cloudformation deploy \
-                --template-file templates/ecr.yaml \
-                --stack-name {name}-ecr \
-                --no-fail-on-empty-changeset
-            """
-        ),
-        pty=True,
-        echo=True,
-    )
-
-    ctx.run(
         f"""
         docker buildx build \
             --progress plain \
@@ -326,6 +312,20 @@ def build_image(ctx: invoke.Context, env="dev", name="eco-server", publish=False
     )
 
     if publish:
+
+        ctx.run(
+            textwrap.dedent(
+                f"""
+                aws cloudformation validate-template --template-body file://templates/ecr.yaml && \
+                aws cloudformation deploy \
+                    --template-file templates/ecr.yaml \
+                    --stack-name {name}-ecr \
+                    --no-fail-on-empty-changeset
+                """
+            ),
+            pty=True,
+            echo=True,
+        )
 
         ctx.run(
             f"""
