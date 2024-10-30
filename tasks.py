@@ -3,11 +3,10 @@
 # builtin
 import json
 import os
-import pathlib
 import shutil
 import stat
-import subprocess
 import textwrap
+import zipfile
 
 # 3rd party
 import boto3
@@ -36,6 +35,17 @@ def handleRemoveReadonly(func, path, exc):
         func(path)
     else:
         raise Exception("could not handle path")
+
+
+def zipdir(path, ziph):
+    print(f"Zipping {path}")
+    for root, _, files in os.walk(path):
+        for file in files:
+            if file.split(".")[-1] != "zip":
+                print("zipping", os.path.join(root, file))
+                ziph.write(
+                    os.path.join(root, file), os.path.relpath(os.path.join(root, file), os.path.join(path, ".."))
+                )
 
 
 def get_ip_address(name: str):
@@ -142,27 +152,6 @@ def deploy_shared(ctx: invoke.Context):
 
 
 @invoke.task
-def local_copy_source(ctx: invoke.Context, redownload=False):
-    if os.path.exists("./eco-server/source"):
-        shutil.rmtree("./eco-server/source", ignore_errors=False, onerror=handleRemoveReadonly)
-
-    if redownload:
-        downloads = os.listdir(os.path.join(pathlib.Path.home(), "Downloads"))
-        for download in downloads:
-            if "EcoServer" in download:
-                os.remove(os.path.join(pathlib.Path.home(), "Downloads", download))
-        input("Go download the Eco Server from play.eco, then press enter to continue.")
-
-    #     ctx.run("rm -r -fo ~/Downloads/EcoServerLinux*.zip")
-
-    # shutil.copyfile("~/Downloads/EcoServerLinux*.zip", "./eco-server/source/EcoServerLinux.zip")
-    # ctx.run("unzip ./eco-server/source/EcoServerLinux.zip -d ./eco-server/source/")
-    # ctx.run("rm -rf ./eco-server/source/EcoServerLinux.zip")
-    # ctx.run("chmod +x ./eco-server/source/EcoServer")
-    # ctx.run("chmod +x ./eco-server/source/install.sh")
-
-
-@invoke.task
 def local_copy_configs(ctx: invoke.Context):
     # Clean out configs folder
     print("Cleaning out configs folder")
@@ -207,9 +196,6 @@ def local_copy_mods(ctx: invoke.Context):
 
 @invoke.task
 def local_run(ctx: invoke.Context):
-    # TODO: rsync Config/WorldGenerator.eco down from remote if it exists
-    # TODO: rsync Storage/ down from remote if it exists
-
     local_copy_configs(ctx)
     local_copy_mods(ctx)
 
@@ -236,6 +222,17 @@ def local_run(ctx: invoke.Context):
     # run server
     os.chdir(SERVER_PATH)
     ctx.run(f"EcoServer.exe -userToken={eco_server_api_token}", echo=True)
+
+
+@invoke.task
+def local_zip(ctx: invoke.Context):
+    local_copy_configs(ctx)
+    local_copy_mods(ctx)
+    os.chdir(SERVER_PATH)
+    if os.path.exists("EcoServer.zip"):
+        os.remove("EcoServer.zip")
+    with zipfile.ZipFile("EcoServer.zip", "w", zipfile.ZIP_DEFLATED) as zipf:
+        zipdir(".", zipf)
 
 
 @invoke.task
