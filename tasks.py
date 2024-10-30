@@ -346,6 +346,11 @@ def build_image(ctx: invoke.Context, env="dev", name="eco-server", publish=False
 @invoke.task
 def run_image(ctx: invoke.Context, env="dev", name="eco-server"):
     account_id = sts.get_caller_identity()["Account"]
+    response = ssm.get_parameter(
+        Name="/eco/server-api-token",
+        WithDecryption=True,
+    )
+    eco_server_api_token = response["Parameter"]["Value"].strip()
 
     ctx.run(
         "mkdir -p eco-server/storage",
@@ -369,7 +374,8 @@ def run_image(ctx: invoke.Context, env="dev", name="eco-server"):
             --name {name} \
             --volume {os.getcwd()}/eco-server/storage:/home/ubuntu/eco/Storage \
             --volume {os.getcwd()}/eco-server/logs:/home/ubuntu/eco/Logs \
-            {account_id}.dkr.ecr.us-east-1.amazonaws.com/{name}-ecr:{env}
+            {account_id}.dkr.ecr.us-east-1.amazonaws.com/{name}-ecr:{env} \
+            /home/ubuntu/eco/EcoServer -userToken="{eco_server_api_token}"
         """,
         pty=True,
         echo=True,
