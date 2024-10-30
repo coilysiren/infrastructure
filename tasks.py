@@ -21,11 +21,13 @@ ssm = boto3.client("ssm")
 # https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/sts.html#sts
 sts = boto3.client("sts")
 
-WINDOWS_USERNAME = "firem"
+USERNAME = os.getenv("USERNAME")
+
 
 class Context(invoke.Context):
-    def run(self, command):
+    def run(self, command, **kawrgs):
         super().run(textwrap.dedent(command), echo=True, pty=True)
+
 
 def get_ip_address(name: str):
     output = ec2.describe_instances(
@@ -36,6 +38,7 @@ def get_ip_address(name: str):
     )
     ip_address = output["Reservations"][0]["Instances"][0]["PublicIpAddress"]
     return ip_address
+
 
 @invoke.task
 def ssh(
@@ -61,6 +64,7 @@ def ssh(
             echo=True,
         )
 
+
 @invoke.task
 def scp(
     ctx: Context,
@@ -78,6 +82,7 @@ def scp(
         echo=True,
     )
 
+
 @invoke.task
 def tail(
     ctx: Context,
@@ -89,8 +94,9 @@ def tail(
         cmd='sudo multitail -c -ts -Q 1 "/var/log/*"',
     )
 
+
 @invoke.task
-def deploy_shared(ctx: Context, name="eco-server"):
+def deploy_shared(ctx: Context):
     ctx.run(
         textwrap.dedent(
             """
@@ -125,6 +131,7 @@ def deploy_shared(ctx: Context, name="eco-server"):
         echo=True,
     )
 
+
 @invoke.task
 def local_copy_source(ctx: Context, redownload=False):
     ctx.run("rm -rf ./eco-server/source")
@@ -132,14 +139,15 @@ def local_copy_source(ctx: Context, redownload=False):
 
     if redownload:
         ctx.run("rm -rf ./eco-server/source/EcoServerLinux.zip")
-        ctx.run(f"rm -rf /mnt/c/Users/{WINDOWS_USERNAME}/Downloads/EcoServerLinux*.zip")
+        ctx.run(f"rm -rf /mnt/c/Users/{USERNAME}/Downloads/EcoServerLinux*.zip")
         input("Go download the Eco linux server from play.eco, then press enter to continue.")
 
-    ctx.run(f"cp /mnt/c/Users/{WINDOWS_USERNAME}/Downloads/EcoServerLinux*.zip ./eco-server/source/EcoServerLinux.zip")
+    ctx.run(f"cp /mnt/c/Users/{USERNAME}/Downloads/EcoServerLinux*.zip ./eco-server/source/EcoServerLinux.zip")
     ctx.run("unzip ./eco-server/source/EcoServerLinux.zip -d ./eco-server/source/")
     ctx.run("rm -rf ./eco-server/source/EcoServerLinux.zip")
     ctx.run("chmod +x ./eco-server/source/EcoServer")
     ctx.run("chmod +x ./eco-server/source/install.sh")
+
 
 @invoke.task
 def local_copy_configs(ctx: Context):
@@ -149,6 +157,7 @@ def local_copy_configs(ctx: Context):
     ctx.run("rm -rf ./eco-server/configs/.git")
     ctx.run("cp -r ./eco-server/configs/. ./eco-server/source/")
 
+
 @invoke.task
 def local_copy_mods(ctx: Context):
     ctx.run("rm -rf ./eco-server/mods")
@@ -157,20 +166,21 @@ def local_copy_mods(ctx: Context):
     ctx.run("rm -rf ./eco-server/mods/.git")
     ctx.run("cp -r ./eco-server/mods/. ./eco-server/source/")
 
+
 @invoke.task
 def local_run(ctx: Context):
     # TODO: rsync Config/WorldGenerator.eco down from remote if it exists
     # TODO: rsync Storage/ down from remote if it exists
 
     # modify network.eco to reflect local server
-    with open("./eco-server/source/Configs/Network.eco", "r") as file:
+    with open("./eco-server/source/Configs/Network.eco", "r", encoding="utf-8") as file:
         network = json.load(file)
         network["PublicServer"] = False
         network["Name"] = "localhost"
         network["IPAddress"] = "Any"
         network["RemoteAddress"] = "localhost:3000"
         network["WebServerUrl"] = "http://localhost:3001"
-    with open("./eco-server/source/Configs/Network.eco", "w") as file:
+    with open("./eco-server/source/Configs/Network.eco", "w", encoding="utf-8") as file:
         json.dump(network, file, indent=4)
 
     # get API key and run server
@@ -180,7 +190,8 @@ def local_run(ctx: Context):
     )
     eco_server_api_token = response["Parameter"]["Value"].strip()
     with ctx.cd("./eco-server/source/"):
-        ctx.run(f"./EcoServer -userToken=\"{eco_server_api_token}\"")
+        ctx.run(f'./EcoServer -userToken="{eco_server_api_token}"')
+
 
 @invoke.task
 def build_ami(ctx: Context):
@@ -188,6 +199,7 @@ def build_ami(ctx: Context):
     ctx.run("packer fmt ubuntu.pkr.hcl")
     ctx.run("packer validate ubuntu.pkr.hcl")
     ctx.run("packer build ubuntu.pkr.hcl")
+
 
 @invoke.task
 def local_to_remote(ctx: Context):
@@ -209,6 +221,7 @@ def local_to_remote(ctx: Context):
     scp(ctx, source="./eco-server/source/EcoSource.zip", destination="/home/ubuntu/eco/")
     ssh(ctx, cmd="unzip -o /home/ubuntu/eco/EcoSource.zip -d /home/ubuntu/eco/")
 
+
 @invoke.task
 def deploy_apex_dns(ctx: Context):
     ctx.run(
@@ -219,6 +232,7 @@ def deploy_apex_dns(ctx: Context):
             --stack-name apex-dns
         """
     )
+
 
 @invoke.task
 def deploy_server(ctx: Context, env="dev", name="eco-server"):
@@ -308,9 +322,10 @@ def deploy_server(ctx: Context, env="dev", name="eco-server"):
         """
     )
 
+
 @invoke.task
 def delete_server(ctx: Context, env="dev", name="eco-server"):
-    ip_address = get_ip_address(name=name, env=env)
+    ip_address = get_ip_address(name=name)
     # reload ssh key - required until I figured out ssh identity pinning
     ctx.run(
         f"ssh-keygen -R {ip_address}",
@@ -328,10 +343,12 @@ def delete_server(ctx: Context, env="dev", name="eco-server"):
         echo=True,
     )
 
+
 @invoke.task
 def redeploy(ctx: Context, env="dev", name="eco-server"):
     delete_server(ctx, env=env, name=name)
     deploy_server(ctx, env=env, name=name)
+
 
 @invoke.task
 def reboot(ctx: Context, name="eco-server"):
@@ -341,9 +358,11 @@ def reboot(ctx: Context, name="eco-server"):
         cmd="sudo reboot",
     )
 
+
 #########################
 # TERRARIA SERVER STUFF #
 #########################
+
 
 @invoke.task
 def terraria_push_code(
@@ -373,6 +392,7 @@ def terraria_push_code(
     reboot(ctx, name=name)
     ssh(ctx, name=name, connection_attempts=60)
 
+
 @invoke.task
 def terraria_clean_logs(
     ctx: Context,
@@ -384,9 +404,11 @@ def terraria_clean_logs(
         cmd="rm -rf /home/ubuntu/games/terraria-logs/*",
     )
 
+
 ####################
 # ECO SERVER STUFF #
 ####################
+
 
 def eco_rcon(args: list[str]):
     ip_address = get_ip_address("eco-server")
@@ -394,40 +416,48 @@ def eco_rcon(args: list[str]):
         response = client.run(*args)
     print(response)
 
+
 @invoke.task
 def eco_tail(
     ctx: Context,
 ):
     ssh(ctx, cmd='multitail -Q 1 "/home/ubuntu/games/eco/Logs/*"')
 
+
 @invoke.task
 def eco_restart(ctx: Context):
     ssh(ctx, cmd="sudo systemctl restart eco-server")
+
 
 @invoke.task
 def eco_announce(ctx: Context, msg: str):
     # https://wiki.play.eco/en/Chat_Commands
     eco_rcon(["manage", "announce", msg])
 
+
 @invoke.task
 def eco_alert(ctx: Context, msg: str):
     # https://wiki.play.eco/en/Chat_Commands
     eco_rcon(["manage", "alert", msg])
+
 
 @invoke.task
 def eco_players(ctx: Context):
     # https://wiki.play.eco/en/Chat_Commands
     eco_rcon(["manage", "players"])
 
+
 @invoke.task
 def eco_listusers(ctx: Context):
     # https://wiki.play.eco/en/Chat_Commands
     eco_rcon(["manage", "listusers"])
 
+
 @invoke.task
 def eco_listadmins(ctx: Context):
     # https://wiki.play.eco/en/Chat_Commands
     eco_rcon(["manage", "listadmins"])
+
 
 @invoke.task
 def eco_save(ctx: Context):
