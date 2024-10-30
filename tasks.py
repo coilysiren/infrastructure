@@ -210,6 +210,9 @@ def local_run(ctx: invoke.Context):
     # TODO: rsync Config/WorldGenerator.eco down from remote if it exists
     # TODO: rsync Storage/ down from remote if it exists
 
+    local_copy_configs(ctx)
+    local_copy_mods(ctx)
+
     # modify network.eco to reflect local server
     print("Modifying network.eco to reflect local server")
     with open(os.path.join(SERVER_PATH, "Configs", "Network.eco"), "r", encoding="utf-8") as file:
