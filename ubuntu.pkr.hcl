@@ -67,6 +67,7 @@ build {
   }
 
   provisioner "shell" {
+    max_retries = 5
     environment_vars = [
       "DEBIAN_FRONTEND=noninteractive",
     ]

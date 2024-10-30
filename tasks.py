@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 # builtin
+import json
 import os
 import textwrap
 
@@ -35,6 +36,30 @@ def get_ip_address(name: str):
     )
     ip_address = output["Reservations"][0]["Instances"][0]["PublicIpAddress"]
     return ip_address
+
+def local_network_eco():
+    # modify network.eco to reflect local server
+    with open("./eco-server/source/Configs/Network.eco", "r") as file:
+        network = json.load(file)
+        network["PublicServer"] = False
+        network["Name"] = "localhost"
+        network["IPAddress"] = "Any"
+        network["RemoteAddress"] = "localhost:3000"
+        network["WebServerUrl"] = "http://localhost:3001"
+    with open("./eco-server/source/Configs/Network.eco", "w") as file:
+        json.dump(network, file, indent=4)
+
+def remote_network_eco(name="eco-server"):
+    # modify network.eco to reflect remote server
+    ip_address = get_ip_address(name)
+    with open("./eco-server/source/Configs/Network.eco", "r") as file:
+        network = json.load(file)
+        network["PublicServer"] = True
+        network["IPAddress"] = ip_address
+        network["RemoteAddress"] = f"{ip_address}:3000"
+        network["WebServerUrl"] = f"http://{ip_address}:3001"
+    with open("./eco-server/source/Configs/Network.eco", "w") as file:
+        json.dump(network, file, indent=4)
 
 @invoke.task
 def ssh(
@@ -141,14 +166,6 @@ def local_copy_source(ctx: Context, redownload=False):
     ctx.run("chmod +x ./eco-server/source/install.sh")
 
 @invoke.task
-def local_copy_mods(ctx: Context):
-    ctx.run("rm -rf ./eco-server/mods")
-    ctx.run("mkdir -p ./eco-server/mods")
-    ctx.run("git clone --depth 1 git@github.com:coilysiren/eco-mods.git ./eco-server/mods")
-    ctx.run("rm -rf ./eco-server/mods/.git")
-    ctx.run("cp -r ./eco-server/mods/. ./eco-server/source/")
-
-@invoke.task
 def local_copy_configs(ctx: Context):
     ctx.run("rm -rf ./eco-server/configs")
     ctx.run("mkdir -p ./eco-server/configs/")
@@ -157,15 +174,30 @@ def local_copy_configs(ctx: Context):
     ctx.run("cp -r ./eco-server/configs/. ./eco-server/source/")
 
 @invoke.task
-def local_copy(ctx: Context, redownload=False):
-    local_copy_source(ctx, redownload=redownload)
-    local_copy_mods(ctx)
-    local_copy_configs(ctx)
+def local_copy_mods(ctx: Context):
+    ctx.run("rm -rf ./eco-server/mods")
+    ctx.run("mkdir -p ./eco-server/mods")
+    ctx.run("git clone --depth 1 git@github.com:coilysiren/eco-mods.git ./eco-server/mods")
+    ctx.run("rm -rf ./eco-server/mods/.git")
+    ctx.run("cp -r ./eco-server/mods/. ./eco-server/source/")
 
 @invoke.task
 def local_run(ctx: Context):
-    # TODO: rsync
-    # TODO: modify network.eco for local runs
+    # TODO: rsync Config/WorldGenerator.eco down from remote if it exists
+    # TODO: rsync Storage/ down from remote if it exists
+
+    local_network_eco()
+    with open("./eco-server/source/Configs/Network.eco", "r") as file:
+        network = json.load(file)
+        network["PublicServer"] = False
+        network["Name"] = "localhost"
+        network["IPAddress"] = "Any"
+        network["RemoteAddress"] = "localhost:3000"
+        network["WebServerUrl"] = "http://localhost:3001"
+    with open("./eco-server/source/Configs/Network.eco", "w") as file:
+        json.dump(network, file, indent=4)
+
+    # get API key and run server
     response = ssm.get_parameter(
         Name="/eco/server-api-token",
         WithDecryption=True,
@@ -179,7 +211,27 @@ def build_ami(ctx: Context):
     ctx.run("packer init ubuntu.pkr.hcl")
     ctx.run("packer fmt ubuntu.pkr.hcl")
     ctx.run("packer validate ubuntu.pkr.hcl")
-    ctx.run(f"packer build ubuntu.pkr.hcl")
+    ctx.run("packer build ubuntu.pkr.hcl")
+
+@invoke.task
+def local_to_remote(ctx: Context):
+    # resync configs and mods to blow away any changes made locally
+    local_copy_configs(ctx)
+    local_copy_mods(ctx)
+    # remove storage and logs from local
+    ctx.run("rm -rf ./eco-server/source/Storage")
+    ctx.run("rm -rf ./eco-server/source/Logs")
+    # zip source folder
+    with ctx.cd("./eco-server/source/"):
+        ctx.run("rm -rf EcoSource.zip")
+        ctx.run("zip -r EcoSource.zip .")
+    # backup storage (game save)
+    ssh(ctx, cmd="rm -rf /home/ubuntu/eco/EcoStorage.zip")
+    ssh(ctx, cmd="cd /home/ubuntu/eco/ && zip -r EcoStorage.zip Storage")
+    ssh(ctx, cmd="aws s3 cp /home/ubuntu/eco/EcoStorage.zip s3://coilysiren-assets/downloads/")
+    # sync new data to remote
+    scp(ctx, source="./eco-server/source/EcoSource.zip", destination="/home/ubuntu/eco/")
+    ssh(ctx, cmd="unzip -o /home/ubuntu/eco/EcoSource.zip -d /home/ubuntu/eco/")
 
 @invoke.task
 def deploy_apex_dns(ctx: Context):
@@ -304,70 +356,6 @@ def delete_server(ctx: Context, env="dev", name="eco-server"):
 def redeploy(ctx: Context, env="dev", name="eco-server"):
     delete_server(ctx, env=env, name=name)
     deploy_server(ctx, env=env, name=name)
-
-@invoke.task
-def push_asset_local(
-    ctx: Context,
-    download,
-    bucket="coilysiren-assets",
-    cd="",
-):
-    def cmd():
-        ctx.run(
-            f"aws s3 cp {download} s3://{bucket}/downloads/{download}",
-            pty=True,
-            echo=True,
-        )
-
-    if cd:
-        with ctx.cd(cd):
-            cmd()
-    else:
-        cmd()
-
-@invoke.task
-def push_asset_remote(
-    ctx: Context,
-    download,
-    bucket="coilysiren-assets",
-):
-    ssh(
-        ctx,
-        cmd=f"aws s3 cp /home/ubuntu/games/{download} s3://{bucket}/downloads/",
-    )
-
-@invoke.task
-def pull_asset_remote(
-    ctx: Context,
-    download,
-    bucket="coilysiren-assets",
-    name="eco-server",
-    cd="",
-):
-    if cd:
-        ssh(
-            ctx,
-            name=name,
-            cmd=f"cd {cd} && aws s3 cp s3://{bucket}/downloads/{download} .",
-        )
-    else:
-        ssh(
-            ctx,
-            name=name,
-            cmd=f"aws s3 cp s3://{bucket}/downloads/{download} /home/ubuntu/games/",
-        )
-
-@invoke.task
-def pull_asset_local(
-    ctx: Context,
-    download,
-    bucket="coilysiren-assets",
-):
-    ctx.run(
-        f"aws s3 cp s3://{bucket}/downloads/{download} ~/Downloads/",
-        pty=True,
-        echo=True,
-    )
 
 @invoke.task
 def reboot(ctx: Context, name="eco-server"):

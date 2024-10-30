@@ -8,10 +8,10 @@ sudo chown -R ubuntu /var/log/
 
 # move scripts files
 mkdir -p /home/ubuntu/scripts
-cp /tmp/scripts/* /home/ubuntu/scripts/
+cp /tmp/scripts/* /home/ubuntu/scripts/ || true
 
 # move systemd service files
-sudo cp /tmp/systemd/* /etc/systemd/system/
+sudo cp /tmp/systemd/* /etc/systemd/system/ || true
 
 # allow running scripts
 chmod a+x /home/ubuntu/scripts/*
@@ -47,4 +47,4 @@ aws configure set default.region us-east-1
 rm -rf awscliv2.zip
 
 # final cleanup
-rm -rf /tmp/*
+sudo rm -rf /tmp/*
