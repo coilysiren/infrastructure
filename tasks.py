@@ -362,7 +362,7 @@ def run_image(ctx: invoke.Context, env="dev", name="eco-server"):
     ctx.run(
         f"""
         docker run --rm \
-            -p 3000:3000 \
+            -p 3000:3000/udp \
             -p 3001:3001 \
             -p 3002:3002 \
             -p 3003:3003 \

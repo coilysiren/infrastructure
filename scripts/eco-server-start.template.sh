@@ -12,7 +12,7 @@ set -eux
 
 /usr/bin/docker run --rm \
     --name eco-server \
-    -p 3000:3000 \
+    -p 3000:3000/udp \
     -p 3001:3001 \
     -p 3002:3002 \
     -p 3003:3003 \
