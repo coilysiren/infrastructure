@@ -293,7 +293,7 @@ def copy_build_configs(ctx: invoke.Context):
     )
 
 @invoke.task
-def build_image(ctx: invoke.Context, env="dev", name="eco-server"):
+def build_image(ctx: invoke.Context, env="dev", name="eco-server", publish=False):
     account_id = sts.get_caller_identity()["Account"]
 
     ctx.run(
@@ -325,21 +325,23 @@ def build_image(ctx: invoke.Context, env="dev", name="eco-server"):
         echo=True,
     )
 
-    ctx.run(
-        f"""
-        aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin {account_id}.dkr.ecr.us-east-1.amazonaws.com
-        """,
-        pty=True,
-        echo=True,
-    )
+    if publish:
 
-    ctx.run(
-        f"""
-        docker push {account_id}.dkr.ecr.us-east-1.amazonaws.com/{name}-ecr:{env}
-        """,
-        pty=True,
-        echo=True,
-    )
+        ctx.run(
+            f"""
+            aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin {account_id}.dkr.ecr.us-east-1.amazonaws.com
+            """,
+            pty=True,
+            echo=True,
+        )
+
+        ctx.run(
+            f"""
+            docker push {account_id}.dkr.ecr.us-east-1.amazonaws.com/{name}-ecr:{env}
+            """,
+            pty=True,
+            echo=True,
+        )
 
 @invoke.task
 def run_image(ctx: invoke.Context, env="dev", name="eco-server"):
