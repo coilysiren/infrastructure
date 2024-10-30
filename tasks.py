@@ -163,11 +163,24 @@ def local_copy_source(ctx: invoke.Context, redownload=False):
 
 @invoke.task
 def local_copy_configs(ctx: invoke.Context):
-    ctx.run("rm -rf ./eco-server/configs")
-    ctx.run("mkdir -p ./eco-server/configs/")
-    ctx.run("git clone --depth 1 git@github.com:coilysiren/eco-configs.git ./eco-server/configs")
-    ctx.run("rm -rf ./eco-server/configs/.git")
-    ctx.run("cp -r ./eco-server/configs/. ./eco-server/source/")
+    # Clean out configs folder
+    print("Cleaning out configs folder")
+    if os.path.exists("./eco-server/configs"):
+        shutil.rmtree("./eco-server/configs", ignore_errors=False, onerror=handleRemoveReadonly)
+
+    # Get configs from git
+    ctx.run("git clone --depth 1 git@github.com:coilysiren/eco-configs.git ./eco-server/configs", echo=True)
+
+    # Copy configs to server
+    print("Copying configs to server")
+    configs = os.listdir("./eco-server/configs/Configs")
+    for config in configs:
+        if config.split(".")[-1] != "template":
+            config_path = os.path.join(SERVER_PATH, "Configs", config)
+            if os.path.exists(config_path):
+                os.remove(config_path)
+            print(f"\tCopying ./eco-server/configs/Configs/{config} to {config_path}")
+            shutil.copyfile(f"./eco-server/configs/Configs/{config}", config_path)
 
 
 @invoke.task
@@ -176,8 +189,10 @@ def local_copy_mods(ctx: invoke.Context):
     print("Cleaning out mods folder")
     if os.path.exists("./eco-server/mods"):
         shutil.rmtree("./eco-server/mods", ignore_errors=False, onerror=handleRemoveReadonly)
+
     # get mods from git
     ctx.run("git clone --depth 1 git@github.com:coilysiren/eco-mods.git ./eco-server/mods", echo=True)
+
     # copy mods to server
     print("Copying mods to server")
     mods = os.listdir("./eco-server/mods/Mods")
