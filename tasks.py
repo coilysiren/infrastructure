@@ -3,6 +3,9 @@
 # builtin
 import json
 import os
+import pathlib
+import shutil
+import stat
 import textwrap
 
 # 3rd party
@@ -21,12 +24,17 @@ ssm = boto3.client("ssm")
 # https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/sts.html#sts
 sts = boto3.client("sts")
 
-USERNAME = os.getenv("USERNAME")
+USERNAME = os.getenv("USERNAME", "")
+SERVER_PATH = os.path.join("C:\\", "Program Files (x86)", "Steam", "steamapps", "common", "Eco", "Eco_Data", "Server")
+PROJECT_PATH = os.path.join("C:\\", "Users", USERNAME, "projects")
 
 
-class Context(invoke.Context):
-    def run(self, command, **kawrgs):
-        super().run(textwrap.dedent(command), echo=True, pty=True)
+def handleRemoveReadonly(func, path, exc):
+    if not os.access(path, os.W_OK):
+        os.chmod(path, stat.S_IWUSR)
+        func(path)
+    else:
+        raise Exception("could not handle path")
 
 
 def get_ip_address(name: str):
@@ -42,7 +50,7 @@ def get_ip_address(name: str):
 
 @invoke.task
 def ssh(
-    ctx: Context,
+    ctx: invoke.Context,
     name="eco-server",
     user="ubuntu",
     cmd="bash",
@@ -67,7 +75,7 @@ def ssh(
 
 @invoke.task
 def scp(
-    ctx: Context,
+    ctx: invoke.Context,
     name="eco-server",
     user="ubuntu",
     source="",
@@ -85,7 +93,7 @@ def scp(
 
 @invoke.task
 def tail(
-    ctx: Context,
+    ctx: invoke.Context,
     name="eco-server",
 ):
     ssh(
@@ -96,7 +104,7 @@ def tail(
 
 
 @invoke.task
-def deploy_shared(ctx: Context):
+def deploy_shared(ctx: invoke.Context):
     ctx.run(
         textwrap.dedent(
             """
@@ -133,24 +141,28 @@ def deploy_shared(ctx: Context):
 
 
 @invoke.task
-def local_copy_source(ctx: Context, redownload=False):
-    ctx.run("rm -rf ./eco-server/source")
-    ctx.run("mkdir ./eco-server/source")
+def local_copy_source(ctx: invoke.Context, redownload=False):
+    if os.path.exists("./eco-server/source"):
+        shutil.rmtree("./eco-server/source", ignore_errors=False, onerror=handleRemoveReadonly)
 
     if redownload:
-        ctx.run("rm -rf ./eco-server/source/EcoServerLinux.zip")
-        ctx.run(f"rm -rf /mnt/c/Users/{USERNAME}/Downloads/EcoServerLinux*.zip")
-        input("Go download the Eco linux server from play.eco, then press enter to continue.")
+        downloads = os.listdir(os.path.join(pathlib.Path.home(), "Downloads"))
+        for download in downloads:
+            if "EcoServer" in download:
+                os.remove(os.path.join(pathlib.Path.home(), "Downloads", download))
+        input("Go download the Eco Server from play.eco, then press enter to continue.")
 
-    ctx.run(f"cp /mnt/c/Users/{USERNAME}/Downloads/EcoServerLinux*.zip ./eco-server/source/EcoServerLinux.zip")
-    ctx.run("unzip ./eco-server/source/EcoServerLinux.zip -d ./eco-server/source/")
-    ctx.run("rm -rf ./eco-server/source/EcoServerLinux.zip")
-    ctx.run("chmod +x ./eco-server/source/EcoServer")
-    ctx.run("chmod +x ./eco-server/source/install.sh")
+    #     ctx.run("rm -r -fo ~/Downloads/EcoServerLinux*.zip")
+
+    # shutil.copyfile("~/Downloads/EcoServerLinux*.zip", "./eco-server/source/EcoServerLinux.zip")
+    # ctx.run("unzip ./eco-server/source/EcoServerLinux.zip -d ./eco-server/source/")
+    # ctx.run("rm -rf ./eco-server/source/EcoServerLinux.zip")
+    # ctx.run("chmod +x ./eco-server/source/EcoServer")
+    # ctx.run("chmod +x ./eco-server/source/install.sh")
 
 
 @invoke.task
-def local_copy_configs(ctx: Context):
+def local_copy_configs(ctx: invoke.Context):
     ctx.run("rm -rf ./eco-server/configs")
     ctx.run("mkdir -p ./eco-server/configs/")
     ctx.run("git clone --depth 1 git@github.com:coilysiren/eco-configs.git ./eco-server/configs")
@@ -159,16 +171,26 @@ def local_copy_configs(ctx: Context):
 
 
 @invoke.task
-def local_copy_mods(ctx: Context):
-    ctx.run("rm -rf ./eco-server/mods")
-    ctx.run("mkdir -p ./eco-server/mods")
-    ctx.run("git clone --depth 1 git@github.com:coilysiren/eco-mods.git ./eco-server/mods")
-    ctx.run("rm -rf ./eco-server/mods/.git")
-    ctx.run("cp -r ./eco-server/mods/. ./eco-server/source/")
+def local_copy_mods(ctx: invoke.Context):
+    # clean out mods folder
+    print("Cleaning out mods folder")
+    if os.path.exists("./eco-server/mods"):
+        shutil.rmtree("./eco-server/mods", ignore_errors=False, onerror=handleRemoveReadonly)
+    # get mods from git
+    ctx.run("git clone --depth 1 git@github.com:coilysiren/eco-mods.git ./eco-server/mods", echo=True)
+    # copy mods to server
+    print("Copying mods to server")
+    mods = os.listdir("./eco-server/mods/Mods")
+    for mod in mods:
+        mod_path = os.path.join(SERVER_PATH, "Mods", mod)
+        if os.path.exists(mod_path):
+            shutil.rmtree(mod_path, ignore_errors=False, onerror=handleRemoveReadonly)
+        print(f"\tCopying ./eco-server/mods/Mods/{mod} to {mod_path}")
+        shutil.copytree(f"./eco-server/mods/Mods/{mod}", mod_path)
 
 
 @invoke.task
-def local_run(ctx: Context):
+def local_run(ctx: invoke.Context):
     # TODO: rsync Config/WorldGenerator.eco down from remote if it exists
     # TODO: rsync Storage/ down from remote if it exists
 
@@ -194,7 +216,7 @@ def local_run(ctx: Context):
 
 
 @invoke.task
-def build_ami(ctx: Context):
+def build_ami(ctx: invoke.Context):
     ctx.run("packer init ubuntu.pkr.hcl")
     ctx.run("packer fmt ubuntu.pkr.hcl")
     ctx.run("packer validate ubuntu.pkr.hcl")
@@ -202,7 +224,7 @@ def build_ami(ctx: Context):
 
 
 @invoke.task
-def local_to_remote(ctx: Context):
+def local_to_remote(ctx: invoke.Context):
     # resync configs and mods to blow away any changes made locally
     local_copy_configs(ctx)
     local_copy_mods(ctx)
@@ -223,7 +245,7 @@ def local_to_remote(ctx: Context):
 
 
 @invoke.task
-def deploy_apex_dns(ctx: Context):
+def deploy_apex_dns(ctx: invoke.Context):
     ctx.run(
         """
         aws cloudformation validate-template --template-body file://templates/apex-dns.yaml && \
@@ -235,7 +257,7 @@ def deploy_apex_dns(ctx: Context):
 
 
 @invoke.task
-def deploy_server(ctx: Context, env="dev", name="eco-server"):
+def deploy_server(ctx: invoke.Context, env="dev", name="eco-server"):
     dns_name = name.split("-")[0]
     deploy_shared(ctx)
     ctx.run(
@@ -324,7 +346,7 @@ def deploy_server(ctx: Context, env="dev", name="eco-server"):
 
 
 @invoke.task
-def delete_server(ctx: Context, env="dev", name="eco-server"):
+def delete_server(ctx: invoke.Context, env="dev", name="eco-server"):
     ip_address = get_ip_address(name=name)
     # reload ssh key - required until I figured out ssh identity pinning
     ctx.run(
@@ -345,13 +367,13 @@ def delete_server(ctx: Context, env="dev", name="eco-server"):
 
 
 @invoke.task
-def redeploy(ctx: Context, env="dev", name="eco-server"):
+def redeploy(ctx: invoke.Context, env="dev", name="eco-server"):
     delete_server(ctx, env=env, name=name)
     deploy_server(ctx, env=env, name=name)
 
 
 @invoke.task
-def reboot(ctx: Context, name="eco-server"):
+def reboot(ctx: invoke.Context, name="eco-server"):
     ssh(
         ctx,
         name=name,
@@ -366,7 +388,7 @@ def reboot(ctx: Context, name="eco-server"):
 
 @invoke.task
 def terraria_push_code(
-    ctx: Context,
+    ctx: invoke.Context,
     name="eco-server",
 ):
     ssh(
@@ -395,7 +417,7 @@ def terraria_push_code(
 
 @invoke.task
 def terraria_clean_logs(
-    ctx: Context,
+    ctx: invoke.Context,
     name="eco-server",
 ):
     ssh(
@@ -419,47 +441,47 @@ def eco_rcon(args: list[str]):
 
 @invoke.task
 def eco_tail(
-    ctx: Context,
+    ctx: invoke.Context,
 ):
     ssh(ctx, cmd='multitail -Q 1 "/home/ubuntu/games/eco/Logs/*"')
 
 
 @invoke.task
-def eco_restart(ctx: Context):
+def eco_restart(ctx: invoke.Context):
     ssh(ctx, cmd="sudo systemctl restart eco-server")
 
 
 @invoke.task
-def eco_announce(ctx: Context, msg: str):
+def eco_announce(ctx: invoke.Context, msg: str):
     # https://wiki.play.eco/en/Chat_Commands
     eco_rcon(["manage", "announce", msg])
 
 
 @invoke.task
-def eco_alert(ctx: Context, msg: str):
+def eco_alert(ctx: invoke.Context, msg: str):
     # https://wiki.play.eco/en/Chat_Commands
     eco_rcon(["manage", "alert", msg])
 
 
 @invoke.task
-def eco_players(ctx: Context):
+def eco_players(ctx: invoke.Context):
     # https://wiki.play.eco/en/Chat_Commands
     eco_rcon(["manage", "players"])
 
 
 @invoke.task
-def eco_listusers(ctx: Context):
+def eco_listusers(ctx: invoke.Context):
     # https://wiki.play.eco/en/Chat_Commands
     eco_rcon(["manage", "listusers"])
 
 
 @invoke.task
-def eco_listadmins(ctx: Context):
+def eco_listadmins(ctx: invoke.Context):
     # https://wiki.play.eco/en/Chat_Commands
     eco_rcon(["manage", "listadmins"])
 
 
 @invoke.task
-def eco_save(ctx: Context):
+def eco_save(ctx: invoke.Context):
     # https://wiki.play.eco/en/Chat_Commands
     eco_rcon(["manage", "save"])
