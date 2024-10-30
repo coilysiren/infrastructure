@@ -233,7 +233,7 @@ def copy_build_mods(ctx: invoke.Context):
     ctx.run(
         textwrap.dedent(
             f"""
-            git clone git@github.com:coilysiren/eco-mods.git ./eco-server/mods
+            git clone --depth 1 git@github.com:coilysiren/eco-mods.git ./eco-server/mods
             """
         ),
         pty=True,
@@ -275,7 +275,7 @@ def copy_build_configs(ctx: invoke.Context):
     ctx.run(
         textwrap.dedent(
             f"""
-            git clone git@github.com:coilysiren/eco-configs.git ./eco-server/configs
+            git clone --depth 1 git@github.com:coilysiren/eco-configs.git ./eco-server/configs
             """
         ),
         pty=True,
