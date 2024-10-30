@@ -24,7 +24,7 @@ WINDOWS_USERNAME = "firem"
 
 class Context(invoke.Context):
     def run(self, command):
-        super().run(command, echo=True, pty=True)
+        super().run(textwrap.dedent(command), echo=True, pty=True)
 
 def get_ip_address(name: str):
     output = ec2.describe_instances(
@@ -125,94 +125,7 @@ def deploy_shared(ctx: Context, name="eco-server"):
     )
 
 @invoke.task
-def copy_source(ctx: Context, redownload=False):
-
-    if redownload:
-
-        ctx.run(
-            textwrap.dedent(
-                f"""
-                rm -rf ./eco-server/source/EcoServerLinux.zip
-                """
-            ),
-            pty=True,
-            echo=True,
-        )
-
-        ctx.run(
-            textwrap.dedent(
-                f"""
-                rm -rf /mnt/c/Users/{WINDOWS_USERNAME}/Downloads/EcoServerLinux*.zip
-                """
-            ),
-            pty=True,
-            echo=True,
-        )
-
-        ctx.run(
-            textwrap.dedent(
-                f"""
-                rm -rf ./eco-server/source/*
-                """
-            ),
-            pty=True,
-            echo=True,
-        )
-
-        ctx.run(
-            textwrap.dedent(
-                f"""
-                mkdir ./eco-server/source/*
-                """
-            ),
-            pty=True,
-            echo=True,
-        )
-
-        input("Go download the Eco linux server from play.eco, then press enter to continue.")
-
-    ctx.run(
-        textwrap.dedent(
-            f"""
-            cp /mnt/c/Users/{WINDOWS_USERNAME}/Downloads/EcoServerLinux*.zip ./eco-server/source
-            """
-        ),
-        pty=True,
-        echo=True,
-    )
-
-    ctx.run(
-        textwrap.dedent(
-            f"""
-            cp /mnt/c/Users/{WINDOWS_USERNAME}/Downloads/EcoServerLinux*.zip ./eco-server/source/EcoServerLinux.zip
-            """
-        ),
-        pty=True,
-        echo=True,
-    )
-
-    ctx.run(
-        textwrap.dedent(
-            f"""
-            unzip ./eco-server/source/EcoServerLinux.zip -d ./eco-server/source/
-            """
-        ),
-        pty=True,
-        echo=True,
-    )
-
-    ctx.run(
-        textwrap.dedent(
-            f"""
-            rm -rf ./eco-server/source/EcoServerLinux.zip
-            """
-        ),
-        pty=True,
-        echo=True,
-    )
-
-@invoke.task
-def copy_source(ctx: Context, redownload=False):
+def local_copy_source(ctx: Context, redownload=False):
     ctx.run("rm -rf ./eco-server/source")
     ctx.run("mkdir ./eco-server/source")
 
@@ -224,101 +137,88 @@ def copy_source(ctx: Context, redownload=False):
     ctx.run(f"cp /mnt/c/Users/{WINDOWS_USERNAME}/Downloads/EcoServerLinux*.zip ./eco-server/source/EcoServerLinux.zip")
     ctx.run("unzip ./eco-server/source/EcoServerLinux.zip -d ./eco-server/source/")
     ctx.run("rm -rf ./eco-server/source/EcoServerLinux.zip")
+    ctx.run("chmod +x ./eco-server/source/EcoServer")
+    ctx.run("chmod +x ./eco-server/source/install.sh")
 
 @invoke.task
-def copy_mods(ctx: Context):
+def local_copy_mods(ctx: Context):
     ctx.run("rm -rf ./eco-server/mods")
     ctx.run("mkdir -p ./eco-server/mods")
     ctx.run("git clone --depth 1 git@github.com:coilysiren/eco-mods.git ./eco-server/mods")
     ctx.run("rm -rf ./eco-server/mods/.git")
-    ctx.run("cp -r ./eco-server/mods/. ./eco-server/source/Mods/")
+    ctx.run("cp -r ./eco-server/mods/. ./eco-server/source/")
 
 @invoke.task
-def copy_configs(ctx: Context):
+def local_copy_configs(ctx: Context):
     ctx.run("rm -rf ./eco-server/configs")
     ctx.run("mkdir -p ./eco-server/configs/")
     ctx.run("git clone --depth 1 git@github.com:coilysiren/eco-configs.git ./eco-server/configs")
     ctx.run("rm -rf ./eco-server/configs/.git")
-    ctx.run("cp -r ./eco-server/configs/. ./eco-server/source/Configs/")
+    ctx.run("cp -r ./eco-server/configs/. ./eco-server/source/")
 
 @invoke.task
-def copy_all(ctx: Context, redownload=False):
-    copy_source(ctx, redownload=redownload)
-    copy_mods(ctx)
-    copy_configs(ctx)
+def local_copy(ctx: Context, redownload=False):
+    local_copy_source(ctx, redownload=redownload)
+    local_copy_mods(ctx)
+    local_copy_configs(ctx)
 
 @invoke.task
-def run_server(ctx: Context):
+def local_run(ctx: Context):
+    # TODO: rsync
+    # TODO: modify network.eco for local runs
     response = ssm.get_parameter(
         Name="/eco/server-api-token",
         WithDecryption=True,
     )
     eco_server_api_token = response["Parameter"]["Value"].strip()
-    ctx.run(f"./eco-server/source/EcoServer -userToken=\"{eco_server_api_token}\"")
+    with ctx.cd("./eco-server/source/"):
+        ctx.run(f"./EcoServer -userToken=\"{eco_server_api_token}\"")
 
 @invoke.task
-def build_ami(ctx: Context, only_validate=False):
+def build_ami(ctx: Context):
     ctx.run("packer init ubuntu.pkr.hcl")
     ctx.run("packer fmt ubuntu.pkr.hcl")
     ctx.run("packer validate ubuntu.pkr.hcl")
-
-    if not only_validate:
-        ctx.run(f"packer build ubuntu.pkr.hcl")
+    ctx.run(f"packer build ubuntu.pkr.hcl")
 
 @invoke.task
 def deploy_apex_dns(ctx: Context):
     ctx.run(
-        textwrap.dedent(
-            """
-            aws cloudformation validate-template --template-body file://templates/apex-dns.yaml && \
-            aws cloudformation deploy \
-                --template-file templates/apex-dns.yaml \
-                --stack-name apex-dns
-            """
-        ),
-        pty=True,
-        echo=True,
+        """
+        aws cloudformation validate-template --template-body file://templates/apex-dns.yaml && \
+        aws cloudformation deploy \
+            --template-file templates/apex-dns.yaml \
+            --stack-name apex-dns
+        """
     )
 
 @invoke.task
 def deploy_server(ctx: Context, env="dev", name="eco-server"):
-    deploy_shared(ctx)
-
     dns_name = name.split("-")[0]
-    env_suffix = "-dev" if env == "dev" else ""
-
+    deploy_shared(ctx)
     ctx.run(
-        textwrap.dedent(
-            f"""
-            aws cloudformation validate-template --template-body file://templates/dns.yaml && \
-            aws cloudformation deploy \
-                --template-file templates/dns.yaml \
-                --parameter-overrides \
-                    Name={name} \
-                    Env={env} \
-                    DnsName={dns_name}{env_suffix} \
-                --stack-name {name}-{env}-dns \
-                --no-fail-on-empty-changeset
-            """
-        ),
-        pty=True,
-        echo=True,
+        f"""
+        aws cloudformation validate-template --template-body file://templates/dns.yaml && \
+        aws cloudformation deploy \
+            --template-file templates/dns.yaml \
+            --parameter-overrides \
+                Name={name} \
+                Env={env} \
+                DnsName={dns_name} \
+            --stack-name {name}-dns \
+            --no-fail-on-empty-changeset
+        """
     )
-
     ctx.run(
-        textwrap.dedent(
-            f"""
-            aws cloudformation validate-template --template-body file://templates/volume.yaml && \
-            aws cloudformation deploy \
-                --template-file templates/volume.yaml \
-                --parameter-overrides \
-                    Name={name}-{env} \
-                --stack-name {name}-{env}-volume \
-                --no-fail-on-empty-changeset
-            """
-        ),
-        pty=True,
-        echo=True,
+        f"""
+        aws cloudformation validate-template --template-body file://templates/volume.yaml && \
+        aws cloudformation deploy \
+            --template-file templates/volume.yaml \
+            --parameter-overrides \
+                Name={name} \
+            --stack-name {name}-volume \
+            --no-fail-on-empty-changeset
+        """
     )
 
     # get AMI
@@ -331,14 +231,14 @@ def deploy_server(ctx: Context, env="dev", name="eco-server"):
 
     # get EBS volume
     response = ssm.get_parameter(
-        Name=f"/cfn/{name}-{env}/ebs-vol",
+        Name=f"/cfn/{name}/ebs-vol",
         WithDecryption=True,
     )
     ebs_volume = response["Parameter"]["Value"]
 
     # get EIP id
     response = ssm.get_parameter(
-        Name=f"/cfn/{name}-{env}/eip-id",
+        Name=f"/cfn/{name}/eip-id",
         WithDecryption=True,
     )
     eip_ip = response["Parameter"]["Value"]
@@ -362,26 +262,22 @@ def deploy_server(ctx: Context, env="dev", name="eco-server"):
         InstanceType = "t3.large"
 
     ctx.run(
-        textwrap.dedent(
-            f"""
-            aws cloudformation validate-template --template-body file://templates/instance.yaml && \
-            aws cloudformation deploy \
-                --template-file templates/instance.yaml \
-                --parameter-overrides \
-                    Name={name}-{env} \
-                    Service={name} \
-                    Volume={ebs_volume} \
-                    Env={env} \
-                    AMI={ubuntu_ami} \
-                    EIPAllocationId={eip_ip} \
-                    SecurityGroups={",".join(security_groups)} \
-                    InstanceType={InstanceType} \
-                --stack-name {name}-{env}-instance \
-                --no-fail-on-empty-changeset
-            """
-        ),
-        pty=True,
-        echo=True,
+        f"""
+        aws cloudformation validate-template --template-body file://templates/instance.yaml && \
+        aws cloudformation deploy \
+            --template-file templates/instance.yaml \
+            --parameter-overrides \
+                Name={name} \
+                Service={name} \
+                Volume={ebs_volume} \
+                Env={env} \
+                AMI={ubuntu_ami} \
+                EIPAllocationId={eip_ip} \
+                SecurityGroups={",".join(security_groups)} \
+                InstanceType={InstanceType} \
+            --stack-name {name}-instance \
+            --no-fail-on-empty-changeset
+        """
     )
 
 @invoke.task
@@ -394,12 +290,12 @@ def delete_server(ctx: Context, env="dev", name="eco-server"):
         echo=True,
     )
     ctx.run(
-        f"aws cloudformation delete-stack --stack-name {name}-{env}-instance",
+        f"aws cloudformation delete-stack --stack-name {name}-instance",
         pty=True,
         echo=True,
     )
     ctx.run(
-        f"aws cloudformation wait stack-delete-complete --stack-name {name}-{env}-instance",
+        f"aws cloudformation wait stack-delete-complete --stack-name {name}-instance",
         pty=True,
         echo=True,
     )
@@ -480,16 +376,10 @@ def reboot(ctx: Context, name="eco-server"):
         name=name,
         cmd="sudo reboot",
     )
-    ssh(
-        ctx,
-        name=name,
-    )
-
 
 #########################
 # TERRARIA SERVER STUFF #
 #########################
-
 
 @invoke.task
 def terraria_push_code(
@@ -519,7 +409,6 @@ def terraria_push_code(
     reboot(ctx, name=name)
     ssh(ctx, name=name, connection_attempts=60)
 
-
 @invoke.task
 def terraria_clean_logs(
     ctx: Context,
@@ -530,7 +419,6 @@ def terraria_clean_logs(
         name=name,
         cmd="rm -rf /home/ubuntu/games/terraria-logs/*",
     )
-
 
 ####################
 # ECO SERVER STUFF #
@@ -546,60 +434,38 @@ def eco_rcon(args: list[str]):
 def eco_tail(
     ctx: Context,
 ):
-    ssh(
-        ctx,
-        cmd='multitail -Q 1 "/home/ubuntu/games/eco/Logs/*"',
-    )
+    ssh(ctx, cmd='multitail -Q 1 "/home/ubuntu/games/eco/Logs/*"')
 
 @invoke.task
-def eco_restart(
-    ctx: Context,
-):
-    ssh(
-        ctx,
-        cmd="sudo systemctl restart eco-server",
-    )
+def eco_restart(ctx: Context):
+    ssh(ctx, cmd="sudo systemctl restart eco-server")
 
 @invoke.task
-def eco_announce(
-    ctx: Context,
-    msg: str,
-):
+def eco_announce(ctx: Context, msg: str):
     # https://wiki.play.eco/en/Chat_Commands
     eco_rcon(["manage", "announce", msg])
 
 @invoke.task
-def eco_alert(
-    ctx: Context,
-    msg: str,
-):
+def eco_alert(ctx: Context, msg: str):
     # https://wiki.play.eco/en/Chat_Commands
     eco_rcon(["manage", "alert", msg])
 
 @invoke.task
-def eco_players(
-    ctx: Context,
-):
+def eco_players(ctx: Context):
     # https://wiki.play.eco/en/Chat_Commands
     eco_rcon(["manage", "players"])
 
 @invoke.task
-def eco_listusers(
-    ctx: Context,
-):
+def eco_listusers(ctx: Context):
     # https://wiki.play.eco/en/Chat_Commands
     eco_rcon(["manage", "listusers"])
 
 @invoke.task
-def eco_listadmins(
-    ctx: Context,
-):
+def eco_listadmins(ctx: Context):
     # https://wiki.play.eco/en/Chat_Commands
     eco_rcon(["manage", "listadmins"])
 
 @invoke.task
-def eco_save(
-    ctx: Context,
-):
+def eco_save(ctx: Context):
     # https://wiki.play.eco/en/Chat_Commands
     eco_rcon(["manage", "save"])

@@ -4,14 +4,4 @@ venv
 *.pem
 *.zip
 home/
-
-eco-server/configs/*
-eco-server/mods/*
-eco-server/source/*
-eco-server/logs/*
-eco-server/storage/*
-
-# allow script templates, but not generated files
-# should push these generated files into another folder
-scripts/eco-server-start.sh
-scripts/eco-server-stop.sh
+eco-server/

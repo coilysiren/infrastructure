@@ -46,6 +46,13 @@ build {
     destination = "/tmp/scripts/"
   }
 
+  provisioner "file" {
+    sources = [
+      "eco-server/source/install.sh",
+    ]
+    destination = "/tmp/scripts/install.sh"
+  }
+
   provisioner "shell" {
     inline = [
       "mkdir -p /tmp/systemd",
