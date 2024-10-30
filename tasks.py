@@ -37,30 +37,6 @@ def get_ip_address(name: str):
     ip_address = output["Reservations"][0]["Instances"][0]["PublicIpAddress"]
     return ip_address
 
-def local_network_eco():
-    # modify network.eco to reflect local server
-    with open("./eco-server/source/Configs/Network.eco", "r") as file:
-        network = json.load(file)
-        network["PublicServer"] = False
-        network["Name"] = "localhost"
-        network["IPAddress"] = "Any"
-        network["RemoteAddress"] = "localhost:3000"
-        network["WebServerUrl"] = "http://localhost:3001"
-    with open("./eco-server/source/Configs/Network.eco", "w") as file:
-        json.dump(network, file, indent=4)
-
-def remote_network_eco(name="eco-server"):
-    # modify network.eco to reflect remote server
-    ip_address = get_ip_address(name)
-    with open("./eco-server/source/Configs/Network.eco", "r") as file:
-        network = json.load(file)
-        network["PublicServer"] = True
-        network["IPAddress"] = ip_address
-        network["RemoteAddress"] = f"{ip_address}:3000"
-        network["WebServerUrl"] = f"http://{ip_address}:3001"
-    with open("./eco-server/source/Configs/Network.eco", "w") as file:
-        json.dump(network, file, indent=4)
-
 @invoke.task
 def ssh(
     ctx: Context,
@@ -186,7 +162,7 @@ def local_run(ctx: Context):
     # TODO: rsync Config/WorldGenerator.eco down from remote if it exists
     # TODO: rsync Storage/ down from remote if it exists
 
-    local_network_eco()
+    # modify network.eco to reflect local server
     with open("./eco-server/source/Configs/Network.eco", "r") as file:
         network = json.load(file)
         network["PublicServer"] = False
