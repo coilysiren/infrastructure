@@ -6,6 +6,7 @@ import os
 import pathlib
 import shutil
 import stat
+import subprocess
 import textwrap
 
 # 3rd party
@@ -210,24 +211,28 @@ def local_run(ctx: invoke.Context):
     # TODO: rsync Storage/ down from remote if it exists
 
     # modify network.eco to reflect local server
-    with open("./eco-server/source/Configs/Network.eco", "r", encoding="utf-8") as file:
+    print("Modifying network.eco to reflect local server")
+    with open(os.path.join(SERVER_PATH, "Configs", "Network.eco"), "r", encoding="utf-8") as file:
         network = json.load(file)
         network["PublicServer"] = False
         network["Name"] = "localhost"
         network["IPAddress"] = "Any"
         network["RemoteAddress"] = "localhost:3000"
         network["WebServerUrl"] = "http://localhost:3001"
-    with open("./eco-server/source/Configs/Network.eco", "w", encoding="utf-8") as file:
+    with open(os.path.join(SERVER_PATH, "Configs", "Network.eco"), "w", encoding="utf-8") as file:
         json.dump(network, file, indent=4)
 
-    # get API key and run server
+    # get API key
+    print("Getting API key")
     response = ssm.get_parameter(
         Name="/eco/server-api-token",
         WithDecryption=True,
     )
     eco_server_api_token = response["Parameter"]["Value"].strip()
-    with ctx.cd("./eco-server/source/"):
-        ctx.run(f'./EcoServer -userToken="{eco_server_api_token}"')
+
+    # run server
+    os.chdir(SERVER_PATH)
+    ctx.run(f"EcoServer.exe -userToken={eco_server_api_token}", echo=True)
 
 
 @invoke.task
