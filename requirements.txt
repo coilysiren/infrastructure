@@ -1,7 +1,5 @@
-boto3==1.28.53
-invoke==2.2.0
-requests==2.31.0
-pipupgrade==1.12.0
-pylint==2.17.5
-rcon==2.4.6
-jinja2==3.1.4
+boto3
+invoke
+requests
+pylint
+jinja2

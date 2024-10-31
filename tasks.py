@@ -12,20 +12,31 @@ import zipfile
 import boto3
 import invoke
 import jinja2
-import rcon
 
 
 # docs: https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/ec2.html
-ec2 = boto3.client("ec2")
+ec2 = boto3.client("ec2", region_name="us-east-1")
 
 # docs: https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/ssm.html
-ssm = boto3.client("ssm")
+ssm = boto3.client("ssm", region_name="us-east-1")
 
 # https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/sts.html#sts
 sts = boto3.client("sts")
 
+# https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/route53.html#route53
+route53 = boto3.client("route53")
+
 USERNAME = os.getenv("USERNAME", "")
-SERVER_PATH = os.path.join("C:\\", "Program Files (x86)", "Steam", "steamapps", "common", "Eco", "Eco_Data", "Server")
+SERVER_PATH = os.path.join(
+    "C:\\",
+    "Program Files (x86)",
+    "Steam",
+    "steamapps",
+    "common",
+    "Eco",
+    "Eco_Data",
+    "Server",
+)
 PROJECT_PATH = os.path.join("C:\\", "Users", USERNAME, "projects")
 
 
@@ -47,8 +58,34 @@ def zipdir(path, ziph):
             if not_eco_zip and not_storage and not_logs:
                 print("zipping", os.path.join(root, file))
                 ziph.write(
-                    os.path.join(root, file), os.path.relpath(os.path.join(root, file), os.path.join(path, ".."))
+                    os.path.join(root, file),
+                    os.path.relpath(os.path.join(root, file), os.path.join(path, "..")),
                 )
+
+
+@invoke.task
+def update_dns(ctx: invoke.Context):
+    ip_address = ctx.run("curl -4 ifconfig.co", echo=True)
+    response = route53.list_hosted_zones_by_name(DNSName="coilysiren.me")
+    hosted_zone = response["HostedZones"][0]["Id"].split("/")[-1]
+    response = route53.change_resource_record_sets(
+        HostedZoneId=hosted_zone,
+        ChangeBatch={
+            "Changes": [
+                {
+                    "Action": "UPSERT",
+                    "ResourceRecordSet": {
+                        "Name": "eco.coilysiren.me",
+                        "Type": "A",
+                        "TTL": 60,
+                        "ResourceRecords": [
+                            {"Value": ip_address.stdout.strip()},
+                        ],
+                    },
+                },
+            ],
+        },
+    )
 
 
 @invoke.task
@@ -56,10 +93,15 @@ def local_copy_configs(ctx: invoke.Context):
     # Clean out configs folder
     print("Cleaning out configs folder")
     if os.path.exists("./eco-server/configs"):
-        shutil.rmtree("./eco-server/configs", ignore_errors=False, onerror=handleRemoveReadonly)
+        shutil.rmtree(
+            "./eco-server/configs", ignore_errors=False, onerror=handleRemoveReadonly
+        )
 
     # Get configs from git
-    ctx.run("git clone --depth 1 git@github.com:coilysiren/eco-configs.git ./eco-server/configs", echo=True)
+    ctx.run(
+        "git clone --depth 1 git@github.com:coilysiren/eco-configs.git ./eco-server/configs",
+        echo=True,
+    )
 
     # Copy configs to server
     print("Copying configs to server")
@@ -78,10 +120,15 @@ def local_copy_mods(ctx: invoke.Context):
     # clean out mods folder
     print("Cleaning out mods folder")
     if os.path.exists("./eco-server/mods"):
-        shutil.rmtree("./eco-server/mods", ignore_errors=False, onerror=handleRemoveReadonly)
+        shutil.rmtree(
+            "./eco-server/mods", ignore_errors=False, onerror=handleRemoveReadonly
+        )
 
     # get mods from git
-    ctx.run("git clone --depth 1 git@github.com:coilysiren/eco-mods.git ./eco-server/mods", echo=True)
+    ctx.run(
+        "git clone --depth 1 git@github.com:coilysiren/eco-mods.git ./eco-server/mods",
+        echo=True,
+    )
 
     # copy mods to server
     print("Copying mods to server")
@@ -101,14 +148,18 @@ def local_run(ctx: invoke.Context):
 
     # modify network.eco to reflect local server
     print("Modifying network.eco to reflect local server")
-    with open(os.path.join(SERVER_PATH, "Configs", "Network.eco"), "r", encoding="utf-8") as file:
+    with open(
+        os.path.join(SERVER_PATH, "Configs", "Network.eco"), "r", encoding="utf-8"
+    ) as file:
         network = json.load(file)
         network["PublicServer"] = False
         network["Name"] = "localhost"
         network["IPAddress"] = "Any"
         network["RemoteAddress"] = "localhost:3000"
         network["WebServerUrl"] = "http://localhost:3001"
-    with open(os.path.join(SERVER_PATH, "Configs", "Network.eco"), "w", encoding="utf-8") as file:
+    with open(
+        os.path.join(SERVER_PATH, "Configs", "Network.eco"), "w", encoding="utf-8"
+    ) as file:
         json.dump(network, file, indent=4)
 
     # get API key
