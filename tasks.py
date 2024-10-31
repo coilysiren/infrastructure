@@ -6,13 +6,15 @@ import os
 import shutil
 import stat
 import textwrap
+import uuid
 import zipfile
 
 # 3rd party
 import boto3
 import invoke
-import requests
+import jinja2
 import rcon
+import requests
 
 
 # docs: https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/ec2.html
@@ -240,13 +242,34 @@ def local_zip(ctx: invoke.Context):
     with zipfile.ZipFile("EcoServer.zip", "w", zipfile.ZIP_DEFLATED) as zipf:
         zipdir(".", zipf)
 
+    # copy zip to current directory
+    shutil.copyfile("EcoServer.zip", os.path.join(PROJECT_PATH, "EcoServer.zip"))
+
 
 @invoke.task
 def build_ami(ctx: invoke.Context):
-    ctx.run("packer init ubuntu.pkr.hcl")
-    ctx.run("packer fmt ubuntu.pkr.hcl")
-    ctx.run("packer validate ubuntu.pkr.hcl")
-    ctx.run("packer build ubuntu.pkr.hcl")
+    # generate AMI password
+    uuid_str = str(uuid.uuid4())
+    ssm.put_parameter(
+        Name="/packer/ami-password",
+        Value=uuid_str,
+        Type="SecureString",
+        Overwrite=True,
+    )
+
+    # generate bootstrap.txt with AMI password
+    jinja_env = jinja2.Environment(loader=jinja2.PackageLoader(__name__, "./templates"))
+    template = jinja_env.get_template("bootstrap.template")
+    content = template.render(
+        ami_password=uuid_str,
+    )
+    with open("templates/bootstrap.txt", mode="w", encoding="utf-8") as file:
+        file.write(content)
+
+    ctx.run("packer init infra/server.pkr.hcl")
+    ctx.run("packer fmt infra/server.pkr.hcl")
+    ctx.run("packer validate infra/server.pkr.hcl")
+    ctx.run("packer build infra/server.pkr.hcl")
 
 
 @invoke.task
