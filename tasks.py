@@ -65,7 +65,7 @@ def zipdir(path, ziph):
 
 @invoke.task
 def update_dns(ctx: invoke.Context):
-    ip_address = ctx.run("curl -4 ifconfig.co", echo=True)
+    ip_address = ctx.run("curl -4 ifconfig.co", echo=True).stdout.strip()
     response = route53.list_hosted_zones_by_name(DNSName="coilysiren.me")
     hosted_zone = response["HostedZones"][0]["Id"].split("/")[-1]
     response = route53.change_resource_record_sets(
@@ -79,7 +79,7 @@ def update_dns(ctx: invoke.Context):
                         "Type": "A",
                         "TTL": 60,
                         "ResourceRecords": [
-                            {"Value": ip_address.stdout.strip()},
+                            {"Value": ip_address},
                         ],
                     },
                 },
@@ -89,7 +89,7 @@ def update_dns(ctx: invoke.Context):
 
 
 @invoke.task
-def local_copy_configs(ctx: invoke.Context):
+def copy_configs(ctx: invoke.Context):
     # Clean out configs folder
     print("Cleaning out configs folder")
     if os.path.exists("./eco-server/configs"):
@@ -116,7 +116,7 @@ def local_copy_configs(ctx: invoke.Context):
 
 
 @invoke.task
-def local_copy_mods(ctx: invoke.Context):
+def copy_mods(ctx: invoke.Context):
     # clean out mods folder
     print("Cleaning out mods folder")
     if os.path.exists("./eco-server/mods"):
@@ -142,9 +142,9 @@ def local_copy_mods(ctx: invoke.Context):
 
 
 @invoke.task
-def local_run(ctx: invoke.Context):
-    local_copy_configs(ctx)
-    local_copy_mods(ctx)
+def run(ctx: invoke.Context):
+    copy_configs(ctx)
+    copy_mods(ctx)
 
     # modify network.eco to reflect local server
     print("Modifying network.eco to reflect local server")
