@@ -63,6 +63,11 @@ def zipdir(path, ziph):
                 )
 
 
+def run_eco(ctx: invoke.Context):
+    os.chdir(SERVER_PATH)
+    ctx.run(f"EcoServer.exe {command}", echo=True)
+
+
 @invoke.task
 def update_dns(ctx: invoke.Context):
     ip_address = ctx.run("curl -4 ifconfig.co", echo=True).stdout.strip()
@@ -117,7 +122,6 @@ def copy_configs(ctx: invoke.Context):
 
 @invoke.task
 def copy_mods(ctx: invoke.Context):
-    # clean out mods folder
     print("Cleaning out mods folder")
     if os.path.exists("./eco-server/mods"):
         shutil.rmtree(
@@ -130,7 +134,6 @@ def copy_mods(ctx: invoke.Context):
         echo=True,
     )
 
-    # copy mods to server
     print("Copying mods to server")
     mods = os.listdir("./eco-server/mods/Mods")
     for mod in mods:
@@ -140,14 +143,17 @@ def copy_mods(ctx: invoke.Context):
         print(f"\tCopying ./eco-server/mods/Mods/{mod} to {mod_path}")
         shutil.copytree(f"./eco-server/mods/Mods/{mod}", mod_path)
 
+    print("Copying mod configs to server")
+    shutil.copytree(
+        "./eco-server/mods/Configs",
+        os.path.join(SERVER_PATH, "Configs"),
+        dirs_exist_ok=True,
+    )
+
 
 @invoke.task
-def run(ctx: invoke.Context):
-    copy_configs(ctx)
-    copy_mods(ctx)
-
-    # modify network.eco to reflect local server
-    print("Modifying network.eco to reflect local server")
+def run_private(ctx: invoke.Context):
+    print("Modifying network.eco to reflect private server")
     with open(
         os.path.join(SERVER_PATH, "Configs", "Network.eco"), "r", encoding="utf-8"
     ) as file:
@@ -173,3 +179,67 @@ def run(ctx: invoke.Context):
     # run server
     os.chdir(SERVER_PATH)
     ctx.run(f"EcoServer.exe -userToken={eco_server_api_token}", echo=True)
+
+
+@invoke.task
+def run_public(ctx: invoke.Context):
+    print("Copying configs and mods to server to ensure they are up to date")
+    copy_configs(ctx)
+    copy_mods(ctx)
+
+    print("Modifying network.eco to reflect public server")
+    with open(
+        os.path.join(SERVER_PATH, "Configs", "Network.eco"), "r", encoding="utf-8"
+    ) as file:
+        network = json.load(file)
+        network["PublicServer"] = True
+        network["Name"] = "Eco Sirens"
+        network["IPAddress"] = "Any"
+        network["RemoteAddress"] = "eco.coilysiren.me:3000"
+        network["WebServerUrl"] = "http://eco.coilysiren.me:3001"
+    with open(
+        os.path.join(SERVER_PATH, "Configs", "Network.eco"), "w", encoding="utf-8"
+    ) as file:
+        json.dump(network, file, indent=4)
+
+    # get API key
+    print("Getting API key")
+    response = ssm.get_parameter(
+        Name="/eco/server-api-token",
+        WithDecryption=True,
+    )
+    eco_server_api_token = response["Parameter"]["Value"].strip()
+
+    # run server
+    os.chdir(SERVER_PATH)
+    ctx.run(f"EcoServer.exe -userToken={eco_server_api_token}", echo=True)
+
+
+@invoke.task
+def regenerate_world(ctx: invoke.Context):
+    if os.path.exists(os.path.join(SERVER_PATH, "Storage")):
+        shutil.rmtree(
+            os.path.join(SERVER_PATH, "Storage"),
+            ignore_errors=False,
+            onerror=handleRemoveReadonly,
+        )
+    if os.path.exists(os.path.join(SERVER_PATH, "Logs")):
+        shutil.rmtree(
+            os.path.join(SERVER_PATH, "Logs"),
+            ignore_errors=False,
+            onerror=handleRemoveReadonly,
+        )
+
+    print("Modifying difficulty.eco to regenerate world")
+    with open(
+        os.path.join(SERVER_PATH, "Configs", "Difficulty.eco"), "r", encoding="utf-8"
+    ) as file:
+        difficulty = json.load(file)
+        difficulty["GameSettings"]["GenerateRandomWorld"] = True
+    with open(
+        os.path.join(SERVER_PATH, "Configs", "Network.eco"), "w", encoding="utf-8"
+    ) as file:
+        json.dump(difficulty, file, indent=4)
+
+    # Run the world generation
+    run_private(ctx)
