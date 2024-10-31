@@ -229,9 +229,9 @@ def local_run(ctx: invoke.Context):
 
 @invoke.task
 def local_zip(ctx: invoke.Context):
-    # # get fresh configs and mods
-    # local_copy_configs(ctx)
-    # local_copy_mods(ctx)
+    # get fresh configs and mods
+    local_copy_configs(ctx)
+    local_copy_mods(ctx)
 
     # zip server folder
     os.chdir(SERVER_PATH)
