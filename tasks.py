@@ -91,6 +91,9 @@ def copy_mods():
         target_path = os.path.join(SERVER_PATH, "Mods", "UserCode", mod)
         copy_paths(origin_path, target_path)
 
+    # TODO: handle overrides in UserCode/Tools/, UserCode/Objects/, etc
+    # TODO: get the list of overrides by looking inside __core__
+
     if os.path.exists("./eco-server/mods/Configs"):
         print("Copying mod configs to server")
         shutil.copytree(
