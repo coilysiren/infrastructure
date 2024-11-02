@@ -119,7 +119,7 @@ def copy_configs(ctx: invoke.Context):
 
 
 @invoke.task
-def copy_mods(ctx: invoke.Context, branch=""):
+def copy_private_mods(ctx: invoke.Context, branch=""):
     print("Cleaning out mods folder")
     if os.path.exists("./eco-server/mods"):
         shutil.rmtree("./eco-server/mods", ignore_errors=False, onerror=handleRemoveReadonly)
@@ -132,6 +132,10 @@ def copy_mods(ctx: invoke.Context, branch=""):
         f"git clone --depth 1 {branch_flag} -- git@github.com:coilysiren/eco-mods.git ./eco-server/mods",
         echo=True,
     )
+
+    # remove .git folder
+    if os.path.exists("./eco-server/mods/.git"):
+        shutil.rmtree("./eco-server/mods/.git", ignore_errors=False, onerror=handleRemoveReadonly)
 
     print("Copying mods to server")
     mods = os.listdir("./eco-server/mods/Mods")
@@ -149,6 +153,44 @@ def copy_mods(ctx: invoke.Context, branch=""):
         os.path.join(SERVER_PATH, "Configs"),
         dirs_exist_ok=True,
     )
+
+
+@invoke.task
+def copy_public_mods(ctx: invoke.Context, branch=""):
+    print("Cleaning out mods folder")
+    if os.path.exists("./eco-server/mods"):
+        shutil.rmtree("./eco-server/mods", ignore_errors=False, onerror=handleRemoveReadonly)
+
+    # get mods from git
+    branch_flag = ""
+    if branch != "":
+        branch_flag = f"-b {branch}"
+    ctx.run(
+        f"git clone --depth 1 {branch_flag} -- git@github.com:coilysiren/eco-mods-public.git ./eco-server/mods",
+        echo=True,
+    )
+
+    # remove .git folder
+    if os.path.exists("./eco-server/mods/.git"):
+        shutil.rmtree("./eco-server/mods/.git", ignore_errors=False, onerror=handleRemoveReadonly)
+
+    print("Copying mods to server")
+    mods = os.listdir("./eco-server/mods/Mods/UserCode")
+    for mod in mods:
+        mod_path = os.path.join(SERVER_PATH, "Mods", "UserCode", mod)
+        if os.path.exists(mod_path):
+            shutil.rmtree(mod_path, ignore_errors=False, onerror=handleRemoveReadonly)
+        if os.path.isdir(f"./eco-server/mods/Mods/UserCode/{mod}"):
+            print(f"\tCopying ./eco-server/mods/Mods/UserCode/{mod} to {mod_path}")
+            shutil.copytree(f"./eco-server/mods/Mods/UserCode/{mod}", mod_path)
+
+    if os.path.exists("./eco-server/mods/Configs"):
+        print("Copying mod configs to server")
+        shutil.copytree(
+            "./eco-server/mods/Configs",
+            os.path.join(SERVER_PATH, "Configs"),
+            dirs_exist_ok=True,
+        )
 
 
 @invoke.task
@@ -181,7 +223,8 @@ def run_private(ctx: invoke.Context):
 def run_public(ctx: invoke.Context):
     print("Copying configs and mods to server to ensure they are up to date")
     copy_configs(ctx)
-    copy_mods(ctx)
+    copy_private_mods(ctx)
+    copy_public_mods(ctx)
 
     print("Modifying network.eco to reflect public server")
     with open(os.path.join(SERVER_PATH, "Configs", "Network.eco"), "r", encoding="utf-8") as file:
