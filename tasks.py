@@ -63,9 +63,41 @@ def zipdir(path, ziph):
                 )
 
 
-def run_eco(ctx: invoke.Context):
-    os.chdir(SERVER_PATH)
-    ctx.run(f"EcoServer.exe {command}", echo=True)
+def copy_paths(origin_path, target_path):
+    if not os.path.isdir(origin_path):
+        return
+    if os.path.exists(target_path) and os.path.isdir(target_path):
+        print(f"\tRemoving {target_path}")
+        shutil.rmtree(target_path, ignore_errors=False, onerror=handleRemoveReadonly)
+    if os.path.isdir(origin_path):
+        print(f"\tCopying {origin_path} to {target_path}")
+        shutil.copytree(origin_path, target_path)
+
+
+def copy_mods():
+    print("Copying mods to server")
+    mods = os.listdir("./eco-server/mods/Mods")
+    for mod in mods:
+        origin_path = os.path.join("./eco-server/mods/Mods", mod)
+        target_path = os.path.join(SERVER_PATH, "Mods", mod)
+        if mod.endswith("UserCode"):
+            continue
+        copy_paths(origin_path, target_path)
+
+    print("Copying user code mods to server")
+    mods = os.listdir("./eco-server/mods/Mods/UserCode")
+    for mod in mods:
+        origin_path = os.path.join("./eco-server/mods/Mods/UserCode", mod)
+        target_path = os.path.join(SERVER_PATH, "Mods", "UserCode", mod)
+        copy_paths(origin_path, target_path)
+
+    if os.path.exists("./eco-server/mods/Configs"):
+        print("Copying mod configs to server")
+        shutil.copytree(
+            "./eco-server/mods/Configs",
+            os.path.join(SERVER_PATH, "Configs"),
+            dirs_exist_ok=True,
+        )
 
 
 @invoke.task
@@ -132,27 +164,9 @@ def copy_private_mods(ctx: invoke.Context, branch=""):
         f"git clone --depth 1 {branch_flag} -- git@github.com:coilysiren/eco-mods.git ./eco-server/mods",
         echo=True,
     )
+    shutil.rmtree("./eco-server/mods/.git", ignore_errors=False, onerror=handleRemoveReadonly)
 
-    # remove .git folder
-    if os.path.exists("./eco-server/mods/.git"):
-        shutil.rmtree("./eco-server/mods/.git", ignore_errors=False, onerror=handleRemoveReadonly)
-
-    print("Copying mods to server")
-    mods = os.listdir("./eco-server/mods/Mods")
-    for mod in mods:
-        mod_path = os.path.join(SERVER_PATH, "Mods", mod)
-        if os.path.exists(mod_path):
-            shutil.rmtree(mod_path, ignore_errors=False, onerror=handleRemoveReadonly)
-        if os.path.isdir(f"./eco-server/mods/Mods/{mod}"):
-            print(f"\tCopying ./eco-server/mods/Mods/{mod} to {mod_path}")
-            shutil.copytree(f"./eco-server/mods/Mods/{mod}", mod_path)
-
-    print("Copying mod configs to server")
-    shutil.copytree(
-        "./eco-server/mods/Configs",
-        os.path.join(SERVER_PATH, "Configs"),
-        dirs_exist_ok=True,
-    )
+    copy_mods()
 
 
 @invoke.task
@@ -169,28 +183,9 @@ def copy_public_mods(ctx: invoke.Context, branch=""):
         f"git clone --depth 1 {branch_flag} -- git@github.com:coilysiren/eco-mods-public.git ./eco-server/mods",
         echo=True,
     )
+    shutil.rmtree("./eco-server/mods/.git", ignore_errors=False, onerror=handleRemoveReadonly)
 
-    # remove .git folder
-    if os.path.exists("./eco-server/mods/.git"):
-        shutil.rmtree("./eco-server/mods/.git", ignore_errors=False, onerror=handleRemoveReadonly)
-
-    print("Copying mods to server")
-    mods = os.listdir("./eco-server/mods/Mods/UserCode")
-    for mod in mods:
-        mod_path = os.path.join(SERVER_PATH, "Mods", "UserCode", mod)
-        if os.path.exists(mod_path):
-            shutil.rmtree(mod_path, ignore_errors=False, onerror=handleRemoveReadonly)
-        if os.path.isdir(f"./eco-server/mods/Mods/UserCode/{mod}"):
-            print(f"\tCopying ./eco-server/mods/Mods/UserCode/{mod} to {mod_path}")
-            shutil.copytree(f"./eco-server/mods/Mods/UserCode/{mod}", mod_path)
-
-    if os.path.exists("./eco-server/mods/Configs"):
-        print("Copying mod configs to server")
-        shutil.copytree(
-            "./eco-server/mods/Configs",
-            os.path.join(SERVER_PATH, "Configs"),
-            dirs_exist_ok=True,
-        )
+    copy_mods()
 
 
 @invoke.task
