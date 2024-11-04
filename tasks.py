@@ -63,10 +63,10 @@ def zipdir(path, ziph):
                 )
 
 
-def copy_paths(origin_path, target_path, in_place=False):
+def copy_paths(origin_path, target_path):
     if not os.path.isdir(origin_path):
         return
-    if os.path.exists(target_path) and os.path.isdir(target_path) and in_place is False:
+    if os.path.exists(target_path) and os.path.isdir(target_path):
         print(f"\tRemoving {target_path}")
         shutil.rmtree(target_path, ignore_errors=False, onerror=handleRemoveReadonly)
     if os.path.isdir(origin_path):
@@ -192,7 +192,7 @@ def copy_public_mods(ctx: invoke.Context, branch=""):
 
 
 @invoke.task
-def copy_assets(ctx: invoke.Context, branch="", in_place=False):
+def copy_assets(ctx: invoke.Context, branch=""):
     print("Cleaning out assets folder")
     if os.path.exists("./eco-server/assets"):
         shutil.rmtree("./eco-server/assets", ignore_errors=False, onerror=handleRemoveReadonly)
@@ -210,7 +210,7 @@ def copy_assets(ctx: invoke.Context, branch="", in_place=False):
     for build in os.listdir("./eco-server/assets/Builds/Mods/UserCode/"):
         origin_path = os.path.join("./eco-server/assets/Builds/Mods/UserCode", build, "Assets")
         target_path = os.path.join(SERVER_PATH, "Mods", "UserCode", build, "Assets")
-        copy_paths(origin_path, target_path, in_place)
+        copy_paths(origin_path, target_path)
 
 
 @invoke.task
