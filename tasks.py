@@ -63,10 +63,10 @@ def zipdir(path, ziph):
                 )
 
 
-def copy_paths(origin_path, target_path):
+def copy_paths(origin_path, target_path, in_place=False):
     if not os.path.isdir(origin_path):
         return
-    if os.path.exists(target_path) and os.path.isdir(target_path):
+    if os.path.exists(target_path) and os.path.isdir(target_path) and in_place is False:
         print(f"\tRemoving {target_path}")
         shutil.rmtree(target_path, ignore_errors=False, onerror=handleRemoveReadonly)
     if os.path.isdir(origin_path):
@@ -192,6 +192,28 @@ def copy_public_mods(ctx: invoke.Context, branch=""):
 
 
 @invoke.task
+def copy_assets(ctx: invoke.Context, branch="", in_place=False):
+    print("Cleaning out assets folder")
+    if os.path.exists("./eco-server/assets"):
+        shutil.rmtree("./eco-server/assets", ignore_errors=False, onerror=handleRemoveReadonly)
+
+    # get assets from git
+    branch_flag = ""
+    if branch != "":
+        branch_flag = f"-b {branch}"
+    ctx.run(
+        f"git clone --depth 1 {branch_flag} -- git@github.com:coilysiren/eco-mods-assets.git ./eco-server/assets",
+        echo=True,
+    )
+    shutil.rmtree("./eco-server/assets/.git", ignore_errors=False, onerror=handleRemoveReadonly)
+
+    for build in os.listdir("./eco-server/assets/Builds/Mods/UserCode/"):
+        origin_path = os.path.join("./eco-server/assets/Builds/Mods/UserCode", build, "Assets")
+        target_path = os.path.join(SERVER_PATH, "Mods", "UserCode", build, "Assets")
+        copy_paths(origin_path, target_path, in_place)
+
+
+@invoke.task
 def run_private(ctx: invoke.Context):
     print("Modifying network.eco to reflect private server")
     with open(os.path.join(SERVER_PATH, "Configs", "Network.eco"), "r", encoding="utf-8") as file:
@@ -203,6 +225,14 @@ def run_private(ctx: invoke.Context):
         network["WebServerUrl"] = "http://localhost:3001"
     with open(os.path.join(SERVER_PATH, "Configs", "Network.eco"), "w", encoding="utf-8") as file:
         json.dump(network, file, indent=4)
+
+    # This should be the default state, but we perform the modification just in case
+    print("Modifying difficulty.eco to ensure static world")
+    with open(os.path.join(SERVER_PATH, "Configs", "Difficulty.eco"), "r", encoding="utf-8") as file:
+        difficulty = json.load(file)
+        difficulty["GameSettings"]["GenerateRandomWorld"] = False
+    with open(os.path.join(SERVER_PATH, "Configs", "Difficulty.eco"), "w", encoding="utf-8") as file:
+        json.dump(difficulty, file, indent=4)
 
     # get API key
     print("Getting API key")
@@ -240,7 +270,7 @@ def run_public(ctx: invoke.Context):
     with open(os.path.join(SERVER_PATH, "Configs", "Difficulty.eco"), "r", encoding="utf-8") as file:
         difficulty = json.load(file)
         difficulty["GameSettings"]["GenerateRandomWorld"] = False
-    with open(os.path.join(SERVER_PATH, "Configs", "Network.eco"), "w", encoding="utf-8") as file:
+    with open(os.path.join(SERVER_PATH, "Configs", "Difficulty.eco"), "w", encoding="utf-8") as file:
         json.dump(difficulty, file, indent=4)
 
     # get API key
