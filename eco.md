@@ -52,7 +52,12 @@ invoke ssh --cmd "cd /home/ubuntu/games/eco/Mods/ && unzip -o EcoUserModsFolder.
 invoke copy-private-mods --branch cycle-2
 (cd ./eco-server/mods/Mods && zip -r EcoPrivateModsFolder.zip .)
 invoke push-asset-local --cd ./eco-server/mods/Mods/ EcoPrivateModsFolder.zip
-invoke ssh --cmd "rm -rf /home/ubuntu/games/eco/Mods/UserCode/"
+
+# TODO: automate
+invoke ssh --cmd "rm -rf /home/ubuntu/games/eco/Mods/OpenNutriView/"
+invoke ssh --cmd "rm -rf /home/ubuntu/games/eco/Mods/MightyMoose/"
+invoke ssh --cmd "rm -rf /home/ubuntu/games/eco/Mods/NidToolbox/"
+
 invoke pull-asset-remote --cd /home/ubuntu/games/eco/Mods/ EcoPrivateModsFolder.zip
 invoke ssh --cmd "cd /home/ubuntu/games/eco/Mods/ && unzip -o EcoPrivateModsFolder.zip"
 ```

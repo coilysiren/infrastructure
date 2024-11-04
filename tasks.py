@@ -226,14 +226,6 @@ def run_private(ctx: invoke.Context):
     with open(os.path.join(SERVER_PATH, "Configs", "Network.eco"), "w", encoding="utf-8") as file:
         json.dump(network, file, indent=4)
 
-    # This should be the default state, but we perform the modification just in case
-    print("Modifying difficulty.eco to ensure static world")
-    with open(os.path.join(SERVER_PATH, "Configs", "Difficulty.eco"), "r", encoding="utf-8") as file:
-        difficulty = json.load(file)
-        difficulty["GameSettings"]["GenerateRandomWorld"] = False
-    with open(os.path.join(SERVER_PATH, "Configs", "Difficulty.eco"), "w", encoding="utf-8") as file:
-        json.dump(difficulty, file, indent=4)
-
     # get API key
     print("Getting API key")
     response = ssm.get_parameter(
