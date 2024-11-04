@@ -13,7 +13,7 @@ Login to https://play.eco/account
 On this page, there will be a "Linux Server" option. Click that. It will download that latest stable server, with its version number appended to its filename. Example:
 
 ```text
-https://play.eco/s3/release/EcoServerLinux_v0.11.0.6-beta.zip
+https://play.eco/s3/release/EcoServerLinux_v0.11.1.1-beta.zip
 ```
 
 (feel encouraged to update the above, plus all other entries, to the version you are deploying at time of reading)
@@ -22,103 +22,40 @@ This will go into your `~/Downloads` folder. You'll want to rename it to somethi
 
 ```bash
 mkdir -p ~/Downloads
-cp /mnt/c/Users/$WINDOWSUSERNAME/Downloads/EcoServerLinux_v0.11.0.6-beta.zip ~/Downloads/EcoServer.zip
+cp /mnt/c/Users/$WINDOWSUSERNAME/Downloads/EcoServerLinux_v0.11.1.1-beta.zip EcoServer.zip
 invoke push-asset-local EcoServer.zip
 invoke pull-asset-remote --cd /home/ubuntu/games/eco/ EcoServer.zip
-```
-
-## 2. Clear out old Eco installation
-
-If this is isn't the first time you're deploying an Eco game server, you might have a filesystem version of Eco stored on it. You'll want to remove the old server application code, and the old mods, and saves (RIP).
-
-```bash
-invoke ssh --cmd "rm -rf /home/ubuntu/games/eco/*"
-invoke ssh --cmd "rm -rf /home/ubuntu/games/eco/Mods/__core__/*"
-invoke ssh --cmd "rm -rf /home/ubuntu/games/eco/Mods/UserCode/*"
-invoke ssh --cmd "rm -rf /home/ubuntu/games/eco/Logs/*"
-invoke ssh --cmd "rm -rf /home/ubuntu/games/eco/Storage/*"
 ```
 
 ## 3. Install new Eco code
 
 ```bash
+invoke ssh --cmd "rm -rf /home/ubuntu/games/eco/Mods/__core__/*"
 invoke ssh --cmd "cd /home/ubuntu/games/eco/ && unzip -o EcoServer.zip"
 invoke ssh --cmd "chmod a+x /home/ubuntu/games/eco/EcoServer"
-invoke ssh --cmd "chmod a+x /home/ubuntu/games/eco/install.sh"
-invoke ssh --cmd "cd /home/ubuntu/games/eco/ && sudo ./install.sh"
 ```
 
-## 4. Configure Eco
-
-For this step you'll be pulling the entirety of your Eco server folder into a text editor
-so that you can configure it. No pressure!!! Follow instructions on the Eco wiki and
-various online tutorials to consult how to modify the files themselves. This document
-only shows you how to push and pull the files back and forth.
-
-AT NOT POINT SHOULD YOU BE SHOWING PEOPLE THE FILES YOU ARE ABOUT TO SEE. ITS ILLEGAL.
-which is to say, it is against Eco's license. You would be opening yourself up to
-lawsuits, and also you would just generally be a bad person.
-
-Here we go! The following commands were written for WSL and VSCode, the best text editor.
+### Sync Public Mods
 
 ```bash
-invoke ssh --cmd "cd ~/games && zip -r EcoCoreFolder.zip /home/ubuntu/games/eco/Mods/__core__/"
-invoke ssh --cmd "cd ~/games && zip -r EcoUserModsFolder.zip /home/ubuntu/games/eco/Mods/UserCode/"
-invoke ssh --cmd "cd ~/games && zip -r EcoConfigFolder.zip /home/ubuntu/games/eco/Configs/"
-
-invoke push-asset-remote EcoCoreFolder.zip
-invoke push-asset-remote EcoUserModsFolder.zip
-invoke push-asset-remote EcoConfigFolder.zip
-invoke pull-asset-local EcoCoreFolder.zip
-invoke pull-asset-local EcoUserModsFolder.zip
-invoke pull-asset-local EcoConfigFolder.zip
-
-cd home/ubuntu/games/eco
-unzip -o ~/Downloads/EcoCoreFolder.zip
-unzip -o ~/Downloads/EcoUserModsFolder.zip
-unzip -o ~/Downloads/EcoConfigFolder.zip
+invoke copy-public-mods
+(cd ./eco-server/mods/Mods && zip -r EcoUserModsFolder.zip .)
+invoke push-asset-local --cd ./eco-server/mods/Mods/ EcoUserModsFolder.zip
+invoke ssh --cmd "rm -rf /home/ubuntu/games/eco/Mods/UserCode/"
+invoke pull-asset-remote --cd /home/ubuntu/games/eco/Mods/ EcoUserModsFolder.zip
+invoke ssh --cmd "cd /home/ubuntu/games/eco/Mods/ && unzip -o EcoUserModsFolder.zip"
 ```
 
-Make your edits, again, consulting the wiki and online tutorials as needed. And then...
-
-### Sync Configs
+### Sync Private Mods
 
 ```bash
-# to sync just the configs
-rm -rf home/ubuntu/games/eco/EcoConfigFolder.zip
-(cd home/ubuntu/games/eco/ && zip -r EcoConfigFolder.zip Configs -x "*.git*")
-invoke push-asset-local --cd home/ubuntu/games/eco/ EcoConfigFolder.zip
-invoke pull-asset-remote --cd /home/ubuntu/games/eco/ EcoConfigFolder.zip
-invoke ssh --cmd "cd /home/ubuntu/games/eco/ && unzip -o EcoConfigFolder.zip"
-invoke eco-restart
+invoke copy-private-mods --branch cycle-2
+(cd ./eco-server/mods/Mods && zip -r EcoPrivateModsFolder.zip .)
+invoke push-asset-local --cd ./eco-server/mods/Mods/ EcoPrivateModsFolder.zip
+invoke ssh --cmd "rm -rf /home/ubuntu/games/eco/Mods/UserCode/"
+invoke pull-asset-remote --cd /home/ubuntu/games/eco/Mods/ EcoPrivateModsFolder.zip
+invoke ssh --cmd "cd /home/ubuntu/games/eco/Mods/ && unzip -o EcoPrivateModsFolder.zip"
 ```
-
-### Sync Mods
-
-```bash
-# to sync just the mods
-rm -rf home/ubuntu/games/eco/EcoUserModsFolder.zip
-(cd home/ubuntu/games/eco/ && zip -r EcoUserModsFolder.zip Mods/UserCode -x "*.git*")
-invoke push-asset-local --cd home/ubuntu/games/eco/ EcoUserModsFolder.zip
-invoke pull-asset-remote --cd /home/ubuntu/games/eco/ EcoUserModsFolder.zip
-# TODO: auto remove custom mods folders (eg. BunWulfBioChemical and DirtDecomposition etc)
-invoke ssh --cmd "rm -rf /home/ubuntu/games/eco/Mods/UserCode/BunWulfBioChemical/"
-invoke ssh --cmd "rm -rf /home/ubuntu/games/eco/Mods/UserCode/BunWulfAgricultural/"
-invoke ssh --cmd "rm -rf /home/ubuntu/games/eco/Mods/UserCode/DirtDecomposition/"
-invoke ssh --cmd "cd /home/ubuntu/games/eco/ && unzip -o EcoUserModsFolder.zip"
-invoke eco-restart
-```
-
-### Sync Mods to mod.io
-
-```bash
-rm -rf home/ubuntu/games/eco/BunWulfBioChemical.zip
-(cd home/ubuntu/games/eco/ && zip -r BunWulfBioChemical.zip Mods/UserCode/BunWulfBioChemical/ -x "*.git*")
-rm -rf /mnt/c/Users/$WINDOWSUSERNAME/Downloads/BunWulfBioChemical.zip
-cp home/ubuntu/games/eco/BunWulfBioChemical.zip /mnt/c/Users/$WINDOWSUSERNAME/Downloads/BunWulfBioChemical.zip
-```
-
-https://mod.io/g/eco/m/bunwulf-biochemical/admin/settings
 
 ## 5. Start the Eco Server
 

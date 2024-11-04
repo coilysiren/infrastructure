@@ -152,7 +152,7 @@ def copy_configs(ctx: invoke.Context):
 
 
 @invoke.task
-def copy_private_mods(ctx: invoke.Context, branch=""):
+def copy_private_mods(ctx: invoke.Context, branch="", local=False):
     print("Cleaning out mods folder")
     if os.path.exists("./eco-server/mods"):
         shutil.rmtree("./eco-server/mods", ignore_errors=False, onerror=handleRemoveReadonly)
@@ -167,11 +167,12 @@ def copy_private_mods(ctx: invoke.Context, branch=""):
     )
     shutil.rmtree("./eco-server/mods/.git", ignore_errors=False, onerror=handleRemoveReadonly)
 
-    copy_mods()
+    if local:
+        copy_mods()
 
 
 @invoke.task
-def copy_public_mods(ctx: invoke.Context, branch=""):
+def copy_public_mods(ctx: invoke.Context, branch="", local=False):
     print("Cleaning out mods folder")
     if os.path.exists("./eco-server/mods"):
         shutil.rmtree("./eco-server/mods", ignore_errors=False, onerror=handleRemoveReadonly)
@@ -186,7 +187,8 @@ def copy_public_mods(ctx: invoke.Context, branch=""):
     )
     shutil.rmtree("./eco-server/mods/.git", ignore_errors=False, onerror=handleRemoveReadonly)
 
-    copy_mods()
+    if local:
+        copy_mods()
 
 
 @invoke.task
