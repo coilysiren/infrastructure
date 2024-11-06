@@ -250,7 +250,7 @@ def run_public(ctx: invoke.Context):
     with open(os.path.join(SERVER_PATH, "Configs", "Network.eco"), "r", encoding="utf-8") as file:
         network = json.load(file)
         network["PublicServer"] = True
-        network["Name"] = "Eco Sirens"
+        network["Name"] = "<color=green>Eco</color> <color=blue>Sirens</color>"
         network["IPAddress"] = "Any"
         network["RemoteAddress"] = "eco.coilysiren.me:3000"
         network["WebServerUrl"] = "http://eco.coilysiren.me:3001"
