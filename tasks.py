@@ -53,10 +53,8 @@ WINDOWS_SERVER_PATH = os.path.join(
 def server_path():
     if "windows" in os.getenv("OS", "").lower():
         return WINDOWS_SERVER_PATH
-    elif "linux" in os.getenv("OSTYPE", "").lower():
-        return LINUX_SERVER_PATH
     else:
-        raise Exception("Unsupported OS")
+        return LINUX_SERVER_PATH
 
 
 def handleRemoveReadonly(func, path, _):
