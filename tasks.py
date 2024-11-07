@@ -57,6 +57,13 @@ def server_path():
         return LINUX_SERVER_PATH
 
 
+def eco_binary():
+    if "windows" in os.getenv("OS", "").lower():
+        return "EcoServer.exe"
+    else:
+        return "EcoServer"
+
+
 def handleRemoveReadonly(func, path, _):
     if not os.access(path, os.W_OK):
         os.chmod(path, stat.S_IWUSR)
@@ -255,7 +262,7 @@ def run_private(ctx: invoke.Context):
 
     # run server
     os.chdir(server_path())
-    ctx.run(f"EcoServer.exe -userToken={eco_server_api_token}", echo=True)
+    ctx.run(f"{eco_binary()} -userToken={eco_server_api_token}", echo=True)
 
 
 @invoke.task
@@ -294,7 +301,7 @@ def run_public(ctx: invoke.Context):
 
     # run server
     os.chdir(server_path())
-    ctx.run(f"EcoServer.exe -userToken={eco_server_api_token}", echo=True)
+    ctx.run(f"{eco_binary()} -userToken={eco_server_api_token}", echo=True)
 
 
 @invoke.task
