@@ -165,9 +165,13 @@ def copy_configs(ctx: invoke.Context):
         echo=True,
     )
 
-    # Remove git from target directory
+    # Remove .git from target directory
     if os.path.exists(f"{server_path()}/Configs/.git"):
         shutil.rmtree(f"{server_path()}/Configs/.git", ignore_errors=False, onerror=handleRemoveReadonly)
+
+    # Copy .git to target directory
+    print("Copying .git to server")
+    shutil.copytree("./eco-server/configs/.git", f"{server_path()}/Configs/.git", dirs_exist_ok=True)
 
     # Copy configs to server
     print("Copying configs to server")
