@@ -10,8 +10,8 @@ Restart=on-failure
 TimeoutStopSec=120
 RestartSec=5
 User=ubuntu
-WorkingDirectory=/home/ubuntu
-ExecStart=/home/ubuntu/scripts/eco-server-start.sh
+WorkingDirectory=/home/kai
+ExecStart=/home/kai/projects/infrastructure/scripts/eco-server-start.sh
 ExecStop=kill -TERM $MAINPID
 
 [Install]
