@@ -61,7 +61,7 @@ def eco_binary():
     if "windows" in os.getenv("OS", "").lower():
         return "EcoServer.exe"
     else:
-        return "EcoServer"
+        return "./EcoServer"
 
 
 def handleRemoveReadonly(func, path, _):
