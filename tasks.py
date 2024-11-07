@@ -25,7 +25,20 @@ sts = boto3.client("sts")
 route53 = boto3.client("route53")
 
 USERNAME = os.getenv("USERNAME", "")
-SERVER_PATH = os.path.join(
+
+LINUX_SERVER_PATH = os.path.join(
+    "/home",
+    "kai",
+    ".local",
+    "share",
+    "Steam",
+    "steamapps",
+    "common",
+    "Eco",
+    "Eco_Data",
+    "Server",
+)
+WINDOWS_SERVER_PATH = os.path.join(
     "C:\\",
     "Program Files (x86)",
     "Steam",
@@ -35,7 +48,15 @@ SERVER_PATH = os.path.join(
     "Eco_Data",
     "Server",
 )
-PROJECT_PATH = os.path.join("C:\\", "Users", USERNAME, "projects")
+
+
+def server_path():
+    if "windows" in os.getenv("OS").lower():
+        return WINDOWS_SERVER_PATH
+    elif "linux" in os.getenv("OSTYPE").lower():
+        return LINUX_SERVER_PATH
+    else:
+        raise Exception("Unsupported OS")
 
 
 def handleRemoveReadonly(func, path, _):
@@ -77,7 +98,7 @@ def copy_mods():
     mods = os.listdir("./eco-server/mods/Mods")
     for mod in mods:
         origin_path = os.path.join("./eco-server/mods/Mods", mod)
-        target_path = os.path.join(SERVER_PATH, "Mods", mod)
+        target_path = os.path.join(server_path(), "Mods", mod)
         if mod.endswith("UserCode"):
             continue
         copy_paths(origin_path, target_path)
@@ -86,7 +107,7 @@ def copy_mods():
     mods = os.listdir("./eco-server/mods/Mods/UserCode")
     for mod in mods:
         origin_path = os.path.join("./eco-server/mods/Mods/UserCode", mod)
-        target_path = os.path.join(SERVER_PATH, "Mods", "UserCode", mod)
+        target_path = os.path.join(server_path(), "Mods", "UserCode", mod)
         copy_paths(origin_path, target_path)
 
     # TODO: handle overrides in UserCode/Tools/, UserCode/Objects/, etc
@@ -96,7 +117,7 @@ def copy_mods():
         print("Copying mod configs to server")
         shutil.copytree(
             "./eco-server/mods/Configs",
-            os.path.join(SERVER_PATH, "Configs"),
+            os.path.join(server_path(), "Configs"),
             dirs_exist_ok=True,
         )
 
@@ -144,7 +165,7 @@ def copy_configs(ctx: invoke.Context):
     configs = os.listdir("./eco-server/configs/Configs")
     for config in configs:
         if config.split(".")[-1] != "template":
-            config_path = os.path.join(SERVER_PATH, "Configs", config)
+            config_path = os.path.join(server_path(), "Configs", config)
             if os.path.exists(config_path):
                 os.remove(config_path)
             print(f"\tCopying ./eco-server/configs/Configs/{config} to {config_path}")
@@ -209,21 +230,21 @@ def copy_assets(ctx: invoke.Context, branch=""):
 
     for build in os.listdir("./eco-server/assets/Builds/Mods/UserCode/"):
         origin_path = os.path.join("./eco-server/assets/Builds/Mods/UserCode", build, "Assets")
-        target_path = os.path.join(SERVER_PATH, "Mods", "UserCode", build, "Assets")
+        target_path = os.path.join(server_path(), "Mods", "UserCode", build, "Assets")
         copy_paths(origin_path, target_path)
 
 
 @invoke.task
 def run_private(ctx: invoke.Context):
     print("Modifying network.eco to reflect private server")
-    with open(os.path.join(SERVER_PATH, "Configs", "Network.eco"), "r", encoding="utf-8") as file:
+    with open(os.path.join(server_path(), "Configs", "Network.eco"), "r", encoding="utf-8") as file:
         network = json.load(file)
         network["PublicServer"] = False
         network["Name"] = "localhost"
         network["IPAddress"] = "Any"
         network["RemoteAddress"] = "localhost:3000"
         network["WebServerUrl"] = "http://localhost:3001"
-    with open(os.path.join(SERVER_PATH, "Configs", "Network.eco"), "w", encoding="utf-8") as file:
+    with open(os.path.join(server_path(), "Configs", "Network.eco"), "w", encoding="utf-8") as file:
         json.dump(network, file, indent=4)
 
     # get API key
@@ -235,7 +256,7 @@ def run_private(ctx: invoke.Context):
     eco_server_api_token = response["Parameter"]["Value"].strip()
 
     # run server
-    os.chdir(SERVER_PATH)
+    os.chdir(server_path())
     ctx.run(f"EcoServer.exe -userToken={eco_server_api_token}", echo=True)
 
 
@@ -247,22 +268,22 @@ def run_public(ctx: invoke.Context):
     copy_public_mods(ctx)
 
     print("Modifying network.eco to reflect public server")
-    with open(os.path.join(SERVER_PATH, "Configs", "Network.eco"), "r", encoding="utf-8") as file:
+    with open(os.path.join(server_path(), "Configs", "Network.eco"), "r", encoding="utf-8") as file:
         network = json.load(file)
         network["PublicServer"] = True
         network["Name"] = "<color=green>Eco</color> <color=blue>Sirens</color>"
         network["IPAddress"] = "Any"
         network["RemoteAddress"] = "eco.coilysiren.me:3000"
         network["WebServerUrl"] = "http://eco.coilysiren.me:3001"
-    with open(os.path.join(SERVER_PATH, "Configs", "Network.eco"), "w", encoding="utf-8") as file:
+    with open(os.path.join(server_path(), "Configs", "Network.eco"), "w", encoding="utf-8") as file:
         json.dump(network, file, indent=4)
 
     # This should be the default state, but we perform the modification just in case
     print("Modifying difficulty.eco to ensure static world")
-    with open(os.path.join(SERVER_PATH, "Configs", "Difficulty.eco"), "r", encoding="utf-8") as file:
+    with open(os.path.join(server_path(), "Configs", "Difficulty.eco"), "r", encoding="utf-8") as file:
         difficulty = json.load(file)
         difficulty["GameSettings"]["GenerateRandomWorld"] = False
-    with open(os.path.join(SERVER_PATH, "Configs", "Difficulty.eco"), "w", encoding="utf-8") as file:
+    with open(os.path.join(server_path(), "Configs", "Difficulty.eco"), "w", encoding="utf-8") as file:
         json.dump(difficulty, file, indent=4)
 
     # get API key
@@ -274,30 +295,30 @@ def run_public(ctx: invoke.Context):
     eco_server_api_token = response["Parameter"]["Value"].strip()
 
     # run server
-    os.chdir(SERVER_PATH)
+    os.chdir(server_path())
     ctx.run(f"EcoServer.exe -userToken={eco_server_api_token}", echo=True)
 
 
 @invoke.task
 def regenerate_world(ctx: invoke.Context):
-    if os.path.exists(os.path.join(SERVER_PATH, "Storage")):
+    if os.path.exists(os.path.join(server_path(), "Storage")):
         shutil.rmtree(
-            os.path.join(SERVER_PATH, "Storage"),
+            os.path.join(server_path(), "Storage"),
             ignore_errors=False,
             onerror=handleRemoveReadonly,
         )
-    if os.path.exists(os.path.join(SERVER_PATH, "Logs")):
+    if os.path.exists(os.path.join(server_path(), "Logs")):
         shutil.rmtree(
-            os.path.join(SERVER_PATH, "Logs"),
+            os.path.join(server_path(), "Logs"),
             ignore_errors=False,
             onerror=handleRemoveReadonly,
         )
 
     print("Modifying difficulty.eco to regenerate world")
-    with open(os.path.join(SERVER_PATH, "Configs", "Difficulty.eco"), "r", encoding="utf-8") as file:
+    with open(os.path.join(server_path(), "Configs", "Difficulty.eco"), "r", encoding="utf-8") as file:
         difficulty = json.load(file)
         difficulty["GameSettings"]["GenerateRandomWorld"] = True
-    with open(os.path.join(SERVER_PATH, "Configs", "Network.eco"), "w", encoding="utf-8") as file:
+    with open(os.path.join(server_path(), "Configs", "Network.eco"), "w", encoding="utf-8") as file:
         json.dump(difficulty, file, indent=4)
 
     # Run the world generation
@@ -345,8 +366,6 @@ def ssh(
 
 @invoke.task
 def deploy_server(ctx: invoke.Context, env="dev", name="eco-server"):
-    deploy_shared(ctx)
-
     dns_name = name.split("-")[0]
     env_suffix = "-dev" if env == "dev" else ""
 
