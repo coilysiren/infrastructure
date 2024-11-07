@@ -337,7 +337,7 @@ def regenerate_world(ctx: invoke.Context):
 
 
 @invoke.task
-def prep_scripts(ctx: invoke.Context):
+def copy_systemd(ctx: invoke.Context):
     ctx.run("chmod +x ./scripts/*", echo=True)
     systemd_files = os.listdir("./systemd")
     for systemd_file in systemd_files:
