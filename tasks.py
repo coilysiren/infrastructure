@@ -354,7 +354,7 @@ def eco_systemd_tail(ctx: invoke.Context):
 
 @invoke.task
 def eco_server_tail(ctx: invoke.Context):
-    ctx.run(f"multitail -Q 1 {server_path()}/Logs/*", echo=True)
+    ctx.run(f"tail -f {server_path()}/Logs/*", echo=True)
 
 
 @invoke.task
