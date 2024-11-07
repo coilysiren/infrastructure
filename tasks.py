@@ -5,7 +5,6 @@ import json
 import os
 import shutil
 import stat
-import textwrap
 
 # 3rd party
 import boto3
@@ -37,7 +36,7 @@ LINUX_SERVER_PATH = os.path.join(
     "Eco",
     "Eco_Data",
     "Server",
-)
+).replace("\\", "/")
 WINDOWS_SERVER_PATH = os.path.join(
     "C:\\",
     "Program Files (x86)",
@@ -348,12 +347,12 @@ def copy_systemd(ctx: invoke.Context):
 
 
 @invoke.task
-def eco_systemd_tail(ctx: invoke.Context):
+def system_tail(ctx: invoke.Context):
     ctx.run("journalctl -u eco-server -f", echo=True)
 
 
 @invoke.task
-def eco_server_tail(ctx: invoke.Context):
+def server_tail(ctx: invoke.Context):
     ctx.run(f"tail -f {server_path()}/Logs/*", echo=True)
 
 
