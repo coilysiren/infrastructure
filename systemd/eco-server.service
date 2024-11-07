@@ -10,7 +10,7 @@ Restart=on-failure
 TimeoutStopSec=120
 RestartSec=5
 User=ubuntu
-WorkingDirectory=/home/kai
+WorkingDirectory=/home/kai/.local/share/Steam/steamapps/common/Eco/Eco_Data/Server/
 ExecStart=/home/kai/projects/infrastructure/scripts/eco-server-start.sh
 ExecStop=kill -TERM $MAINPID
 
