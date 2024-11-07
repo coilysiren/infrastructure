@@ -344,6 +344,7 @@ def prep_scripts(ctx: invoke.Context):
         ctx.run(f"sudo cp ./systemd/{systemd_file} /etc/systemd/system/", echo=True)
         ctx.run(f"sudo systemctl enable {systemd_file}", echo=True)
         ctx.run(f"sudo systemctl start {systemd_file}", echo=True)
+        ctx.run(f"sudo systemctl restart {systemd_file}", echo=True)
 
 
 @invoke.task
