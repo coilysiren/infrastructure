@@ -165,6 +165,10 @@ def copy_configs(ctx: invoke.Context):
         echo=True,
     )
 
+    # Remove git from target directory
+    if os.path.exists(f"{server_path()}/Configs/.git"):
+        shutil.rmtree(f"{server_path()}/Configs/.git", ignore_errors=False, onerror=handleRemoveReadonly)
+
     # Copy configs to server
     print("Copying configs to server")
     configs = os.listdir("./eco-server/configs/Configs")
@@ -191,7 +195,6 @@ def copy_private_mods(ctx: invoke.Context, branch="", local=False):
         f"git clone --depth 1 {branch_flag} -- git@github.com:coilysiren/eco-mods.git ./eco-server/mods",
         echo=True,
     )
-    shutil.rmtree("./eco-server/mods/.git", ignore_errors=False, onerror=handleRemoveReadonly)
 
     if local:
         copy_mods()
@@ -211,7 +214,6 @@ def copy_public_mods(ctx: invoke.Context, branch="", local=False):
         f"git clone --depth 1 {branch_flag} -- git@github.com:coilysiren/eco-mods-public.git ./eco-server/mods",
         echo=True,
     )
-    shutil.rmtree("./eco-server/mods/.git", ignore_errors=False, onerror=handleRemoveReadonly)
 
     if local:
         copy_mods()
