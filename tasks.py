@@ -330,6 +330,16 @@ def regenerate_world(ctx: invoke.Context):
     run_private(ctx)
 
 
+@invoke.task
+def prep_scripts(ctx: invoke.Context):
+    ctx.run("chmox +x ./scripts/*", echo=True)
+    systemd_files = os.listdir("./systemd")
+    for systemd_file in systemd_files:
+        ctx.run(f"sudo cp ./systemd/{systemd_file} /etc/systemd/system/", echo=True)
+        ctx.run(f"sudo systemctl enable {systemd_file}", echo=True)
+        ctx.run(f"sudo systemctl start {systemd_file}", echo=True)
+
+
 ###################################################################
 
 
