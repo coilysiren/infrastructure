@@ -308,7 +308,30 @@ def run_public(ctx: invoke.Context):
 
 
 @invoke.task
-def regenerate_world(ctx: invoke.Context):
+def generate_same_world(_: invoke.Context):
+    if os.path.exists(os.path.join(server_path(), "Storage")):
+        shutil.rmtree(
+            os.path.join(server_path(), "Storage"),
+            ignore_errors=False,
+            onerror=handleRemoveReadonly,
+        )
+    if os.path.exists(os.path.join(server_path(), "Logs")):
+        shutil.rmtree(
+            os.path.join(server_path(), "Logs"),
+            ignore_errors=False,
+            onerror=handleRemoveReadonly,
+        )
+
+    print("Modifying difficulty.eco to regenerate world")
+    with open(os.path.join(server_path(), "Configs", "Difficulty.eco"), "r", encoding="utf-8") as file:
+        difficulty = json.load(file)
+        difficulty["GameSettings"]["GenerateRandomWorld"] = False
+    with open(os.path.join(server_path(), "Configs", "Network.eco"), "w", encoding="utf-8") as file:
+        json.dump(difficulty, file, indent=4)
+
+
+@invoke.task
+def generate_new_world(_: invoke.Context):
     if os.path.exists(os.path.join(server_path(), "Storage")):
         shutil.rmtree(
             os.path.join(server_path(), "Storage"),
@@ -328,9 +351,6 @@ def regenerate_world(ctx: invoke.Context):
         difficulty["GameSettings"]["GenerateRandomWorld"] = True
     with open(os.path.join(server_path(), "Configs", "Network.eco"), "w", encoding="utf-8") as file:
         json.dump(difficulty, file, indent=4)
-
-    # Run the world generation
-    run_private(ctx)
 
 
 @invoke.task
