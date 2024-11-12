@@ -128,7 +128,11 @@ def copy_mods():
 
 @invoke.task
 def update_dns(ctx: invoke.Context):
-    ip_address = ctx.run("curl -4 ifconfig.co", echo=True).stdout.strip()
+    result = ctx.run("curl -4 ifconfig.co", echo=True)
+    if result:
+        ip_address = result.stdout.strip()
+    else:
+        raise RuntimeError("Failed to retrieve IP address")
     response = route53.list_hosted_zones_by_name(DNSName="coilysiren.me")
     hosted_zone = response["HostedZones"][0]["Id"].split("/")[-1]
     response = route53.change_resource_record_sets(
@@ -243,7 +247,7 @@ def copy_assets(ctx: invoke.Context, branch=""):
 
 
 @invoke.task
-def run_private(ctx: invoke.Context):
+def run(ctx: invoke.Context):
     print("Modifying network.eco to reflect private server")
     with open(os.path.join(server_path(), "Configs", "Network.eco"), "r", encoding="utf-8") as file:
         network = json.load(file)
@@ -255,44 +259,12 @@ def run_private(ctx: invoke.Context):
     with open(os.path.join(server_path(), "Configs", "Network.eco"), "w", encoding="utf-8") as file:
         json.dump(network, file, indent=4)
 
-    # get API key
-    print("Getting API key")
-    response = ssm.get_parameter(
-        Name="/eco/server-api-token",
-        WithDecryption=True,
-    )
-    eco_server_api_token = response["Parameter"]["Value"].strip()
-
-    # run server
-    os.chdir(server_path())
-    ctx.run(f"{eco_binary()} -userToken={eco_server_api_token}", echo=True)
-
-
-@invoke.task
-def run_public(ctx: invoke.Context):
-    print("Copying configs and mods to server to ensure they are up to date")
-    copy_configs(ctx)
-    copy_private_mods(ctx)
-    copy_public_mods(ctx)
-
-    print("Modifying network.eco to reflect public server")
-    with open(os.path.join(server_path(), "Configs", "Network.eco"), "r", encoding="utf-8") as file:
-        network = json.load(file)
-        network["PublicServer"] = True
-        network["Name"] = "<color=green>Eco</color> <color=blue>Sirens</color>"
-        network["IPAddress"] = "Any"
-        network["RemoteAddress"] = "eco.coilysiren.me:3000"
-        network["WebServerUrl"] = "http://eco.coilysiren.me:3001"
-    with open(os.path.join(server_path(), "Configs", "Network.eco"), "w", encoding="utf-8") as file:
-        json.dump(network, file, indent=4)
-
-    # This should be the default state, but we perform the modification just in case
-    print("Modifying difficulty.eco to ensure static world")
-    with open(os.path.join(server_path(), "Configs", "Difficulty.eco"), "r", encoding="utf-8") as file:
-        difficulty = json.load(file)
-        difficulty["GameSettings"]["GenerateRandomWorld"] = False
-    with open(os.path.join(server_path(), "Configs", "Difficulty.eco"), "w", encoding="utf-8") as file:
-        json.dump(difficulty, file, indent=4)
+    print("Modifying DiscordLink.eco to remove BotToken")
+    with open(os.path.join(server_path(), "Configs", "DiscordLink.eco"), "r", encoding="utf-8") as file:
+        discord = json.load(file)
+        discord["BotToken"] = ""
+    with open(os.path.join(server_path(), "Configs", "DiscordLink.eco"), "w", encoding="utf-8") as file:
+        json.dump(discord, file, indent=4)
 
     # get API key
     print("Getting API key")
@@ -365,12 +337,12 @@ def copy_systemd(ctx: invoke.Context):
 
 
 @invoke.task
-def system_tail(ctx: invoke.Context):
+def eco_system_tail(ctx: invoke.Context):
     ctx.run("journalctl -u eco-server -f", echo=True)
 
 
 @invoke.task
-def server_tail(ctx: invoke.Context):
+def eco_server_tail(ctx: invoke.Context):
     ctx.run(f"tail -f {server_path()}/Logs/*", echo=True)
 
 
