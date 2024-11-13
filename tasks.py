@@ -129,7 +129,7 @@ def copy_mods():
 @invoke.task
 def update_steam(ctx: invoke.Context):
     with ctx.cd("~/.local/share"):
-        ctx.run("steamcmd +login balrore +app_update 382310 +validate", echo=True)
+        ctx.run("steamcmd +login balrore +app_update 382310 +quit", echo=True)
 
 
 @invoke.task
