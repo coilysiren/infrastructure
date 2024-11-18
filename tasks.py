@@ -33,7 +33,7 @@ LINUX_SERVER_PATH = os.path.join(
     "Steam",
     "steamapps",
     "common",
-    "Eco Server",
+    "EcoServer",
 ).replace("\\", "/")
 WINDOWS_SERVER_PATH = os.path.join(
     "C:\\",
