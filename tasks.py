@@ -28,8 +28,6 @@ USERNAME = os.getenv("USERNAME", "")
 LINUX_SERVER_PATH = os.path.join(
     "/home",
     "kai",
-    ".local",
-    "share",
     "Steam",
     "steamapps",
     "common",
