@@ -10,7 +10,8 @@ Restart=on-failure
 TimeoutStopSec=120
 RestartSec=5
 User=kai
-WorkingDirectory=/home/kai/.local/share/Steam/steamapps/common/Eco/Eco_Data/Server/
+WorkingDirectory="/home/kai/.local/share/Steam/steamapps/common/Eco Server"
+ExecStartPre=bash -c /home/kai/projects/infrastructure/scripts/eco-server-pre.sh
 ExecStart=bash -c /home/kai/projects/infrastructure/scripts/eco-server-start.sh
 ExecStop=kill -TERM $MAINPID
 
