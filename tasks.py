@@ -268,6 +268,13 @@ def run(ctx: invoke.Context):
     with open(os.path.join(server_path(), "Configs", "DiscordLink.eco"), "w", encoding="utf-8") as file:
         json.dump(discord, file, indent=4)
 
+    print("Modifying difficulty.eco to speed up world")
+    with open(os.path.join(server_path(), "Configs", "Difficulty.eco"), "r", encoding="utf-8") as file:
+        difficulty = json.load(file)
+        difficulty["GameSettings"]["GameSpeed"] = "VeryFast"
+    with open(os.path.join(server_path(), "Configs", "Network.eco"), "w", encoding="utf-8") as file:
+        json.dump(difficulty, file, indent=4)
+
     # get API key
     print("Getting API key")
     response = ssm.get_parameter(
