@@ -275,6 +275,14 @@ def run(ctx: invoke.Context):
     with open(os.path.join(server_path(), "Configs", "Network.eco"), "w", encoding="utf-8") as file:
         json.dump(difficulty, file, indent=4)
 
+    print("Creating sleep.eco to allow time to fast forward")
+    with open(os.path.join(server_path(), "Configs", "Sleep.eco"), "w", encoding="utf-8") as file:
+        json.dump(
+            {"AllowFastForward": True, "SleepTimePassMultiplier": 1000, "TimeToReachMaximumTimeRate": 5},
+            file,
+            indent=4,
+        )
+
     # get API key
     print("Getting API key")
     response = ssm.get_parameter(
