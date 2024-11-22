@@ -163,7 +163,18 @@ def symlink_public_mod(_: invoke.Context, mod: str):
     if os.path.islink(target):
         os.unlink(target)
 
+    print(f"Symlinking \n\t{path} => \n\t{target}")
     os.symlink(path, target, target_is_directory=True)
+
+    _obj = os.path.join(server_path(), "Mods", "UserCode", mod, "obj")
+    if os.path.exists(_obj):
+        print(f"Removing {_obj}")
+        shutil.rmtree(_obj, ignore_errors=False, onerror=handleRemoveReadonly)
+
+    _bin = os.path.join(server_path(), "Mods", "UserCode", mod, "bin")
+    if os.path.exists(_bin):
+        print(f"Removing {_bin}")
+        shutil.rmtree(_bin, ignore_errors=False, onerror=handleRemoveReadonly)
 
 
 @invoke.task
