@@ -25,6 +25,8 @@ route53 = boto3.client("route53")
 
 USERNAME = os.getenv("USERNAME", "")
 
+PUBLIC_MODS_FOLDER = os.path.join(os.path.expanduser("~"), "projects", "eco-mods-public")
+
 LINUX_SERVER_PATH = os.path.join(
     "/home",
     "kai",
@@ -123,12 +125,6 @@ def copy_mods():
 
 
 @invoke.task
-def update_steam(ctx: invoke.Context):
-    with ctx.cd("~/.local/share"):
-        ctx.run("steamcmd +login balrore +app_update 382310 +quit", echo=True)
-
-
-@invoke.task
 def update_dns(ctx: invoke.Context):
     result = ctx.run("curl -4 ifconfig.co", echo=True)
     if result:
@@ -155,6 +151,19 @@ def update_dns(ctx: invoke.Context):
             ],
         },
     )
+
+
+@invoke.task
+def symlink_public_mod(_: invoke.Context, mod: str):
+    path = os.path.join(PUBLIC_MODS_FOLDER, "Mods", "UserCode", mod)
+    if not os.path.exists(path):
+        raise FileNotFoundError(f"{path} does not exist")
+
+    target = os.path.join(server_path(), "Mods", "UserCode", mod)
+    if os.path.islink(target):
+        os.unlink(target)
+
+    os.symlink(path, target, target_is_directory=True)
 
 
 @invoke.task
