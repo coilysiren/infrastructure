@@ -155,26 +155,21 @@ def update_dns(ctx: invoke.Context):
 
 @invoke.task
 def symlink_public_mod(_: invoke.Context, mod: str):
-    path = os.path.join(PUBLIC_MODS_FOLDER, "Mods", "UserCode", mod)
+    path = os.path.join(PUBLIC_MODS_FOLDER, "Mods", "UserCode", mod, "src")
     if not os.path.exists(path):
         raise FileNotFoundError(f"{path} does not exist")
 
-    target = os.path.join(server_path(), "Mods", "UserCode", mod)
+    target = os.path.join(server_path(), "Mods", "UserCode", mod, "src")
+    target_dir = os.path.join(server_path(), "Mods", "UserCode", mod)
+
     if os.path.islink(target):
         os.unlink(target)
+    if os.path.exists(target_dir):
+        shutil.rmtree(target_dir, ignore_errors=False, onerror=handleRemoveReadonly)
 
     print(f"Symlinking \n\t{path} => \n\t{target}")
+    os.makedirs(target_dir, exist_ok=True)
     os.symlink(path, target, target_is_directory=True)
-
-    _obj = os.path.join(server_path(), "Mods", "UserCode", mod, "obj")
-    if os.path.exists(_obj):
-        print(f"Removing {_obj}")
-        shutil.rmtree(_obj, ignore_errors=False, onerror=handleRemoveReadonly)
-
-    _bin = os.path.join(server_path(), "Mods", "UserCode", mod, "bin")
-    if os.path.exists(_bin):
-        print(f"Removing {_bin}")
-        shutil.rmtree(_bin, ignore_errors=False, onerror=handleRemoveReadonly)
 
 
 @invoke.task
