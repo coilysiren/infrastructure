@@ -264,7 +264,7 @@ def copy_assets(ctx: invoke.Context, branch=""):
 
 
 @invoke.task
-def run(ctx: invoke.Context):
+def run(ctx: invoke.Context, offline=False):
     print("Modifying network.eco to reflect private server")
     with open(os.path.join(server_path(), "Configs", "Network.eco"), "r", encoding="utf-8") as file:
         network = json.load(file)
@@ -299,16 +299,19 @@ def run(ctx: invoke.Context):
         )
 
     # get API key
-    print("Getting API key")
-    response = ssm.get_parameter(
-        Name="/eco/server-api-token",
-        WithDecryption=True,
-    )
-    eco_server_api_token = response["Parameter"]["Value"].strip()
+    def get_api_key():
+        print("Getting API key")
+        response = ssm.get_parameter(
+            Name="/eco/server-api-token",
+            WithDecryption=True,
+        )
+        return response["Parameter"]["Value"].strip()
+
+    token = "" if offline else f" -userToken={get_api_key()}"
 
     # run server
     os.chdir(server_path())
-    ctx.run(f"{eco_binary()} -userToken={eco_server_api_token}", echo=True)
+    ctx.run(f"{eco_binary()}{token}", echo=True)
 
 
 @invoke.task
