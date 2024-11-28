@@ -155,21 +155,23 @@ def update_dns(ctx: invoke.Context):
 
 @invoke.task
 def symlink_public_mod(_: invoke.Context, mod: str):
-    path = os.path.join(PUBLIC_MODS_FOLDER, "Mods", "UserCode", mod, "src")
+    path = os.path.join(PUBLIC_MODS_FOLDER, "Mods", "UserCode", mod)
     if not os.path.exists(path):
         raise FileNotFoundError(f"{path} does not exist")
 
-    target = os.path.join(server_path(), "Mods", "UserCode", mod, "src")
-    target_dir = os.path.join(server_path(), "Mods", "UserCode", mod)
+    for file in os.listdir(path):
+        if file.endswith(".cs"):
 
-    if os.path.islink(target):
-        os.unlink(target)
-    if os.path.exists(target_dir):
-        shutil.rmtree(target_dir, ignore_errors=False, onerror=handleRemoveReadonly)
+            source = os.path.join(path, file)
+            target_dir = os.path.join(server_path(), "Mods", "UserCode", mod)
+            target = os.path.join(target_dir, file)
 
-    print(f"Symlinking \n\t{path} => \n\t{target}")
-    os.makedirs(target_dir, exist_ok=True)
-    os.symlink(path, target, target_is_directory=True)
+            if os.path.islink(target):
+                os.unlink(target)
+
+            print(f"Symlinking \n\t{source} => \n\t{target}")
+            os.makedirs(target_dir, exist_ok=True)
+            os.symlink(source, target)
 
 
 @invoke.task
