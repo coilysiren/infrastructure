@@ -159,6 +159,8 @@ def symlink_public_mod(_: invoke.Context, mod: str):
     if not os.path.exists(path):
         raise FileNotFoundError(f"{path} does not exist")
 
+    # TODO: remove all files in target directory
+
     for file in os.listdir(path):
         if file.endswith(".cs"):
 
