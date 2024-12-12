@@ -162,7 +162,7 @@ def symlink_public_mod(_: invoke.Context, mod: str):
     # TODO: remove all files in target directory
 
     for file in os.listdir(path):
-        if file.endswith(".cs"):
+        if file.endswith(".cs") or file.endswith(".unity3d"):
 
             source = os.path.join(path, file)
             target_dir = os.path.join(server_path(), "Mods", "UserCode", mod)
