@@ -10,10 +10,6 @@ import stat
 import boto3
 import invoke
 
-# local
-import eco
-import core_keeper
-
 
 # docs: https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/ec2.html
 ec2 = boto3.client("ec2", region_name="us-east-1")
