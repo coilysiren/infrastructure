@@ -1,5 +1,5 @@
 [Unit]
-Description=eco-server
+Description=core-keeper-server
 After=syslog.target network.target nss-lookup.target network-online.target
 StartLimitBurst=5
 StartLimitIntervalSec=60
@@ -10,9 +10,9 @@ Restart=on-failure
 TimeoutStopSec=120
 RestartSec=5
 User=steam
-WorkingDirectory=/home/kai/Steam/steamapps/common/EcoServer
-ExecStartPre=bash -c /home/kai/projects/infrastructure/scripts/eco-server-pre.sh
-ExecStart=bash -c /home/kai/projects/infrastructure/scripts/eco-server-start.sh
+WorkingDirectory=/home/kai/Steam/steamapps/common/CoreKeeperServer
+ExecStartPre=bash -c /home/kai/projects/infrastructure/scripts/core-keeper-server-pre.sh
+ExecStart=bash -c /home/kai/projects/infrastructure/scripts/core-keeper-server-start.sh
 ExecStop=kill -TERM $MAINPID
 
 [Install]
