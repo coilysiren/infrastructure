@@ -362,30 +362,39 @@ def eco_generate_same_world(_: invoke.Context):
     with open(os.path.join(server_path(), "Configs", "Difficulty.eco"), "r", encoding="utf-8") as file:
         difficulty = json.load(file)
         difficulty["GameSettings"]["GenerateRandomWorld"] = False
-    with open(os.path.join(server_path(), "Configs", "Network.eco"), "w", encoding="utf-8") as file:
+    with open(os.path.join(server_path(), "Configs", "Difficulty.eco"), "w", encoding="utf-8") as file:
         json.dump(difficulty, file, indent=4)
 
 
 @invoke.task
 def eco_generate_new_world(_: invoke.Context):
     if os.path.exists(os.path.join(server_path(), "Storage")):
+        print("Removing Storage folder")
         shutil.rmtree(
             os.path.join(server_path(), "Storage"),
             ignore_errors=False,
             onerror=handleRemoveReadonly,
         )
     if os.path.exists(os.path.join(server_path(), "Logs")):
+        print("Removing Logs folder")
         shutil.rmtree(
             os.path.join(server_path(), "Logs"),
             ignore_errors=False,
             onerror=handleRemoveReadonly,
         )
 
-    print("Modifying difficulty.eco to regenerate world")
+    print("Modifying WorldGenerator.eco to set seed to 0")
+    with open(os.path.join(server_path(), "Configs", "WorldGenerator.eco"), "r", encoding="utf-8") as file:
+        world_generator = json.load(file)
+        world_generator["HeightmapModule"]["Source"]["Config"]["Seed"] = 0
+    with open(os.path.join(server_path(), "Configs", "WorldGenerator.eco"), "w", encoding="utf-8") as file:
+        json.dump(world_generator, file, indent=4)
+
+    print("Modifying difficulty.eco to generate random world")
     with open(os.path.join(server_path(), "Configs", "Difficulty.eco"), "r", encoding="utf-8") as file:
         difficulty = json.load(file)
         difficulty["GameSettings"]["GenerateRandomWorld"] = True
-    with open(os.path.join(server_path(), "Configs", "Network.eco"), "w", encoding="utf-8") as file:
+    with open(os.path.join(server_path(), "Configs", "Difficulty.eco"), "w", encoding="utf-8") as file:
         json.dump(difficulty, file, indent=4)
 
 
