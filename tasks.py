@@ -222,16 +222,27 @@ def eco_copy_configs(ctx: invoke.Context):
     print("Copying .git to server")
     shutil.copytree("./eco-server/configs/.git", f"{server_path()}/.git", dirs_exist_ok=True)
 
-    # Copy configs to server
+    # Copy configs to server, except world gen
     print("Copying configs to server")
     configs = os.listdir("./eco-server/configs/Configs")
     for config in configs:
-        if config.split(".")[-1] != "template":
+        if config.split(".")[-1] != "template" and config.split(".")[-2] != "WorldGenerator":
             config_path = os.path.join(server_path(), "Configs", config)
             if os.path.exists(config_path):
                 os.remove(config_path)
             print(f"\tCopying ./eco-server/configs/Configs/{config} to {config_path}")
             shutil.copyfile(f"./eco-server/configs/Configs/{config}", config_path)
+
+    # Copy over world gen, but keep the seed intact
+    print("Copying WorldGenerator.eco to server")
+    with open(os.path.join(server_path(), "Configs", "WorldGenerator.eco"), "r", encoding="utf-8") as file:
+        old_world_generator = json.load(file)
+        seed = old_world_generator["HeightmapModule"]["Source"]["Config"]["Seed"]
+    with open(os.path.join("./eco-server/configs/Configs", "WorldGenerator.eco"), "r", encoding="utf-8") as file:
+        new_world_generator = json.load(file)
+        new_world_generator["HeightmapModule"]["Source"]["Config"]["Seed"] = seed
+    with open(os.path.join(server_path(), "Configs", "WorldGenerator.eco"), "w", encoding="utf-8") as file:
+        json.dump(new_world_generator, file, indent=4)
 
 
 @invoke.task
