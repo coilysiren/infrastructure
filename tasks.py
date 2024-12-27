@@ -163,9 +163,9 @@ def copy_systemd(ctx: invoke.Context):
         ctx.run(f"sudo systemctl restart {systemd_file}", echo=True)
 
 
-###############
-# CORE KEEPER #
-###############
+#######
+# ECO #
+#######
 
 
 @invoke.task
@@ -176,6 +176,18 @@ def eco_tail(ctx: invoke.Context):
 @invoke.task
 def eco_restart(ctx: invoke.Context):
     ctx.run("sudo systemctl restart eco-server", echo=True)
+
+
+@invoke.task
+def eco_stop(ctx: invoke.Context):
+    ctx.run("sudo systemctl stop eco-server", echo=True)
+    ctx.run("sudo systemctl disable eco-server", echo=True)
+
+
+@invoke.task
+def eco_start(ctx: invoke.Context):
+    ctx.run("sudo systemctl start eco-server", echo=True)
+    ctx.run("sudo systemctl enable eco-server", echo=True)
 
 
 @invoke.task
@@ -422,3 +434,15 @@ def core_keeper_tail(ctx: invoke.Context):
 @invoke.task
 def core_keeper_restart(ctx: invoke.Context):
     ctx.run("sudo systemctl restart core-keeper-server", echo=True)
+
+
+@invoke.task
+def core_keeper_stop(ctx: invoke.Context):
+    ctx.run("sudo systemctl stop core-keeper-server", echo=True)
+    ctx.run("sudo systemctl disable core-keeper-server", echo=True)
+
+
+@invoke.task
+def core_keeper_start(ctx: invoke.Context):
+    ctx.run("sudo systemctl start core-keeper-server", echo=True)
+    ctx.run("sudo systemctl enable core-keeper-server", echo=True)
