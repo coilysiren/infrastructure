@@ -196,7 +196,12 @@ def eco_symlink_public_mod(_: invoke.Context, mod: str):
     if not os.path.exists(path):
         raise FileNotFoundError(f"{path} does not exist")
 
-    # TODO: remove all files in target directory
+    if os.path.isdir(os.path.join(server_path(), "Mods", "UserCode", mod)):
+        shutil.rmtree(
+            os.path.join(server_path(), "Mods", "UserCode", mod),
+            ignore_errors=False,
+            onerror=handleRemoveReadonly,
+        )
 
     for file in os.listdir(path):
         if file.endswith(".cs") or file.endswith(".unity3d"):
