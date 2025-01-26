@@ -25,6 +25,7 @@ route53 = boto3.client("route53")
 
 
 PUBLIC_MODS_FOLDER = os.path.join(os.path.expanduser("~"), "projects", "eco-mods-public")
+PRIVATE_MODS_FOLDER = os.path.join(os.path.expanduser("~"), "projects", "eco-mods")
 
 LINUX_SERVER_PATH = os.path.join(
     "/home",
@@ -106,6 +107,33 @@ def copy_mods():
             os.path.join(server_path(), "Configs"),
             dirs_exist_ok=True,
         )
+
+
+def symlink_mods(mods_folder, mod):
+    path = os.path.join(mods_folder, "Mods", "UserCode", mod)
+    if not os.path.exists(path):
+        raise FileNotFoundError(f"{path} does not exist")
+
+    if os.path.isdir(os.path.join(server_path(), "Mods", "UserCode", mod)):
+        shutil.rmtree(
+            os.path.join(server_path(), "Mods", "UserCode", mod),
+            ignore_errors=False,
+            onerror=handleRemoveReadonly,
+        )
+
+    for file in os.listdir(path):
+        if file.endswith(".cs") or file.endswith(".unity3d"):
+
+            source = os.path.join(path, file)
+            target_dir = os.path.join(server_path(), "Mods", "UserCode", mod)
+            target = os.path.join(target_dir, file)
+
+            if os.path.islink(target):
+                os.unlink(target)
+
+            print(f"Symlinking \n\t{source} => \n\t{target}")
+            os.makedirs(target_dir, exist_ok=True)
+            os.symlink(source, target)
 
 
 def zipdir(path, ziph):
@@ -192,30 +220,12 @@ def eco_start(ctx: invoke.Context):
 
 @invoke.task
 def eco_symlink_public_mod(_: invoke.Context, mod: str):
-    path = os.path.join(PUBLIC_MODS_FOLDER, "Mods", "UserCode", mod)
-    if not os.path.exists(path):
-        raise FileNotFoundError(f"{path} does not exist")
+    symlink_mods(PUBLIC_MODS_FOLDER, mod)
 
-    if os.path.isdir(os.path.join(server_path(), "Mods", "UserCode", mod)):
-        shutil.rmtree(
-            os.path.join(server_path(), "Mods", "UserCode", mod),
-            ignore_errors=False,
-            onerror=handleRemoveReadonly,
-        )
 
-    for file in os.listdir(path):
-        if file.endswith(".cs") or file.endswith(".unity3d"):
-
-            source = os.path.join(path, file)
-            target_dir = os.path.join(server_path(), "Mods", "UserCode", mod)
-            target = os.path.join(target_dir, file)
-
-            if os.path.islink(target):
-                os.unlink(target)
-
-            print(f"Symlinking \n\t{source} => \n\t{target}")
-            os.makedirs(target_dir, exist_ok=True)
-            os.symlink(source, target)
+@invoke.task
+def eco_symlink_private_mod(_: invoke.Context, mod: str):
+    symlink_mods(PRIVATE_MODS_FOLDER, mod)
 
 
 @invoke.task
