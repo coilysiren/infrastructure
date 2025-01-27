@@ -137,22 +137,16 @@ def _symlink_mods(mods_folder, mod):
 
 
 def _inner_symlink_mods(mods_folder, path):
-    for file in os.listdir(os.path.join(mods_folder, path)):
-
-        if os.path.isdir(os.path.join(path, file)):
-            _inner_symlink_mods(mods_folder, os.path.join(path, file))
-
-        elif file.endswith(".cs") or file.endswith(".unity3d"):
-
-            source = os.path.join(mods_folder, path, file)
-            target_dir = os.path.join(_server_path(), path)
-            target = os.path.join(target_dir, file)
-
+    for dirpath, _, filenames in os.walk(os.path.join(mods_folder, path)):
+        for filename in filenames:
+            source = os.path.join(dirpath, filename)
+            target = os.path.join(_server_path(), dirpath, filename)
+            if os.path.exists(target):
+                os.remove(target)
             if os.path.islink(target):
                 os.unlink(target)
-
             print(f"Symlinking \n\t{source} => \n\t{target}")
-            os.makedirs(target_dir, exist_ok=True)
+            os.makedirs(os.path.dirname(target), exist_ok=True)
             os.symlink(source, target)
 
 
