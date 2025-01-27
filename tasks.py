@@ -320,28 +320,6 @@ def eco_copy_public_mods(ctx: invoke.Context, branch=""):
 
 
 @invoke.task
-def eco_copy_assets(ctx: invoke.Context, branch=""):
-    print("Cleaning out assets folder")
-    if os.path.exists("./eco-server/assets"):
-        shutil.rmtree("./eco-server/assets", ignore_errors=False, onerror=handleRemoveReadonly)
-
-    # get assets from git
-    branch_flag = ""
-    if branch != "":
-        branch_flag = f"-b {branch}"
-    ctx.run(
-        f"git clone --depth 1 {branch_flag} -- git@github.com:coilysiren/eco-mods-assets.git ./eco-server/assets",
-        echo=True,
-    )
-    shutil.rmtree("./eco-server/assets/.git", ignore_errors=False, onerror=handleRemoveReadonly)
-
-    for build in os.listdir("./eco-server/assets/Builds/Mods/UserCode/"):
-        origin_path = os.path.join("./eco-server/assets/Builds/Mods/UserCode", build, "Assets")
-        target_path = os.path.join(server_path(), "Mods", "UserCode", build, "Assets")
-        copy_paths(origin_path, target_path)
-
-
-@invoke.task
 def eco_run(ctx: invoke.Context, offline=False):
     print("Modifying network.eco to reflect private server")
     with open(os.path.join(server_path(), "Configs", "Network.eco"), "r", encoding="utf-8") as file:
