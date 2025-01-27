@@ -110,22 +110,33 @@ def copy_mods():
 
 
 def symlink_mods(mods_folder, mod):
-    path = os.path.join(mods_folder, "Mods", "UserCode", mod)
-    if not os.path.exists(path):
-        raise FileNotFoundError(f"{path} does not exist")
+    full_source_path = os.path.join(mods_folder, "Mods", "UserCode", mod)
+    full_target_path = os.path.join(server_path(), "Mods", "UserCode", mod)
 
-    if os.path.isdir(os.path.join(server_path(), "Mods", "UserCode", mod)):
+    if not os.path.exists(full_source_path):
+        raise FileNotFoundError(f"{full_source_path} does not exist")
+
+    if os.path.isdir(full_target_path):
+        print("Removing existing mod folder")
         shutil.rmtree(
-            os.path.join(server_path(), "Mods", "UserCode", mod),
+            full_target_path,
             ignore_errors=False,
             onerror=handleRemoveReadonly,
         )
 
-    for file in os.listdir(path):
-        if file.endswith(".cs") or file.endswith(".unity3d"):
+    _symlink_mods(mods_folder, os.path.join("Mods", "UserCode", mod))
 
-            source = os.path.join(path, file)
-            target_dir = os.path.join(server_path(), "Mods", "UserCode", mod)
+
+def _symlink_mods(mods_folder, path):
+    for file in os.listdir(os.path.join(mods_folder, path)):
+
+        if os.path.isdir(os.path.join(path, file)):
+            _symlink_mods(mods_folder, os.path.join(path, file))
+
+        elif file.endswith(".cs") or file.endswith(".unity3d"):
+
+            source = os.path.join(mods_folder, path, file)
+            target_dir = os.path.join(server_path(), path)
             target = os.path.join(target_dir, file)
 
             if os.path.islink(target):
