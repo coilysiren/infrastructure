@@ -138,7 +138,7 @@ def _symlink_mods(mods_folder, mod):
     for dirpath, _, filenames in os.walk(os.path.join(mods_folder, path)):
         for filename in filenames:
             source = os.path.join(dirpath, filename)
-            target = os.path.join(_server_path(), dirpath, filename)
+            target = os.path.join(source.replace(mods_folder, _server_path()), filename)
             if os.path.exists(target):
                 os.remove(target)
             if os.path.islink(target):
