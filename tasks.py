@@ -78,7 +78,7 @@ def _server_path():
         return LINUX_SERVER_PATH
 
 
-def copy_paths(origin_path, target_path):
+def _copy_paths(origin_path, target_path):
     if not os.path.isdir(origin_path):
         return
     if os.path.exists(target_path) and os.path.isdir(target_path):
@@ -89,7 +89,7 @@ def copy_paths(origin_path, target_path):
         shutil.copytree(origin_path, target_path)
 
 
-def copy_mods():
+def _copy_mods():
     print("Copying mods to server")
     mods = os.listdir("./eco-server/mods/Mods")
     for mod in mods:
@@ -97,14 +97,14 @@ def copy_mods():
         target_path = os.path.join(_server_path(), "Mods", mod)
         if mod.endswith("UserCode"):
             continue
-        copy_paths(origin_path, target_path)
+        _copy_paths(origin_path, target_path)
 
     print("Copying user code mods to server")
     mods = os.listdir("./eco-server/mods/Mods/UserCode")
     for mod in mods:
         origin_path = os.path.join("./eco-server/mods/Mods/UserCode", mod)
         target_path = os.path.join(_server_path(), "Mods", "UserCode", mod)
-        copy_paths(origin_path, target_path)
+        _copy_paths(origin_path, target_path)
 
     # TODO: handle overrides in UserCode/Tools/, UserCode/Objects/, etc
     # TODO: get the list of overrides by looking inside __core__
@@ -297,7 +297,7 @@ def eco_copy_private_mods(ctx: invoke.Context, branch=""):
         echo=True,
     )
 
-    copy_mods()
+    _copy_mods()
 
 
 @invoke.task
@@ -315,7 +315,7 @@ def eco_copy_public_mods(ctx: invoke.Context, branch=""):
         echo=True,
     )
 
-    copy_mods()
+    _copy_mods()
 
 
 @invoke.task
