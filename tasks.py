@@ -248,7 +248,7 @@ def eco_copy_configs(ctx: invoke.Context):
 
     # Get configs from git
     ctx.run(
-        "git clone --depth 1 git@github.com:coilysiren/eco-configs.git ./eco-server/configs",
+        "git clone --single-branch -v --depth 1 git@github.com:coilysiren/eco-configs.git ./eco-server/configs",
         echo=True,
     )
 
@@ -294,7 +294,7 @@ def eco_copy_private_mods(ctx: invoke.Context, branch=""):
     if branch != "":
         branch_flag = f"-b {branch}"
     ctx.run(
-        f"git clone --depth 1 {branch_flag} -- git@github.com:coilysiren/eco-mods.git ./eco-server/mods",
+        f"git clone --single-branch -v --depth 1 {branch_flag} -- git@github.com:coilysiren/eco-mods.git ./eco-server/mods",
         echo=True,
     )
 
@@ -312,7 +312,7 @@ def eco_copy_public_mods(ctx: invoke.Context, branch=""):
     if branch != "":
         branch_flag = f"-b {branch}"
     ctx.run(
-        f"git clone --depth 1 {branch_flag} -- git@github.com:coilysiren/eco-mods-public.git ./eco-server/mods",
+        f"git clone --single-branch -v --depth 1 {branch_flag} -- git@github.com:coilysiren/eco-mods-public.git ./eco-server/mods",
         echo=True,
     )
 
