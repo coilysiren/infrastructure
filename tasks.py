@@ -133,10 +133,8 @@ def _symlink_mods(mods_folder, mod):
             onerror=_handleRemoveReadonly,
         )
 
-    _inner_symlink_mods(mods_folder, os.path.join("Mods", "UserCode", mod))
+    path = os.path.join("Mods", "UserCode", mod)
 
-
-def _inner_symlink_mods(mods_folder, path):
     for dirpath, _, filenames in os.walk(os.path.join(mods_folder, path)):
         for filename in filenames:
             source = os.path.join(dirpath, filename)
