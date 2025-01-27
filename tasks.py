@@ -137,15 +137,18 @@ def _symlink_mods(mods_folder, mod):
 
     for dirpath, _, filenames in os.walk(os.path.join(mods_folder, path)):
         for filename in filenames:
-            source = os.path.join(dirpath, filename)
-            target = os.path.join(source.replace(mods_folder, _server_path()), filename)
-            if os.path.exists(target):
-                os.remove(target)
-            if os.path.islink(target):
-                os.unlink(target)
-            print(f"Symlinking \n\t{source} => \n\t{target}")
-            os.makedirs(os.path.dirname(target), exist_ok=True)
-            os.symlink(source, target)
+            if ("\\bin\\" in dirpath) or ("/bin/" in dirpath) or ("\\obj\\" in dirpath) or ("/obj/" in dirpath):
+                continue
+            if filename.endswith(".cs") or filename.endswith(".unity3d"):
+                source = os.path.join(dirpath, filename)
+                target = os.path.join(source.replace(mods_folder, _server_path()), filename)
+                if os.path.exists(target):
+                    os.remove(target)
+                if os.path.islink(target):
+                    os.unlink(target)
+                print(f"Symlinking \n\t{source} => \n\t{target}")
+                os.makedirs(os.path.dirname(target), exist_ok=True)
+                os.symlink(source, target)
 
 
 @invoke.task
