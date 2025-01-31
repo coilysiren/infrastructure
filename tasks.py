@@ -24,8 +24,8 @@ sts = boto3.client("sts")
 route53 = boto3.client("route53")
 
 
-PUBLIC_MODS_FOLDER = os.path.join(os.path.expanduser("~"), "projects", "eco-mods-public")
-PRIVATE_MODS_FOLDER = os.path.join(os.path.expanduser("~"), "projects", "eco-mods")
+PUBLIC_MODS_FOLDER = os.path.join("..", "eco-mods-public")
+PRIVATE_MODS_FOLDER = os.path.join("..", "eco-mods")
 
 LINUX_SERVER_PATH = os.path.join(
     "/home",
@@ -137,11 +137,18 @@ def _symlink_mods(mods_folder, mod):
 
     for dirpath, _, filenames in os.walk(os.path.join(mods_folder, path)):
         for filename in filenames:
-            if ("\\bin\\" in dirpath) or ("/bin/" in dirpath) or ("\\obj\\" in dirpath) or ("/obj/" in dirpath):
+            if (
+                ("\\bin\\" in dirpath)
+                or ("/bin/" in dirpath)
+                or ("\\obj\\" in dirpath)
+                or ("/obj/" in dirpath)
+            ):
                 continue
             if filename.endswith(".cs") or filename.endswith(".unity3d"):
                 source = os.path.join(dirpath, filename)
-                target = os.path.join(source.replace(mods_folder, _server_path()), filename)
+                target = os.path.join(
+                    source.replace(mods_folder, _server_path()), filename
+                )
                 if os.path.exists(target):
                     os.remove(target)
                 if os.path.islink(target):
@@ -238,7 +245,9 @@ def eco_copy_configs(ctx: invoke.Context, with_world_gen=False):
     # Clean out configs folder
     print("Cleaning out configs folder")
     if os.path.exists("./eco-server/configs"):
-        shutil.rmtree("./eco-server/configs", ignore_errors=False, onerror=_handleRemoveReadonly)
+        shutil.rmtree(
+            "./eco-server/configs", ignore_errors=False, onerror=_handleRemoveReadonly
+        )
 
     # Get configs from git
     ctx.run(
@@ -248,11 +257,15 @@ def eco_copy_configs(ctx: invoke.Context, with_world_gen=False):
 
     # Remove .git from target directory
     if os.path.exists(f"{_server_path()}/.git"):
-        shutil.rmtree(f"{_server_path()}/.git", ignore_errors=False, onerror=_handleRemoveReadonly)
+        shutil.rmtree(
+            f"{_server_path()}/.git", ignore_errors=False, onerror=_handleRemoveReadonly
+        )
 
     # Copy .git to target directory
     print("Copying .git to server")
-    shutil.copytree("./eco-server/configs/.git", f"{_server_path()}/.git", dirs_exist_ok=True)
+    shutil.copytree(
+        "./eco-server/configs/.git", f"{_server_path()}/.git", dirs_exist_ok=True
+    )
 
     # Copy configs to server, except world gen
     print("Copying configs to server")
@@ -270,13 +283,25 @@ def eco_copy_configs(ctx: invoke.Context, with_world_gen=False):
     if not with_world_gen:
         # Copy over world gen, but keep the seed intact
         print("Copying WorldGenerator.eco to server, but keeping the seed intact")
-        with open(os.path.join(_server_path(), "Configs", "WorldGenerator.eco"), "r", encoding="utf-8") as file:
+        with open(
+            os.path.join(_server_path(), "Configs", "WorldGenerator.eco"),
+            "r",
+            encoding="utf-8",
+        ) as file:
             old_world_generator = json.load(file)
             seed = old_world_generator["HeightmapModule"]["Source"]["Config"]["Seed"]
-        with open(os.path.join("./eco-server/configs/Configs", "WorldGenerator.eco"), "r", encoding="utf-8") as file:
+        with open(
+            os.path.join("./eco-server/configs/Configs", "WorldGenerator.eco"),
+            "r",
+            encoding="utf-8",
+        ) as file:
             new_world_generator = json.load(file)
             new_world_generator["HeightmapModule"]["Source"]["Config"]["Seed"] = seed
-        with open(os.path.join(_server_path(), "Configs", "WorldGenerator.eco"), "w", encoding="utf-8") as file:
+        with open(
+            os.path.join(_server_path(), "Configs", "WorldGenerator.eco"),
+            "w",
+            encoding="utf-8",
+        ) as file:
             json.dump(new_world_generator, file, indent=4)
 
 
@@ -284,7 +309,9 @@ def eco_copy_configs(ctx: invoke.Context, with_world_gen=False):
 def eco_copy_private_mods(ctx: invoke.Context, branch=""):
     print("Cleaning out mods folder")
     if os.path.exists("./eco-server/mods"):
-        shutil.rmtree("./eco-server/mods", ignore_errors=False, onerror=_handleRemoveReadonly)
+        shutil.rmtree(
+            "./eco-server/mods", ignore_errors=False, onerror=_handleRemoveReadonly
+        )
 
     # get mods from git
     branch_flag = ""
@@ -302,7 +329,9 @@ def eco_copy_private_mods(ctx: invoke.Context, branch=""):
 def eco_copy_public_mods(ctx: invoke.Context, branch=""):
     print("Cleaning out mods folder")
     if os.path.exists("./eco-server/mods"):
-        shutil.rmtree("./eco-server/mods", ignore_errors=False, onerror=_handleRemoveReadonly)
+        shutil.rmtree(
+            "./eco-server/mods", ignore_errors=False, onerror=_handleRemoveReadonly
+        )
 
     # get mods from git
     branch_flag = ""
@@ -319,34 +348,56 @@ def eco_copy_public_mods(ctx: invoke.Context, branch=""):
 @invoke.task
 def eco_run(ctx: invoke.Context, offline=False):
     print("Modifying network.eco to reflect private server")
-    with open(os.path.join(_server_path(), "Configs", "Network.eco"), "r", encoding="utf-8") as file:
+    with open(
+        os.path.join(_server_path(), "Configs", "Network.eco"), "r", encoding="utf-8"
+    ) as file:
         network = json.load(file)
         network["PublicServer"] = False
         network["Name"] = "localhost"
         network["IPAddress"] = "Any"
         network["RemoteAddress"] = "localhost:3000"
         network["WebServerUrl"] = "http://localhost:3001"
-    with open(os.path.join(_server_path(), "Configs", "Network.eco"), "w", encoding="utf-8") as file:
+    with open(
+        os.path.join(_server_path(), "Configs", "Network.eco"), "w", encoding="utf-8"
+    ) as file:
         json.dump(network, file, indent=4)
 
     print("Modifying DiscordLink.eco to remove BotToken")
-    with open(os.path.join(_server_path(), "Configs", "DiscordLink.eco"), "r", encoding="utf-8") as file:
+    with open(
+        os.path.join(_server_path(), "Configs", "DiscordLink.eco"),
+        "r",
+        encoding="utf-8",
+    ) as file:
         discord = json.load(file)
         discord["BotToken"] = ""
-    with open(os.path.join(_server_path(), "Configs", "DiscordLink.eco"), "w", encoding="utf-8") as file:
+    with open(
+        os.path.join(_server_path(), "Configs", "DiscordLink.eco"),
+        "w",
+        encoding="utf-8",
+    ) as file:
         json.dump(discord, file, indent=4)
 
     print("Modifying difficulty.eco to speed up world")
-    with open(os.path.join(_server_path(), "Configs", "Difficulty.eco"), "r", encoding="utf-8") as file:
+    with open(
+        os.path.join(_server_path(), "Configs", "Difficulty.eco"), "r", encoding="utf-8"
+    ) as file:
         difficulty = json.load(file)
         difficulty["GameSettings"]["GameSpeed"] = "VeryFast"
-    with open(os.path.join(_server_path(), "Configs", "Network.eco"), "w", encoding="utf-8") as file:
+    with open(
+        os.path.join(_server_path(), "Configs", "Network.eco"), "w", encoding="utf-8"
+    ) as file:
         json.dump(difficulty, file, indent=4)
 
     print("Creating sleep.eco to allow time to fast forward")
-    with open(os.path.join(_server_path(), "Configs", "Sleep.eco"), "w", encoding="utf-8") as file:
+    with open(
+        os.path.join(_server_path(), "Configs", "Sleep.eco"), "w", encoding="utf-8"
+    ) as file:
         json.dump(
-            {"AllowFastForward": True, "SleepTimePassMultiplier": 1000, "TimeToReachMaximumTimeRate": 5},
+            {
+                "AllowFastForward": True,
+                "SleepTimePassMultiplier": 1000,
+                "TimeToReachMaximumTimeRate": 5,
+            },
             file,
             indent=4,
         )
@@ -374,10 +425,14 @@ def eco_generate_same_world(_: invoke.Context):
         )
 
     print("Modifying difficulty.eco to regenerate world")
-    with open(os.path.join(_server_path(), "Configs", "Difficulty.eco"), "r", encoding="utf-8") as file:
+    with open(
+        os.path.join(_server_path(), "Configs", "Difficulty.eco"), "r", encoding="utf-8"
+    ) as file:
         difficulty = json.load(file)
         difficulty["GameSettings"]["GenerateRandomWorld"] = False
-    with open(os.path.join(_server_path(), "Configs", "Difficulty.eco"), "w", encoding="utf-8") as file:
+    with open(
+        os.path.join(_server_path(), "Configs", "Difficulty.eco"), "w", encoding="utf-8"
+    ) as file:
         json.dump(difficulty, file, indent=4)
 
 
@@ -399,17 +454,29 @@ def eco_generate_new_world(_: invoke.Context):
         )
 
     print("Modifying WorldGenerator.eco to set seed to 0")
-    with open(os.path.join(_server_path(), "Configs", "WorldGenerator.eco"), "r", encoding="utf-8") as file:
+    with open(
+        os.path.join(_server_path(), "Configs", "WorldGenerator.eco"),
+        "r",
+        encoding="utf-8",
+    ) as file:
         world_generator = json.load(file)
         world_generator["HeightmapModule"]["Source"]["Config"]["Seed"] = 0
-    with open(os.path.join(_server_path(), "Configs", "WorldGenerator.eco"), "w", encoding="utf-8") as file:
+    with open(
+        os.path.join(_server_path(), "Configs", "WorldGenerator.eco"),
+        "w",
+        encoding="utf-8",
+    ) as file:
         json.dump(world_generator, file, indent=4)
 
     print("Modifying difficulty.eco to generate random world")
-    with open(os.path.join(_server_path(), "Configs", "Difficulty.eco"), "r", encoding="utf-8") as file:
+    with open(
+        os.path.join(_server_path(), "Configs", "Difficulty.eco"), "r", encoding="utf-8"
+    ) as file:
         difficulty = json.load(file)
         difficulty["GameSettings"]["GenerateRandomWorld"] = True
-    with open(os.path.join(_server_path(), "Configs", "Difficulty.eco"), "w", encoding="utf-8") as file:
+    with open(
+        os.path.join(_server_path(), "Configs", "Difficulty.eco"), "w", encoding="utf-8"
+    ) as file:
         json.dump(difficulty, file, indent=4)
 
 
