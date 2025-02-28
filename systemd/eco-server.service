@@ -7,8 +7,8 @@ StartLimitIntervalSec=60
 [Service]
 Type=simple
 Restart=on-failure
-TimeoutStopSec=120
-RestartSec=5
+TimeoutStopSec=300
+RestartSec=60
 User=kai
 WorkingDirectory=/home/kai/Steam/steamapps/common/EcoServer
 ExecStartPre=bash -c /home/kai/projects/infrastructure/scripts/eco-server-pre.sh
