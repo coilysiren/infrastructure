@@ -18,6 +18,11 @@ def copy_systemd(ctx: invoke.Context):
 
 
 @invoke.task
-def restart_caddy(ctx: invoke.Context):
+def caddy_restart(ctx: invoke.Context):
     ctx.run("sudo cp ./caddy/Caddyfile /etc/caddy/Caddyfile", echo=True)
     ctx.run("sudo systemctl restart caddy", echo=True)
+
+
+@invoke.task
+def caddy_tail(ctx: invoke.Context):
+    ctx.run("sudo journalctl -u caddy -f", echo=True)
