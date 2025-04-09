@@ -3,6 +3,7 @@ import invoke
 
 @invoke.task
 def backend_restart(ctx: invoke.Context):
+    ctx.run("sudo cp ./systemd/coilysiren-backend.service /etc/systemd/system/", echo=True)
     ctx.run("sudo systemctl restart coilysiren-backend", echo=True)
 
 
