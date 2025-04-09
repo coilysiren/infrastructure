@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+set -eux
+
 bsky_password=$(aws ssm get-parameter --name /bsky/password --with-decryption --query Parameter.Value --output text)
 
 env \
