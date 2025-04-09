@@ -8,7 +8,7 @@ from src.eco import *
 
 
 @invoke.task
-def copy_systemd(ctx: invoke.Context):
+def systemd_restart(ctx: invoke.Context):
     ctx.run("chmod +x ./scripts/*", echo=True)
     systemd_files = os.listdir("./systemd")
     for systemd_file in systemd_files:
@@ -16,6 +16,7 @@ def copy_systemd(ctx: invoke.Context):
         ctx.run(f"sudo systemctl enable {systemd_file}", echo=True)
         ctx.run(f"sudo systemctl start {systemd_file}", echo=True)
         ctx.run(f"sudo systemctl restart {systemd_file}", echo=True)
+    ctx.run("sudo systemctl daemon-reload", echo=True)
 
 
 @invoke.task
