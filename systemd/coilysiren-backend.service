@@ -1,0 +1,18 @@
+[Unit]
+Description=coilysiren-backend
+After=syslog.target network.target nss-lookup.target network-online.target
+StartLimitBurst=5
+StartLimitIntervalSec=60
+
+[Service]
+Type=simple
+Restart=on-failure
+TimeoutStopSec=300
+RestartSec=60
+User=kai
+WorkingDirectory=/home/kai/projects/backend
+ExecStart=uvicorn src.main:app --port 4000 --host 0.0.0.0
+ExecStop=kill -TERM $MAINPID
+
+[Install]
+WantedBy=multi-user.target

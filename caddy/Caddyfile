@@ -8,6 +8,10 @@
 # this machine's public IP, then replace ":80" below with your
 # domain name.
 
+api.coilysiren.me {
+    reverse_proxy localhost:4000
+}
+
 :80 {
 	# Set this path to your site's directory.
 	root * /usr/share/caddy

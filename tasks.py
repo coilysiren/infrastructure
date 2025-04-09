@@ -15,3 +15,9 @@ def copy_systemd(ctx: invoke.Context):
         ctx.run(f"sudo systemctl enable {systemd_file}", echo=True)
         ctx.run(f"sudo systemctl start {systemd_file}", echo=True)
         ctx.run(f"sudo systemctl restart {systemd_file}", echo=True)
+
+
+@invoke.task
+def restart_caddy(ctx: invoke.Context):
+    ctx.run("sudo cp ./caddy/Caddyfile /etc/caddy/Caddyfile", echo=True)
+    ctx.run("sudo systemctl restart caddy", echo=True)
