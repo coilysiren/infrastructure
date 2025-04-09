@@ -11,7 +11,7 @@ TimeoutStopSec=300
 RestartSec=60
 User=kai
 WorkingDirectory=/home/kai/projects/backend
-ExecStart=env PYTHONPATH=. /home/kai/.pyenv/shims/uvicorn src.main:app --port 4000 --host 0.0.0.0
+ExecStart=bash -c /home/kai/projects/infrastructure/scripts/backend-start.sh
 ExecStop=kill -TERM $MAINPID
 
 [Install]
