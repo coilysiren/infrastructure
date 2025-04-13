@@ -16,3 +16,6 @@ def backend_tail(ctx: invoke.Context):
 @invoke.task
 def backend_stop(ctx: invoke.Context):
     ctx.run("sudo systemctl stop coilysiren-backend", echo=True)
+
+
+backend_collection = invoke.Collection("backend", backend_restart, backend_tail, backend_stop)

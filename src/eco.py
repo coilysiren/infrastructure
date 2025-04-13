@@ -48,7 +48,7 @@ def _handleRemoveReadonly(func, path, _):
         raise Exception("could not handle path")
 
 
-def eco_binary():
+def binary():
     if "windows" in os.getenv("OS", "").lower():
         return "EcoServer.exe"
     else:
@@ -136,39 +136,39 @@ def _symlink_mods(mods_folder, mod):
 
 
 @invoke.task
-def eco_tail(ctx: invoke.Context):
+def tail(ctx: invoke.Context):
     ctx.run("journalctl -u eco-server -f", echo=True)
 
 
 @invoke.task
-def eco_restart(ctx: invoke.Context):
+def restart(ctx: invoke.Context):
     ctx.run("sudo systemctl restart eco-server", echo=True)
 
 
 @invoke.task
-def eco_stop(ctx: invoke.Context):
+def stop(ctx: invoke.Context):
     ctx.run("sudo systemctl stop eco-server", echo=True)
     ctx.run("sudo systemctl disable eco-server", echo=True)
 
 
 @invoke.task
-def eco_start(ctx: invoke.Context):
+def start(ctx: invoke.Context):
     ctx.run("sudo systemctl start eco-server", echo=True)
     ctx.run("sudo systemctl enable eco-server", echo=True)
 
 
 @invoke.task
-def eco_symlink_public_mod(_: invoke.Context, mod: str):
+def symlink_public_mod(_: invoke.Context, mod: str):
     _symlink_mods(PUBLIC_MODS_FOLDER, mod)
 
 
 @invoke.task
-def eco_symlink_private_mod(_: invoke.Context, mod: str):
+def symlink_private_mod(_: invoke.Context, mod: str):
     _symlink_mods(PRIVATE_MODS_FOLDER, mod)
 
 
 @invoke.task
-def eco_copy_configs(ctx: invoke.Context, with_world_gen=False):
+def copy_configs(ctx: invoke.Context, with_world_gen=False):
     # Clean out configs folder
     print("Cleaning out configs folder")
     if os.path.exists("./eco-server/configs"):
@@ -200,7 +200,7 @@ def eco_copy_configs(ctx: invoke.Context, with_world_gen=False):
 
 
 @invoke.task
-def eco_copy_private_mods(ctx: invoke.Context, branch=""):
+def copy_private_mods(ctx: invoke.Context, branch=""):
     print("Cleaning out mods folder")
     if os.path.exists("./eco-server/mods"):
         shutil.rmtree("./eco-server/mods", ignore_errors=False, onerror=_handleRemoveReadonly)
@@ -218,7 +218,7 @@ def eco_copy_private_mods(ctx: invoke.Context, branch=""):
 
 
 @invoke.task
-def eco_copy_public_mods(ctx: invoke.Context, branch=""):
+def copy_public_mods(ctx: invoke.Context, branch=""):
     print("Cleaning out mods folder")
     if os.path.exists("./eco-server/mods"):
         shutil.rmtree("./eco-server/mods", ignore_errors=False, onerror=_handleRemoveReadonly)
@@ -236,7 +236,7 @@ def eco_copy_public_mods(ctx: invoke.Context, branch=""):
 
 
 @invoke.task
-def eco_run(ctx: invoke.Context, offline=False):
+def run(ctx: invoke.Context, offline=False):
     print("Modifying network.eco to reflect private server")
     with open(os.path.join(_server_path(), "Configs", "Network.eco"), "r", encoding="utf-8") as file:
         network = json.load(file)
@@ -290,7 +290,7 @@ def eco_run(ctx: invoke.Context, offline=False):
 
 
 @invoke.task
-def eco_generate_same_world(_: invoke.Context):
+def generate_same_world(_: invoke.Context):
     if os.path.exists(os.path.join(_server_path(), "Storage")):
         shutil.rmtree(
             os.path.join(_server_path(), "Storage"),
@@ -313,7 +313,7 @@ def eco_generate_same_world(_: invoke.Context):
 
 
 @invoke.task
-def eco_generate_new_world(_: invoke.Context):
+def generate_new_world(_: invoke.Context):
     if os.path.exists(os.path.join(_server_path(), "Storage")):
         print("Removing Storage folder")
         shutil.rmtree(
@@ -350,3 +350,20 @@ def eco_generate_new_world(_: invoke.Context):
         difficulty["GameSettings"]["GenerateRandomWorld"] = True
     with open(os.path.join(_server_path(), "Configs", "Difficulty.eco"), "w", encoding="utf-8") as file:
         json.dump(difficulty, file, indent=4)
+
+
+eco_collection = invoke.Collection(
+    "eco",
+    tail,
+    restart,
+    stop,
+    start,
+    symlink_public_mod,
+    symlink_private_mod,
+    copy_configs,
+    copy_private_mods,
+    copy_public_mods,
+    run,
+    generate_same_world,
+    generate_new_world,
+)
