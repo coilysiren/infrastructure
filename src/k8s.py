@@ -31,13 +31,7 @@ def cert_manager(ctx: invoke.Context):
         f"kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/{CERT_MANAGER_VERSION}/cert-manager.yaml",
         echo=True,
     )
-    # ctx.run(
-    #     """
-    #     kubectl -n cert-manager patch deployment cert-manager \
-    #         --patch '{"spec": {"template": {"spec": {"hostAliases": [{"ip": "99.110.50.213", "hostnames": ["api.coilysiren.me"]}]}}}}'
-    #     """,
-    #     echo=True,
-    # )
+    ctx.run("kubectl apply -f deploy/cert_manager.yml", echo=True)
 
 
 k8s_collection = invoke.Collection(
