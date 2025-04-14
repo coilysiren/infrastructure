@@ -81,9 +81,9 @@ def cert_manager_loopback_fix(ctx: invoke.Context):
 k8s_collection = invoke.Collection(
     "k8s",
     cert_manager,
+    cert_manager_loopback_fix,
     service_status,
     service_restart,
     service_stop,
     service_start,
-    dns,
 )
