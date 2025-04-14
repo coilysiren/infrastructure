@@ -37,7 +37,19 @@ def cert_manager(ctx: invoke.Context):
 
 
 @invoke.task
-def dns(ctx: invoke.Context):
+def cert_manager_loopback_fix(ctx: invoke.Context):
+    """
+    This is a fix for clusters (like residential ones) that have a problem with accessing the loopback address
+    for the ACME HTTP-01 challenge. Specifically what happens is that the challenge tries to run a self check
+    to verify that the challenge URL has been hosted on the ingress. However, some residential networks block access
+    to the loopback address, so the self check fails.
+
+    To fix this this, we have to patch coredns and our cert manager deployment to:
+
+      1. alias the DNS name of the domain we want to verify to the ingress's private IP address, via a coredns configmap
+      2. remove the hostAliases from the cert manager deployment, which would otherwise override our coredns alias
+    """
+
     ingresses = json.loads(ctx.run("kubectl get ingress --all-namespaces -o json", echo=True).stdout)
 
     loopbacks = {}
