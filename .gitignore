@@ -6,3 +6,4 @@ venv
 home/
 eco-server/
 bootstrap.txt
+deploy/coredns_filled.yml
