@@ -3,8 +3,18 @@ kind: ConfigMap
 metadata:
   name: coredns
   namespace: kube-system
+  annotations:
+    kubectl.kubernetes.io/last-applied-configuration: ""
 data:
   Corefile: |
+    {% for host, ip in loopbacks.items() %}
+    {{ host }}:53 {
+        hosts {
+            {{ ip }} {{ host }}
+        }
+    }
+    {% endfor %}
+
     .:53 {
         errors
         health
@@ -15,15 +25,6 @@ data:
           fallthrough in-addr.arpa ip6.arpa
         }
 
-        {% for host, ip in dns_challenges.items() %}
-        {{ host }} {
-            hosts {
-                {{ ip }} {{ host }}
-                fallthrough
-            }
-        }
-        {% endfor %}
-
         hosts /etc/coredns/NodeHosts {
           ttl 60
           reload 15s
@@ -31,7 +32,7 @@ data:
         }
 
         prometheus :9153
-        forward . /etc/resolv.conf
+        forward . 8.8.8.8 8.8.4.4
         cache 30
         loop
         reload
