@@ -62,6 +62,7 @@ def dns(ctx: invoke.Context):
         kubectl patch deployment cert-manager -n cert-manager --type=json -p='[{"op": "remove", "path": "/spec/template/spec/hostAliases"}]' --dry-run=server -o yaml
     """,
         echo=True,
+        warn=True,
     )
 
 
