@@ -1,4 +1,5 @@
 import json
+import os
 import invoke
 import jinja2
 
@@ -30,7 +31,8 @@ def service_start(ctx: invoke.Context):
 @invoke.task
 def cert_manager(ctx: invoke.Context):
     ctx.run(
-        f"kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/{CERT_MANAGER_VERSION}/cert-manager.yaml",
+        f"kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/"
+        f"{CERT_MANAGER_VERSION}/cert-manager.yaml",
         echo=True,
     )
     ctx.run("kubectl apply -f deploy/cert_manager.yml", echo=True)
@@ -71,11 +73,43 @@ def cert_manager_loopback_fix(ctx: invoke.Context):
     ctx.run("kubectl rollout restart deployment coredns -n kube-system", echo=True)
     ctx.run(
         """
-        kubectl patch deployment cert-manager -n cert-manager --type=json -p='[{"op": "remove", "path": "/spec/template/spec/hostAliases"}]' --dry-run=server -o yaml
-    """,
+        kubectl patch deployment cert-manager -n cert-manager --type=json
+        -p='[{"op": "remove", "path": "/spec/template/spec/hostAliases"}]'
+        --dry-run=server -o yaml
+        """,
         echo=True,
         warn=True,
     )
+
+
+@invoke.task
+def aws_secrets(ctx: invoke.Context, aws_access_key_id: str, aws_secret_access_key: str):
+    ctx.run("helm repo add external-secrets https://charts.external-secrets.io", echo=True)
+    ctx.run("helm repo update", echo=True)
+    ctx.run("kubectl create namespace external-secrets", echo=True, warn=True)
+    ctx.run(
+        "helm install external-secrets external-secrets/external-secrets " "--namespace external-secrets",
+        echo=True,
+        warn=True,
+    )
+    # Delete existing secret if it exists
+    ctx.run(
+        "kubectl delete secret aws-credentials -n external-secrets --ignore-not-found",
+        echo=True,
+        warn=True,
+    )
+    ctx.run(
+        f"""kubectl create secret generic aws-credentials \
+            --namespace external-secrets \
+            --from-literal=aws_access_key_id={aws_access_key_id} \
+            --from-literal=aws_secret_access_key={aws_secret_access_key}
+        """,
+        warn=True,
+    )
+    # Apply the SecretStore and ExternalSecret configurations
+    ctx.run("kubectl apply -f deploy/secretstore.yml", echo=True)
+    ctx.run("kubectl apply -f deploy/externalsecret.yml", echo=True)
+    ctx.run("kubectl rollout restart deployment external-secrets -n external-secrets", echo=True)
 
 
 k8s_collection = invoke.Collection(
@@ -86,4 +120,5 @@ k8s_collection = invoke.Collection(
     service_restart,
     service_stop,
     service_start,
+    aws_secrets,
 )
