@@ -2,8 +2,13 @@ import json
 import os
 import invoke
 import jinja2
+import boto3
+
 
 CERT_MANAGER_VERSION = "v1.12.16"
+
+
+ssm = boto3.client("ssm", region_name="us-east-1")
 
 
 @invoke.task
