@@ -7,4 +7,6 @@ cleanup() {
   exit 0
 }
 
+trap cleanup SIGTERM SIGINT
+
 /usr/local/bin/k3s server
