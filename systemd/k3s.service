@@ -9,6 +9,7 @@ WantedBy=multi-user.target
 
 [Service]
 Type=notify
+Environment="K3S_IPTABLES_LEGACY=true"
 EnvironmentFile=-/etc/default/%N
 EnvironmentFile=-/etc/sysconfig/%N
 EnvironmentFile=-/etc/systemd/system/k3s.service.env
