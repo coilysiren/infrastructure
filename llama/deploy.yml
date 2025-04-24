@@ -60,6 +60,8 @@ kind: Service
 metadata:
   name: llama-service
   namespace: llama
+  annotations:
+    tailscale.com/expose: "true"
 spec:
   type: ClusterIP
   selector:
