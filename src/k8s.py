@@ -78,8 +78,8 @@ def cert_manager_loopback_fix(ctx: invoke.Context):
     ctx.run("kubectl rollout restart deployment coredns -n kube-system", echo=True)
     ctx.run(
         """
-        kubectl patch deployment cert-manager -n cert-manager --type=json
-        -p='[{"op": "remove", "path": "/spec/template/spec/hostAliases"}]'
+        kubectl patch deployment cert-manager -n cert-manager --type=json \
+        -p='[{"op": "remove", "path": "/spec/template/spec/hostAliases"}]' \
         --dry-run=server -o yaml
         """,
         echo=True,
