@@ -24,8 +24,8 @@ spec:
             [
               "wget",
               "-O",
-              "/models/DeepSeek-V2-Lite-Chat-Q2_K.gguf",
-              "https://huggingface.co/tensorblock/DeepSeek-V2-Lite-Chat-GGUF/resolve/main/DeepSeek-V2-Lite-Chat-Q2_K.gguf",
+              "/models/tinyllama-1.1b-chat-v1.0.Q3_K_M.gguf",
+              "https://huggingface.co/TheBloke/TinyLlama-1.1B-Chat-v1.0-GGUF/blob/main/tinyllama-1.1b-chat-v1.0.Q3_K_M.gguf",
             ]
           volumeMounts:
             - name: models
@@ -36,13 +36,16 @@ spec:
         - name: llama
           image: ghcr.io/ggml-org/llama.cpp:server
           resources:
+            requests:
+              cpu: 6000m
+              memory: 61440Mi
             limits:
-              cpu: 4000m
-              memory: 4096Mi
+              cpu: 12000m
+              memory: 122880Mi
           command:
             - /app/llama-server
             - -m
-            - /models/DeepSeek-V2-Lite-Chat-Q2_K.gguf
+            - /models/tinyllama-1.1b-chat-v1.0.Q3_K_M.gguf
             - --port
             - "8080"
             - --host
