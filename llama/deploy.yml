@@ -38,10 +38,10 @@ spec:
           resources:
             requests:
               cpu: 6000m
-              memory: 61440Mi
+              memory: 6144Mi
             limits:
-              cpu: 12000m
-              memory: 122880Mi
+              cpu: 6000m
+              memory: 12288Mi
           command:
             - /app/llama-server
             - -m
