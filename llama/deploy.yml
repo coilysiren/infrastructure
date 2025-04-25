@@ -37,10 +37,10 @@ spec:
           image: ghcr.io/ggml-org/llama.cpp:server
           resources:
             requests:
-              cpu: 20
+              cpu: 10
               memory: 5120Mi
             limits:
-              cpu: 20
+              cpu: 10
               memory: 5120Mi
           command:
             - /app/llama-server
