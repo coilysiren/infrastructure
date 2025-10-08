@@ -149,6 +149,7 @@ def tail(ctx: invoke.Context):
 
 @invoke.task
 def restart(ctx: invoke.Context):
+    ctx.run("sudo systemctl daemon-reload eco-server", echo=True)
     ctx.run("sudo systemctl restart eco-server", echo=True)
 
 
