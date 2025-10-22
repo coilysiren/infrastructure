@@ -1,5 +1,5 @@
 [Unit]
-Description=eco-server
+Description=icarus-server
 After=syslog.target network.target nss-lookup.target network-online.target
 StartLimitBurst=5
 StartLimitIntervalSec=60
@@ -10,8 +10,8 @@ Restart=on-failure
 TimeoutStopSec=300
 RestartSec=60
 User=kai
-WorkingDirectory=/home/kai/Steam/steamapps/common/EcoServer
-ExecStartPre=bash -c /home/kai/projects/infrastructure/scripts/eco-server-pre.sh
+WorkingDirectory=/home/kai/Steam/steamapps/common/IcarusServer
+ExecStartPre=bash -c /home/kai/projects/infrastructure/scripts/icarus-server-pre.sh
 ExecStart=sleep infinity
 ExecStop=kill -TERM $MAINPID
 
