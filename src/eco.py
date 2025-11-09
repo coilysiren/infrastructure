@@ -65,6 +65,9 @@ def _server_path():
 def _copy_paths(origin_path, target_path):
     if not os.path.isdir(origin_path):
         return
+    # Temporary workaround until I have a smarter merge logic
+    if "BunWulfEducational" in origin_path:
+        return
     if os.path.exists(target_path) and os.path.isdir(target_path):
         print(f"\tRemoving {target_path}")
         shutil.rmtree(target_path, ignore_errors=False, onerror=_handleRemoveReadonly)
