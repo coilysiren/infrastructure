@@ -71,7 +71,7 @@ def _copy_paths(origin_path, target_path):
         shutil.rmtree(target_path, ignore_errors=False, onerror=_handleRemoveReadonly)
     if os.path.isdir(origin_path):
         print(f"\tCopying {origin_path} to {target_path}")
-        shutil.copytree(origin_path, target_path)
+        shutil.copytree(origin_path, target_path, dirs_exist_ok=True)
 
 
 def _copy_mods():
