@@ -2,6 +2,7 @@ import json
 import os
 import shutil
 import stat
+from time import time
 
 import boto3
 import invoke
@@ -66,7 +67,11 @@ def _copy_paths(origin_path, target_path):
     if not os.path.isdir(origin_path):
         return
     # Temporary workaround until I have a smarter merge logic
-    if os.path.exists(target_path) and os.path.isdir(target_path) and "BunWulfEducational" not in origin_path:
+    if (
+        os.path.exists(target_path)
+        and os.path.isdir(target_path)
+        and "BunWulfEducational" not in origin_path
+    ):
         print(f"\tRemoving {target_path}")
         shutil.rmtree(target_path, ignore_errors=False, onerror=_handleRemoveReadonly)
     if os.path.isdir(origin_path):
@@ -212,6 +217,35 @@ def copy_configs(ctx: invoke.Context, with_world_gen=False):
             os.remove(config_path)
         print(f"\tCopying ./eco-server/configs/Configs/{config} to {config_path}")
         shutil.copyfile(f"./eco-server/configs/Configs/{config}", config_path)
+
+
+@invoke.task
+def increase_skill_gain(ctx: invoke.Context, multiplier: float):
+    print("Modifying balance.eco to increase skill gain")
+    print("Checking if file has been modified in the last 12 hours...")
+    file_path = os.path.join(_server_path(), "Configs", "Balance.eco")
+
+    if (time.time() - os.path.getmtime(file_path)) < 12 * 60 * 60:
+        print("File has been modified in the last 12 hours. Skipping modification.")
+        return
+    else:
+        print(
+            "File was last modified more than 12 hours ago. Proceeding with modification."
+        )
+
+    with open(file_path, "r", encoding="utf-8") as file:
+        balance = json.load(file)
+        skill_gain_multiplier = balance["GameSettings"]["SkillGainMultiplier"]
+        print("Current Skill Gain Multiplier:", skill_gain_multiplier)
+        balance["GameSettings"]["SkillGainMultiplier"] = round(
+            skill_gain_multiplier * multiplier, 2
+        )
+
+    with open(file_path, "w", encoding="utf-8") as file:
+        json.dump(balance, file, indent=4)
+        print(
+            "New Skill Gain Multiplier:", balance["GameSettings"]["SkillGainMultiplier"]
+        )
 
 
 @invoke.task
