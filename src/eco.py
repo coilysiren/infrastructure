@@ -355,12 +355,14 @@ def run(ctx: invoke.Context, offline=False):
 @invoke.task
 def generate_same_world(_: invoke.Context):
     if os.path.exists(os.path.join(_server_path(), "Storage")):
+        print("Removing Storage folder")
         shutil.rmtree(
             os.path.join(_server_path(), "Storage"),
             ignore_errors=False,
             onerror=_handleRemoveReadonly,
         )
     if os.path.exists(os.path.join(_server_path(), "Logs")):
+        print("Removing Logs folder")
         shutil.rmtree(
             os.path.join(_server_path(), "Logs"),
             ignore_errors=False,
