@@ -237,7 +237,9 @@ def increase_skill_gain(ctx: invoke.Context, multiplier: float):
         balance = json.load(file)
         skill_gain_multiplier = balance["SkillGainMultiplier"]
         print("Current Skill Gain Multiplier:", skill_gain_multiplier)
-        balance["SkillGainMultiplier"] = round(skill_gain_multiplier * multiplier, 2)
+        balance["SkillGainMultiplier"] = round(
+            int(skill_gain_multiplier) * int(multiplier), 2
+        )
 
     with open(file_path, "w", encoding="utf-8") as file:
         json.dump(balance, file, indent=4)
