@@ -220,12 +220,14 @@ def copy_configs(ctx: invoke.Context, with_world_gen=False):
 
 
 @invoke.task
-def increase_skill_gain(ctx: invoke.Context, multiplier: float):
+def increase_skill_gain(ctx: invoke.Context, multiplier: float, force: bool = False):
     print("Modifying balance.eco to increase skill gain")
     print("Checking if file has been modified in the last 12 hours...")
     file_path = os.path.join(_server_path(), "Configs", "Balance.eco")
 
-    if (time.time() - os.path.getmtime(file_path)) < 12 * 60 * 60:
+    if force:
+        print("Force flag is set. Proceeding with modification.")
+    elif (time.time() - os.path.getmtime(file_path)) < 12 * 60 * 60:
         print("File has been modified in the last 12 hours. Skipping modification.")
         return
     else:
