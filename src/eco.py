@@ -2,7 +2,7 @@ import json
 import os
 import shutil
 import stat
-from time import time
+import time
 
 import boto3
 import invoke
@@ -235,17 +235,13 @@ def increase_skill_gain(ctx: invoke.Context, multiplier: float):
 
     with open(file_path, "r", encoding="utf-8") as file:
         balance = json.load(file)
-        skill_gain_multiplier = balance["GameSettings"]["SkillGainMultiplier"]
+        skill_gain_multiplier = balance["SkillGainMultiplier"]
         print("Current Skill Gain Multiplier:", skill_gain_multiplier)
-        balance["GameSettings"]["SkillGainMultiplier"] = round(
-            skill_gain_multiplier * multiplier, 2
-        )
+        balance["SkillGainMultiplier"] = round(skill_gain_multiplier * multiplier, 2)
 
     with open(file_path, "w", encoding="utf-8") as file:
         json.dump(balance, file, indent=4)
-        print(
-            "New Skill Gain Multiplier:", balance["GameSettings"]["SkillGainMultiplier"]
-        )
+        print("New Skill Gain Multiplier:", balance["SkillGainMultiplier"])
 
 
 @invoke.task
