@@ -439,4 +439,5 @@ eco_collection = invoke.Collection(
     run,
     generate_same_world,
     generate_new_world,
+    increase_skill_gain,
 )
