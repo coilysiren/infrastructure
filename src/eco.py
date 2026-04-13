@@ -41,7 +41,7 @@ def _get_api_key():
     return response["Parameter"]["Value"].strip()
 
 
-def _handleRemoveReadonly(func, path, _):
+def _handle_remove_readonly(func, path, _):
     if not os.access(path, os.W_OK):
         os.chmod(path, stat.S_IWUSR)
         func(path)
@@ -52,15 +52,13 @@ def _handleRemoveReadonly(func, path, _):
 def eco_binary():
     if "windows" in os.getenv("OS", "").lower():
         return "EcoServer.exe"
-    else:
-        return "./EcoServer"
+    return "./EcoServer"
 
 
 def _server_path():
     if "windows" in os.getenv("OS", "").lower():
         return WINDOWS_SERVER_PATH
-    else:
-        return LINUX_SERVER_PATH
+    return LINUX_SERVER_PATH
 
 
 def _copy_paths(origin_path, target_path):
@@ -73,7 +71,7 @@ def _copy_paths(origin_path, target_path):
         and "BunWulfEducational" not in origin_path
     ):
         print(f"\tRemoving {target_path}")
-        shutil.rmtree(target_path, ignore_errors=False, onerror=_handleRemoveReadonly)
+        shutil.rmtree(target_path, ignore_errors=False, onerror=_handle_remove_readonly)
     if os.path.isdir(origin_path):
         print(f"\tCopying {origin_path} to {target_path}")
         shutil.copytree(origin_path, target_path, dirs_exist_ok=True)
@@ -120,7 +118,7 @@ def _symlink_mods(mods_folder, mod):
         shutil.rmtree(
             full_target_path,
             ignore_errors=False,
-            onerror=_handleRemoveReadonly,
+            onerror=_handle_remove_readonly,
         )
 
     path = os.path.join("Mods", "UserCode", mod)
@@ -182,12 +180,12 @@ def symlink_private_mod(_: invoke.Context, mod: str):
 
 
 @invoke.task
-def copy_configs(ctx: invoke.Context, with_world_gen=False):
+def copy_configs(ctx: invoke.Context, with_world_gen=False):  # pylint: disable=unused-argument
     # Clean out configs folder
     print("Cleaning out configs folder")
     if os.path.exists("./eco-server/configs"):
         shutil.rmtree(
-            "./eco-server/configs", ignore_errors=False, onerror=_handleRemoveReadonly
+            "./eco-server/configs", ignore_errors=False, onerror=_handle_remove_readonly
         )
 
     # Get configs from git
@@ -199,7 +197,7 @@ def copy_configs(ctx: invoke.Context, with_world_gen=False):
     # Remove .git from target directory
     if os.path.exists(f"{_server_path()}/.git"):
         shutil.rmtree(
-            f"{_server_path()}/.git", ignore_errors=False, onerror=_handleRemoveReadonly
+            f"{_server_path()}/.git", ignore_errors=False, onerror=_handle_remove_readonly
         )
 
     # Copy .git to target directory
@@ -220,7 +218,7 @@ def copy_configs(ctx: invoke.Context, with_world_gen=False):
 
 
 @invoke.task
-def increase_skill_gain(ctx: invoke.Context, multiplier: float, force: bool = False):
+def increase_skill_gain(_: invoke.Context, multiplier: float, force: bool = False):
     print("Modifying balance.eco to increase skill gain")
     print("Checking if file has been modified in the last 12 hours...")
     file_path = os.path.join(_server_path(), "Configs", "Balance.eco")
@@ -253,7 +251,7 @@ def copy_private_mods(ctx: invoke.Context, branch=""):
     print("Cleaning out mods folder")
     if os.path.exists("./eco-server/mods"):
         shutil.rmtree(
-            "./eco-server/mods", ignore_errors=False, onerror=_handleRemoveReadonly
+            "./eco-server/mods", ignore_errors=False, onerror=_handle_remove_readonly
         )
 
     # get mods from git
@@ -273,7 +271,7 @@ def copy_public_mods(ctx: invoke.Context, branch=""):
     print("Cleaning out mods folder")
     if os.path.exists("./eco-server/mods"):
         shutil.rmtree(
-            "./eco-server/mods", ignore_errors=False, onerror=_handleRemoveReadonly
+            "./eco-server/mods", ignore_errors=False, onerror=_handle_remove_readonly
         )
 
     # get mods from git
@@ -359,14 +357,14 @@ def generate_same_world(_: invoke.Context):
         shutil.rmtree(
             os.path.join(_server_path(), "Storage"),
             ignore_errors=False,
-            onerror=_handleRemoveReadonly,
+            onerror=_handle_remove_readonly,
         )
     if os.path.exists(os.path.join(_server_path(), "Logs")):
         print("Removing Logs folder")
         shutil.rmtree(
             os.path.join(_server_path(), "Logs"),
             ignore_errors=False,
-            onerror=_handleRemoveReadonly,
+            onerror=_handle_remove_readonly,
         )
 
     print("Modifying difficulty.eco to regenerate world")
@@ -388,14 +386,14 @@ def generate_new_world(_: invoke.Context):
         shutil.rmtree(
             os.path.join(_server_path(), "Storage"),
             ignore_errors=False,
-            onerror=_handleRemoveReadonly,
+            onerror=_handle_remove_readonly,
         )
     if os.path.exists(os.path.join(_server_path(), "Logs")):
         print("Removing Logs folder")
         shutil.rmtree(
             os.path.join(_server_path(), "Logs"),
             ignore_errors=False,
-            onerror=_handleRemoveReadonly,
+            onerror=_handle_remove_readonly,
         )
 
     print("Modifying WorldGenerator.eco to set seed to 0")

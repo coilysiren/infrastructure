@@ -11,11 +11,11 @@ jobs:
     # https://github.com/actions/runner-images
     runs-on: ubuntu-22.04
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: install python
-        uses: actions/setup-python@v3
+        uses: actions/setup-python@v5
         with:
           python-version: "3.11"
       - run: python -m pip install --upgrade pip
       - run: pip install -r requirements.txt
-      - run: pylint $(git ls-files '*.py')
+      - run: pylint --disable=fixme $(git ls-files '*.py')

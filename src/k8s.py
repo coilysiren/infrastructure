@@ -1,5 +1,4 @@
 import json
-import os
 import invoke
 import jinja2
 import boto3
@@ -93,7 +92,8 @@ def aws_secrets(ctx: invoke.Context, aws_access_key_id: str, aws_secret_access_k
     ctx.run("helm repo update", echo=True)
     ctx.run("kubectl create namespace external-secrets", echo=True, warn=True)
     ctx.run(
-        "helm install external-secrets external-secrets/external-secrets " "--namespace external-secrets",
+        "helm install external-secrets external-secrets/external-secrets "
+        "--namespace external-secrets",
         echo=True,
         warn=True,
     )
