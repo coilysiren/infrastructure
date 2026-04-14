@@ -10,9 +10,14 @@ spec:
     privateKeySecretRef:
       name: letsencrypt-production
     solvers:
-      - http01:
-          ingress:
-            class: traefik
+      - dns01:
+          route53:
+            region: us-west-2
+            hostedZoneID: Z06714552N3MO04UBWF33
+            accessKeyID: AKIATJSTTITGKATGTR5E
+            secretAccessKeySecretRef:
+              name: route53-credentials
+              key: secret-access-key
 
 ---
 apiVersion: cert-manager.io/v1
@@ -26,6 +31,11 @@ spec:
     privateKeySecretRef:
       name: letsencrypt-staging
     solvers:
-      - http01:
-          ingress:
-            class: traefik
+      - dns01:
+          route53:
+            region: us-west-2
+            hostedZoneID: Z06714552N3MO04UBWF33
+            accessKeyID: AKIATJSTTITGKATGTR5E
+            secretAccessKeySecretRef:
+              name: route53-credentials
+              key: secret-access-key
