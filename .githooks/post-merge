@@ -1,0 +1,15 @@
+#!/bin/sh
+# Runs after `git pull` / `git merge`. Strips CRLF from text files that
+# must be LF on Linux (shell scripts, systemd units, python, etc).
+# Safe no-op if dos2unix isn't installed.
+
+command -v dos2unix >/dev/null 2>&1 || exit 0
+
+repo_root="$(git rev-parse --show-toplevel)"
+cd "$repo_root" || exit 0
+
+find scripts systemd src -type f \
+  \( -name '*.sh' -o -name '*.service' -o -name '*.py' \) \
+  -exec dos2unix -q {} + 2>/dev/null
+
+exit 0

@@ -1,0 +1,14 @@
+# Normalize line endings: store LF in repo, check out LF everywhere.
+# Prevents CRLF issues when pulling on Linux servers from a Windows checkout.
+* text=auto eol=lf
+
+*.sh      text eol=lf
+*.service text eol=lf
+*.py      text eol=lf
+*.md      text eol=lf
+*.yml     text eol=lf
+*.yaml    text eol=lf
+
+*.zip binary
+*.png binary
+*.jpg binary
