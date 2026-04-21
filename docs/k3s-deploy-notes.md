@@ -549,6 +549,17 @@ One line per trap. Every fix here has a commit in some repo's history.
 - **Stale `docker-registry` secret causing `ImagePullBackOff` for
   minutes after a rotation** → bounce the deployment:
   `kubectl rollout restart deployment/${NAME}-app -n ${NAME}`.
+- **`ExternalSecret` in an app namespace stuck on `SecretSyncedError:
+  aws-credentials not found`** → the `ClusterSecretStore`'s auth
+  `secretRef` must pin `namespace: external-secrets` on both
+  `accessKeyIDSecretRef` and `secretAccessKeySecretRef`. Without it,
+  ClusterSecretStore looks for `aws-credentials` in the *consuming*
+  namespace (where it doesn't exist — only `external-secrets` has the
+  hand-placed bootstrap Secret). Fix lives in
+  `infrastructure/deploy/secretstore.yml`; apply with
+  `kubectl apply -f deploy/secretstore.yml`. Symptom also includes the
+  pod stuck on `CreateContainerConfigError: secret "${NAME}-fred" not
+  found` because the downstream Secret never renders.
 
 ## 8. First-time setup checklist for a new repo
 

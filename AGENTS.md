@@ -33,7 +33,15 @@ You have full read access to files within `/Users/kai/projects/coilysiren`.
 
 - Read-only shell commands (`ls`, `grep`, `cat`, `git log`, `git status`,
   `aws ssm describe-parameters`, etc.) require no approval.
+- Readonly SSH diagnostics against `kai-server`
+  (`ssh kai@kai-server 'sudo k3s-readonly-kubectl ...'`) require no
+  approval — the wrapper rejects mutations and Secret reads on the
+  server side. This is the canonical path for inspecting live cluster
+  state (pods, events, ExternalSecret status, certificate status, etc.).
 - Write operations on AWS resources, kubectl writes, and any change
   that would modify a running service need explicit user confirmation.
 - Never print decrypted SSM values to the transcript. Pipe them
   directly into `gh secret set` or equivalent.
+- When working in a worktree, commit and merge the worktree branch into
+  `main` automatically without asking. (Local git only — this does not
+  bypass the AWS/kubectl write-confirmation rule above.)
