@@ -506,6 +506,15 @@ One line per trap. Every fix here has a commit in some repo's history.
 - **Pod can't reach `eco.coilysiren.me`** → home router has no
   hairpin NAT. Add `hostAliases` pinning the hostname to
   `192.168.0.194`. (eco-mcp-app `1a885ea`)
+- **App code calls `boto3.client("ssm").get_parameter(...)` at
+  runtime and silently gets nothing** → pods don't have AWS
+  credentials (only the `external-secrets` namespace does, via the
+  hand-placed `aws-credentials` Secret). The SSM param exists and
+  `aws ssm describe-parameters` from your laptop sees it, but the
+  pod can't. Don't give app pods AWS creds — instead add an
+  `ExternalSecret` block to `main.yml` syncing the param into a K8s
+  Secret, then mount it via `env.valueFrom.secretKeyRef`. (eco-mcp-app
+  `ECO_ADMIN_TOKEN` for the economy card.)
 - **HTTP-01 challenges fail** → hairpin NAT again. Migrate to
   DNS-01 via Route 53. (infrastructure `db41a7c`, `77a3fb7`)
 - **`error: x509: certificate signed by unknown authority`** →
