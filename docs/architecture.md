@@ -49,7 +49,6 @@ The underlying IAM user `kai-server-k3s` is in two groups:
 Each game server has a `-pre.sh` and a `-start.sh` script. Pre scripts run `steamcmd` updates and any config edits; start scripts exec the binary.
 
 - `k3s.service` — runs `scripts/k3s-start.sh` which execs `/usr/local/bin/k3s server`
-- `coilysiren-backend.service` — **deprecated** (April 2026), the host-level uvicorn copy. Stopped and disabled; the real backend runs in k3s.
 - `core-keeper-server.service` — Core Keeper "Coily Keeper" world
 - `eco-server.service` — Eco game server
 - `factorio-server.service`, `icarus-server.service` — other game servers
