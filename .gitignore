@@ -9,3 +9,5 @@ bootstrap.txt
 deploy/coredns_filled.yml
 .claude/settings.local.json
 .claude/worktrees/
+__pycache__/
+*.pyc
