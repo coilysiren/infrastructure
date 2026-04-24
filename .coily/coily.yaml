@@ -1,0 +1,13 @@
+# Per-repo command allowlist for infrastructure. Loaded by pkg/repocfg when
+# coily is invoked inside this checkout.
+#
+# Scope: diagnostic helpers that run locally against the cluster via
+# kubectl. Systemd-unit ops live in coily core (coily eco / coily backend /
+# coily core-keeper / coily icarus). The *-pre.sh / *-start.sh scripts are
+# invoked by systemd on kai-server and aren't runnable from a workstation,
+# so they stay out.
+
+commands:
+  k3s-list-dns:
+    run: bash scripts/k3s-list-dns.sh
+    description: Spin up a diagnostic ubuntu pod and dump every Service DNS record.
