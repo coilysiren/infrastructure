@@ -7,3 +7,5 @@ home/
 eco-server/
 bootstrap.txt
 deploy/coredns_filled.yml
+.claude/settings.local.json
+.claude/worktrees/
