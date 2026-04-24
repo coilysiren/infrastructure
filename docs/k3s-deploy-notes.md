@@ -253,6 +253,13 @@ deploy:
     - run: make .deploy
 ```
 
+`make .deploy` does `kubectl apply` then blocks on
+`kubectl rollout status deployment/${NAME}-app -n ${NAME} --timeout=5m`.
+That makes the GHA `deploy` job's red/green reflect the actual rollout,
+not just the apply — `ImagePullBackOff`, crash-looping pods, or readiness
+probe failures fail the job inside 5 minutes instead of being silently
+green. No separate push-back channel from the cluster is needed.
+
 Known divergences the next migration should fix:
 
 - **backend** and **eco-mcp-app** still have the old two-step pattern:
@@ -454,6 +461,7 @@ to pull, which is fine — the build just won't hit it.
 .deploy:
 	env NAME=$(name-dashed) DNS_NAME=$(dns-name) IMAGE=$(image-url) \
 	  envsubst < deploy/main.yml | kubectl apply -f -
+	kubectl rollout status deployment/$(name-dashed)-app -n $(name-dashed) --timeout=5m
 
 # Fallback path for when the direct kubectl route is unavailable
 # (e.g. tailnet ACL changes). Pipes the rendered manifest over SSH
