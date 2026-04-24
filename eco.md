@@ -62,6 +62,55 @@ invoke pull-asset-remote --cd /home/ubuntu/games/eco/Mods/ EcoPrivateModsFolder.
 invoke ssh --cmd "cd /home/ubuntu/games/eco/Mods/ && unzip -o EcoPrivateModsFolder.zip"
 ```
 
+## 4. Push mods to the live server
+
+Canonical path since the kai-server migration. The `invoke`-based §3 subsections above target `/home/ubuntu/games/eco/` and predate the move to Steam-installed EcoServer; they are stale for the current host.
+
+### The canonical shape
+
+Three steps, same for every mod regardless of source-level vs compiled:
+
+1. Build a `.zip` whose **internal layout is the install layout**. The server extracts at the Eco install root, so the paths inside the zip land directly under it.
+2. `scp` the zip to `/home/kai/Steam/steamapps/common/EcoServer/` on kai-server.
+3. `ssh` in and `unzip -o` from the Eco install root.
+4. Restart `eco-server.service` to pick up the new files. Eco compiles `Mods/UserCode/*.cs` on boot; `Mods/<Name>/*.dll` drops are discovered by `ModKitPlugin` on boot too. Either way, no restart = no pickup.
+
+### Archive layouts by mod type
+
+| Mod shape | Zip internal layout | Lands at |
+|---|---|---|
+| UserCode source mod (eco-mods, eco-mods-public) | `./Mods/UserCode/<Name>/*.cs` | `…/EcoServer/Mods/UserCode/<Name>/` |
+| Compiled ModKit mod (eco-spec-tracker) | `./Mods/<Name>/<Name>.dll` (+ `.deps.json`, `.pdb` when present) | `…/EcoServer/Mods/<Name>/` |
+
+The zip naming convention is `<Name>.zip` (one mod per zip for individual pushes) or `EcoUserModsFolder.zip` / `EcoPrivateModsFolder.zip` for bulk drops of a whole `Mods/` subtree.
+
+### Push via coily (preferred)
+
+`coily eco mod push --src <zip>` wraps the three steps above. It scp's the zip to `config.eco.server_dir` (default `/home/kai/Steam/steamapps/common/EcoServer`), runs `unzip -o` from that directory, and removes the uploaded `.zip` afterward unless `--keep-remote` is set. It does **not** restart the server; chain with `coily eco restart` when ready.
+
+Implementation: `github.com/coilysiren/coily/cmd/coily/ops_eco_mod.go`. SFTP upload goes through `pkg/ssh.CopyTo` (same transport, host-key verification, and auth as the other `coily eco` verbs — no ssh subprocess).
+
+### Push via invoke (legacy, per-repo)
+
+`eco-mods` and `eco-mods-public` still ship `invoke push-asset --mod=<Name>` that does the same three steps inline with `scp` / `ssh -t`. Equivalent output; use whichever fits the working context. When adding new mod repos, reach for `coily eco mod push` rather than duplicating the invoke task.
+
+### Sequencing: web apps that depend on mod endpoints
+
+`eco-spec-tracker` (and future web apps reading from a mod-exposed endpoint) expect the mod to be live **before** the web app gets `UPSTREAM_URL` set. The app's `upstream.py` calls `raise_for_status()` with no fallback: if `UPSTREAM_URL` is set and the mod isn't responding, every request returns 500.
+
+Push order:
+
+1. `coily eco mod push --src <ModZip>` — drop the mod.
+2. `coily eco restart` — load it.
+3. Verify `curl http://eco.coilysiren.me:3001/api/v1/<mod-route>` returns JSON.
+4. *Then* push the web app manifest with `UPSTREAM_URL` set.
+
+The other direction (manifest first, mod second) puts the app in a 500-loop for the gap.
+
+### Loopback from k3s pods to the native Eco server
+
+The k3s pod reaches the native Eco HTTP endpoint at `http://eco.coilysiren.me:3001/...` via the `hostAliases` block in each app's Deployment, pinning `eco.coilysiren.me → 192.168.0.194` (the LAN IP of kai-server). Same trick `eco-mcp-app` uses for `/info`. Hairpin NAT on the home router doesn't support the public path, so the in-pod DNS override is the workaround — see `k3s-deploy-notes.md` §1 and §7 for the full story.
+
 ## 5. Start the Eco Server
 
 As of late 2024 Eco servers require an API key to run. This is a good change on their
