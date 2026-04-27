@@ -24,7 +24,11 @@ if [[ ! -d "$REPO_RECALL_SRC" ]]; then
 fi
 
 echo ">>> building repo-recall as kai (release)"
-sudo -u kai bash -c "cd '$REPO_RECALL_SRC' && cargo build --release"
+# `sudo -u kai bash -c` is non-login non-interactive: it skips ~/.bashrc and
+# ~/.profile, so a rustup-managed cargo at ~/.cargo/bin is invisible. Source
+# ~/.cargo/env explicitly so we don't fall through to an older apt-managed
+# cargo (which on kai-server is 1.75 and rejects edition2024 deps).
+sudo -u kai bash -c "source ~kai/.cargo/env && cd '$REPO_RECALL_SRC' && cargo build --release"
 
 echo ">>> installing binary -> $BIN_DST"
 install -m 0755 "$REPO_RECALL_SRC/target/release/repo-recall" "$BIN_DST"
