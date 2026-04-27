@@ -1,0 +1,22 @@
+[Unit]
+Description=repo-recall (kai-server tailnet-only)
+After=syslog.target network.target nss-lookup.target network-online.target tailscaled.service
+Wants=network-online.target tailscaled.service
+StartLimitBurst=5
+StartLimitIntervalSec=60
+
+[Service]
+Type=simple
+Restart=on-failure
+RestartSec=10
+User=kai
+WorkingDirectory=/home/kai
+Environment=REPO_RECALL_HOST=0.0.0.0
+Environment=REPO_RECALL_PORT=7777
+Environment=REPO_RECALL_CWD=/home/kai/projects/coilysiren
+Environment=REPO_RECALL_DEPTH=3
+ExecStart=/usr/local/bin/repo-recall
+ExecStop=/bin/kill -TERM $MAINPID
+
+[Install]
+WantedBy=multi-user.target
