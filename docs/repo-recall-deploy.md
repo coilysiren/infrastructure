@@ -80,12 +80,12 @@ trees.
 The binary defaults to `127.0.0.1` because session metadata can leak
 sensitive content (see `repo-recall/AGENTS.md` privacy section). Binding
 `0.0.0.0` is only safe on a host where some other layer gates access. On
-kai-server that layer is `tailscale serve`, which terminates TLS and
-forwards from the tailnet only. No ufw/iptables exception is needed for
-port 7777 because nothing on the public internet ever reaches it - the
-listener is on the host's normal network namespace, but the LAN-side
-traefik in k3s lives on `192.168.0.194:80/443` and doesn't proxy to it.
-The home router doesn't NAT 7777.
+kai-server that layer is `tailscale serve`, which terminates TLS at
+`:443` on the tailnet IP and forwards to `127.0.0.1:7777`. The home
+router doesn't NAT 7777, so nothing on the public internet ever reaches
+it; LAN peers could reach `192.168.0.194:7777` but the LAN itself is
+trusted. If that assumption ever changes, drop `REPO_RECALL_HOST` (or
+set it to `127.0.0.1`) and rely on the loopback-only default.
 
 ## Troubleshooting
 
@@ -99,3 +99,10 @@ The home router doesn't NAT 7777.
   actually contains repos. Empty index = empty dashboard (not an error).
 - **`gh` health warning banner** → run `gh auth login` as `kai` on
   kai-server; the `gh run list` outbound call needs it.
+- **Cert diagnostics from kai-server itself show traefik's self-signed
+  default cert, not the Let's Encrypt one** → expected, not a bug.
+  k3s's svclb binds traefik to `0.0.0.0:443`, so a connection from the
+  host loops back through traefik before tailscaled sees it. Always
+  curl/openssl from a tailnet peer (laptop, phone) when checking the
+  serve cert. The peer's traffic enters via the tailnet IP and
+  tailscaled intercepts it before traefik.
