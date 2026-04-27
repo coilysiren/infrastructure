@@ -17,7 +17,6 @@ REPOS=(
   coily
   coilyco-ai
   coilysiren
-  drift
   eco-configs
   eco-cycle-prep
   eco-mcp-app
