@@ -45,6 +45,23 @@ if [[ "$NAME" == "EcoTelemetry" && -e "$SERVER_DIR/EcoTelemetry" && ! -L "$SERVE
   rm -rf "$SERVER_DIR/EcoTelemetry"
 fi
 
+# Orphaned mod folders + AutoGen overrides that linger after their
+# owning source mod was removed from eco-mods. unzip -o doesn't delete
+# files that no longer exist in source, so a per-deploy sweep here is
+# the workaround until eco-cycle-prep/mods.disable_on_server learns to
+# walk and prune AutoGen. Idempotent (rm -rf, no-op if already gone).
+# Tracked in coilysiren/eco-cycle-prep#5.
+ORPHANED_PATHS=(
+  "$SERVER_DIR/Mods/UserCode/DFEasierShopCart"
+  "$SERVER_DIR/Mods/UserCode/AutoGen/WorldObject"
+)
+for orphan in "${ORPHANED_PATHS[@]}"; do
+  if [[ -e "$orphan" ]]; then
+    echo ">>> removing orphaned $orphan"
+    rm -rf "$orphan"
+  fi
+done
+
 tmp="$(mktemp -d)"
 trap 'rm -rf "$tmp"' EXIT
 
