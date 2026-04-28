@@ -1,0 +1,32 @@
+# Side-car Service for tailnet exposure of vmsingle.
+#
+# vmsingle's primary service is headless (clusterIP: None) because the
+# helm chart wires it as the StatefulSet's pod-DNS service. The
+# tailscale operator can't proxy headless services - it needs a real
+# ClusterIP to forward traffic to. So we drop a second, regular
+# ClusterIP service that selects the same pod and carries the
+# `tailscale.com/expose` annotation. The operator picks this up and
+# spawns a ts-proxy StatefulSet with a MagicDNS hostname.
+#
+# Apply alongside the helm chart:
+#   kubectl apply -f deploy/observability/vmsingle-tailscale-service.yml
+apiVersion: v1
+kind: Service
+metadata:
+  name: vmsingle-tailscale
+  namespace: observability
+  annotations:
+    tailscale.com/expose: "true"
+  labels:
+    app: vmsingle-tailscale
+spec:
+  type: ClusterIP
+  selector:
+    app: server
+    app.kubernetes.io/instance: victoria-metrics
+    app.kubernetes.io/name: victoria-metrics-single
+  ports:
+    - name: http
+      port: 8428
+      targetPort: http
+      protocol: TCP
