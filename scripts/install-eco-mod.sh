@@ -67,7 +67,12 @@ trap 'rm -rf "$tmp"' EXIT
 # Repos that may publish a release asset for this mod. Order is only a
 # tiebreaker: when the same filename ships from multiple repos, the
 # later download overwrites the earlier one (unzip -o is idempotent).
-REPOS=("coilysiren/eco-mods" "coilysiren/eco-mods-public" "coilysiren/$NAME")
+# Try both PascalCase (NAME) and kebab-case (NAME_KEBAB) probes for the
+# per-mod repo - "EcoTelemetry" lives at coilysiren/eco-telemetry, while
+# older repos (EcoJobsTracker) use the PascalCase form. The seen map
+# below dedups when they collapse to the same string.
+NAME_KEBAB="$(printf '%s' "$NAME" | sed -E 's/([a-z0-9])([A-Z])/\1-\2/g' | tr '[:upper:]' '[:lower:]')"
+REPOS=("coilysiren/eco-mods" "coilysiren/eco-mods-public" "coilysiren/$NAME" "coilysiren/$NAME_KEBAB")
 
 found_any=0
 declare -A seen=()
