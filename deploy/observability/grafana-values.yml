@@ -97,6 +97,79 @@ dashboards:
       gnetId: 1860
       revision: 37
       datasource: VictoriaMetrics
+    eco-telemetry:
+      # Inline JSON so it lives in version control alongside this values file.
+      # Loaded by the dashboardProvider on each Grafana restart.
+      json: |
+        {
+          "title": "Eco - server health",
+          "uid": "eco-telemetry",
+          "schemaVersion": 39,
+          "timezone": "browser",
+          "refresh": "30s",
+          "time": {"from": "now-6h", "to": "now"},
+          "tags": ["eco", "eco-telemetry"],
+          "panels": [
+            {
+              "type": "stat",
+              "title": "Players online",
+              "id": 1,
+              "gridPos": {"x": 0, "y": 0, "w": 6, "h": 4},
+              "targets": [
+                {"expr": "eco_players_online", "legendFormat": "{{service_name}}", "refId": "A"}
+              ],
+              "fieldConfig": {"defaults": {"unit": "short", "thresholds": {"mode": "absolute", "steps": [{"color": "blue", "value": null}]}}}
+            },
+            {
+              "type": "timeseries",
+              "title": "Players online (history)",
+              "id": 2,
+              "gridPos": {"x": 6, "y": 0, "w": 18, "h": 4},
+              "targets": [
+                {"expr": "eco_players_online", "legendFormat": "{{service_name}}", "refId": "A"}
+              ]
+            },
+            {
+              "type": "timeseries",
+              "title": ".NET GC heap size",
+              "id": 3,
+              "gridPos": {"x": 0, "y": 4, "w": 12, "h": 6},
+              "targets": [
+                {"expr": "process_runtime_dotnet_gc_heap_size_bytes", "legendFormat": "gen {{generation}}", "refId": "A"}
+              ],
+              "fieldConfig": {"defaults": {"unit": "bytes"}}
+            },
+            {
+              "type": "timeseries",
+              "title": ".NET GC collections (rate)",
+              "id": 4,
+              "gridPos": {"x": 12, "y": 4, "w": 12, "h": 6},
+              "targets": [
+                {"expr": "rate(process_runtime_dotnet_gc_collections_count_total[5m])", "legendFormat": "gen {{generation}}", "refId": "A"}
+              ],
+              "fieldConfig": {"defaults": {"unit": "ops"}}
+            },
+            {
+              "type": "timeseries",
+              "title": ".NET exceptions thrown (rate)",
+              "id": 5,
+              "gridPos": {"x": 0, "y": 10, "w": 12, "h": 6},
+              "targets": [
+                {"expr": "rate(process_runtime_dotnet_exceptions_count_total[5m])", "legendFormat": "exceptions/s", "refId": "A"}
+              ],
+              "fieldConfig": {"defaults": {"unit": "ops"}}
+            },
+            {
+              "type": "timeseries",
+              "title": ".NET threadpool threads",
+              "id": 6,
+              "gridPos": {"x": 12, "y": 10, "w": 12, "h": 6},
+              "targets": [
+                {"expr": "process_runtime_dotnet_thread_pool_threads_count", "legendFormat": "{{state}}", "refId": "A"}
+              ]
+            }
+          ]
+        }
 
 # Public ingress on grafana.coilysiren.me, traefik + cert-manager DNS-01.
 # Mirrors the canonical shape from infrastructure/docs/k3s-deploy-notes.md §5.
