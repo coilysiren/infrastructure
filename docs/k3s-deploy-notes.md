@@ -251,14 +251,46 @@ deploy:
             client-key-data: ${{ secrets.K8S_CLIENT_KEY_DATA }}
         EOF
     - run: make .deploy
+    - name: rollout status
+      env:
+        NS: coilysiren-<NAME>
+        DEP: coilysiren-<NAME>-app
+      run: kubectl -n "$NS" rollout status deployment/"$DEP" --timeout=10m
+    - name: rollout diagnostics on failure
+      if: failure()
+      env:
+        NS: coilysiren-<NAME>
+        DEP: coilysiren-<NAME>-app
+      run: |
+        echo "::group::pods"
+        kubectl -n "$NS" get pods -o wide || true
+        echo "::endgroup::"
+        echo "::group::describe deployment"
+        kubectl -n "$NS" describe deployment "$DEP" || true
+        echo "::endgroup::"
+        echo "::group::describe pods"
+        kubectl -n "$NS" describe pods -l app="$DEP" || true
+        echo "::endgroup::"
+        echo "::group::events"
+        kubectl -n "$NS" get events --sort-by=.lastTimestamp | tail -50 || true
+        echo "::endgroup::"
+        echo "::group::logs (current)"
+        kubectl -n "$NS" logs --tail=200 -l app="$DEP" --all-containers=true || true
+        echo "::endgroup::"
+        echo "::group::logs (previous)"
+        kubectl -n "$NS" logs --tail=200 -l app="$DEP" --all-containers=true --previous || true
+        echo "::endgroup::"
 ```
 
-`make .deploy` does `kubectl apply` then blocks on
-`kubectl rollout status deployment/${NAME}-app -n ${NAME} --timeout=5m`.
-That makes the GHA `deploy` job's red/green reflect the actual rollout,
-not just the apply — `ImagePullBackOff`, crash-looping pods, or readiness
-probe failures fail the job inside 5 minutes instead of being silently
-green. No separate push-back channel from the cluster is needed.
+`make .deploy` is just `envsubst < deploy/main.yml | kubectl apply -f -` -
+it returns as soon as the API server accepts the manifest, not when new
+pods are Ready. The `rollout status` step is what gates job success on
+the actual rollout: `ImagePullBackOff`, crash-looping pods, or readiness
+probe failures fail the job inside 10 minutes instead of being silently
+green. The `if: failure()` diagnostics block dumps pods/events/logs so
+the GHA log has enough context to triage without ssh'ing to kai-server.
+10 minutes accounts for slow GHCR pulls over the homelab's residential
+uplink. No separate push-back channel from the cluster is needed.
 
 Known divergences the next migration should fix:
 
