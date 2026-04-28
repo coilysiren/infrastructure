@@ -115,6 +115,13 @@ def observability(ctx: invoke.Context):
         "-f deploy/observability/victoria-metrics-values.yml",
         echo=True,
     )
+    # vmagent ships as a standalone chart, not bundled with vmsingle.
+    ctx.run(
+        "helm upgrade --install vmagent vm/victoria-metrics-agent "
+        "--namespace observability "
+        "-f deploy/observability/vmagent-values.yml",
+        echo=True,
+    )
     ctx.run(
         "helm upgrade --install grafana grafana-community/grafana "
         "--namespace observability "

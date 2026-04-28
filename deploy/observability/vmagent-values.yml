@@ -1,0 +1,49 @@
+# Helm values for the victoria-metrics-agent chart.
+# https://github.com/VictoriaMetrics/helm-charts/tree/master/charts/victoria-metrics-agent
+#
+# Standalone scraper. Discovers node-exporter pods in the observability
+# namespace via the kubernetes_sd_configs role=endpoints, scrapes :9100,
+# remote-writes to vmsingle in the same namespace.
+#
+# The instance-relabel rule rewrites `instance: 100.69.164.66:9100`
+# (which would leak the tailnet IP onto Grafana graphs) to the k8s node
+# name like `kai-server`.
+
+# Pin to kai-server alongside the rest of the stack.
+nodeSelector:
+  kubernetes.io/hostname: kai-server
+
+# Where to ship the scraped samples.
+remoteWrite:
+  - url: http://victoria-metrics-victoria-metrics-single-server.observability.svc:8428/api/v1/write
+
+resources:
+  requests:
+    cpu: 50m
+    memory: 128Mi
+  limits:
+    cpu: 500m
+    memory: 256Mi
+
+# Scrape config in Prometheus format. The chart wraps this into vmagent's
+# `-promscrape.config` flag.
+config:
+  global:
+    scrape_interval: 30s
+  scrape_configs:
+    - job_name: node-exporter
+      kubernetes_sd_configs:
+        - role: endpoints
+          namespaces:
+            names: [observability]
+      relabel_configs:
+        # Only scrape the prometheus-node-exporter Service endpoints.
+        - source_labels: [__meta_kubernetes_service_label_app_kubernetes_io_name]
+          regex: prometheus-node-exporter
+          action: keep
+        # Friendly node name as `instance`, never the tailnet IP.
+        - source_labels: [__meta_kubernetes_endpoint_node_name]
+          target_label: instance
+        # Drop labels that just add noise to graphs.
+        - action: labeldrop
+          regex: (pod|namespace|service|container)

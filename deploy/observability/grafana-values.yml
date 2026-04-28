@@ -18,6 +18,22 @@ persistence:
   size: 2Gi
   storageClassName: local-path
 
+# The chart's init-chown-data container chowns /var/lib/grafana to user 472.
+# It's no longer required when the pod's fsGroup is set (kubelet handles
+# ownership at mount time). Leaving it on with the chart-12.x defaults
+# results in chown running as non-root and hitting Permission denied on
+# subdirs like /png /csv /pdf that grafana created at runtime.
+initChownData:
+  enabled: false
+
+# Match the chart's default group so kubelet's fsGroup ownership step lines
+# up with the grafana process's gid. Pre-existing PVC files were already
+# created with this gid by the 10.5.x chart, so this is a no-op for ours.
+securityContext:
+  runAsUser: 472
+  runAsGroup: 472
+  fsGroup: 472
+
 # Admin user/password come from the `grafana-admin` k8s Secret, which
 # external-secrets syncs from SSM /grafana/admin-password. See
 # admin-password-externalsecret.yml in this directory.
