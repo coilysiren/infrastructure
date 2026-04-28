@@ -1,0 +1,59 @@
+# Helm values for the victoria-metrics-single chart.
+# https://github.com/VictoriaMetrics/helm-charts/tree/master/charts/victoria-metrics-single
+#
+# Single-node VM: one StatefulSet (vmsingle), one PVC, one bundled vmagent that
+# scrapes the cluster's node-exporter pods. Tailnet-only; no public ingress.
+# Eco-telemetry and other OTLP producers will write to vmsingle's
+# `/opentelemetry/api/v1/push` endpoint over the tailnet.
+
+server:
+  retentionPeriod: 1  # months. Default; cheap on disk per the sizing math.
+  persistentVolume:
+    enabled: true
+    size: 10Gi
+    storageClass: local-path  # k3s default; lands on the NVMe.
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 1000m
+      memory: 1Gi
+  # Pin to kai-server. kai-desktop-tower is the second node but the
+  # observability stack lives with the rest of the cluster substrate.
+  nodeSelector:
+    kubernetes.io/hostname: kai-server
+  service:
+    annotations:
+      tailscale.com/expose: "true"
+    type: ClusterIP
+
+# Bundled vmagent scrapes node-exporter on every node.
+# The relabel rule rewrites `instance: 100.69.164.66:9100` (which would leak
+# the tailnet IP onto Grafana graphs) into `instance: kai-server`.
+vmagent:
+  enabled: true
+  nodeSelector:
+    kubernetes.io/hostname: kai-server
+  config:
+    scrape_configs:
+      - job_name: node-exporter
+        kubernetes_sd_configs:
+          - role: endpoints
+            namespaces:
+              names: [observability]
+        relabel_configs:
+          - source_labels: [__meta_kubernetes_service_label_app_kubernetes_io_name]
+            regex: prometheus-node-exporter
+            action: keep
+          - source_labels: [__meta_kubernetes_endpoint_node_name]
+            target_label: instance
+          - action: labeldrop
+            regex: (pod|namespace|service|container)
+
+# vmalert/alertmanager off for v1. Wire them when there's an alert worth
+# paging on; right now there isn't.
+vmalert:
+  enabled: false
+alertmanager:
+  enabled: false

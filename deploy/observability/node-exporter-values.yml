@@ -1,0 +1,37 @@
+# Helm values for the prometheus-node-exporter chart.
+# https://github.com/prometheus-community/helm-charts/tree/main/charts/prometheus-node-exporter
+#
+# DaemonSet across both nodes. Defaults disable the systemd, processes, and
+# login collectors already, which is what we want - those are the leak
+# vectors that would put game-server unit names and per-PID detail onto
+# graphs that may eventually go public.
+
+# Default args list runs CPU/mem/disk/net/etc. Explicitly disable a couple
+# more that have no signal value here and ship label-heavy data.
+extraArgs:
+  - --no-collector.wifi
+  - --no-collector.hwmon
+  - --no-collector.infiniband
+
+resources:
+  requests:
+    cpu: 20m
+    memory: 32Mi
+  limits:
+    cpu: 100m
+    memory: 64Mi
+
+# Tolerate any node taints so it lands on both kai-server and
+# kai-desktop-tower (and any future node).
+tolerations:
+  - effect: NoSchedule
+    operator: Exists
+
+service:
+  # vmagent in the observability namespace discovers via labels; default
+  # service shape is fine.
+  port: 9100
+
+# The chart uses `app.kubernetes.io/name=prometheus-node-exporter` by
+# default - the vmagent scrape config in victoria-metrics-values.yml
+# matches on exactly that label.

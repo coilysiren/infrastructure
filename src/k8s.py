@@ -71,6 +71,54 @@ def aws_secrets(ctx: invoke.Context, aws_access_key_id: str, aws_secret_access_k
     ctx.run("kubectl rollout restart deployment external-secrets -n external-secrets", echo=True)
 
 
+@invoke.task
+def observability(ctx: invoke.Context):
+    """Install or upgrade the VictoriaMetrics + Grafana stack in the
+    `observability` namespace. Idempotent; safe to re-run.
+
+    See deploy/observability/README.md for the full design.
+    """
+    ctx.run("helm repo add vm https://victoriametrics.github.io/helm-charts/", echo=True, warn=True)
+    ctx.run(
+        "helm repo add prometheus-community https://prometheus-community.github.io/helm-charts",
+        echo=True,
+        warn=True,
+    )
+    ctx.run("helm repo add grafana https://grafana.github.io/helm-charts", echo=True, warn=True)
+    ctx.run("helm repo update", echo=True)
+
+    ctx.run("kubectl apply -f deploy/observability/namespace.yml", echo=True)
+
+    ctx.run(
+        "helm upgrade --install node-exporter prometheus-community/prometheus-node-exporter "
+        "--namespace observability "
+        "-f deploy/observability/node-exporter-values.yml",
+        echo=True,
+    )
+    ctx.run(
+        "helm upgrade --install victoria-metrics vm/victoria-metrics-single "
+        "--namespace observability "
+        "-f deploy/observability/victoria-metrics-values.yml",
+        echo=True,
+    )
+    ctx.run(
+        "helm upgrade --install grafana grafana/grafana "
+        "--namespace observability "
+        "-f deploy/observability/grafana-values.yml",
+        echo=True,
+    )
+
+
+@invoke.task
+def observability_admin_password(ctx: invoke.Context):
+    """Print the auto-generated Grafana admin password."""
+    ctx.run(
+        "kubectl get secret -n observability grafana "
+        "-o jsonpath='{.data.admin-password}' | base64 -d",
+        echo=True,
+    )
+
+
 k8s_collection = invoke.Collection(
     "k8s",
     cert_manager,
@@ -79,4 +127,6 @@ k8s_collection = invoke.Collection(
     service_stop,
     service_start,
     aws_secrets,
+    observability,
+    observability_admin_password,
 )
