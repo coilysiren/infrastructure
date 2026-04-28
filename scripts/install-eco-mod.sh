@@ -134,7 +134,7 @@ if [[ "$NAME" == "EcoTelemetry" ]]; then
 {
   "LogDirectory": "/home/kai/Steam/steamapps/common/EcoServer/Logs/EcoTelemetry",
   "FileSize": 32768,
-  "LogLevel": "Warning"
+  "LogLevel": "Verbose"
 }
 JSON
   echo ">>> wrote $diag (OTel self-diagnostics -> $log_dir)"
