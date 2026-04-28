@@ -52,7 +52,6 @@ fi
 # walk and prune AutoGen. Idempotent (rm -rf, no-op if already gone).
 # Tracked in coilysiren/eco-cycle-prep#5.
 ORPHANED_PATHS=(
-  "$SERVER_DIR/Mods/UserCode/DFEasierShopCart"
   "$SERVER_DIR/Mods/UserCode/AutoGen/WorldObject"
 )
 for orphan in "${ORPHANED_PATHS[@]}"; do
