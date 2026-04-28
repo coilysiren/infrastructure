@@ -138,6 +138,19 @@ if [[ "$NAME" == "EcoTelemetry" ]]; then
 }
 JSON
   echo ">>> wrote $diag (OTel self-diagnostics -> $log_dir)"
+
+  # Force EmitConsoleAlongsideOtlp=true while #5 is open. jq is idempotent;
+  # if the field is already true this is a no-op.
+  live_cfg="$SERVER_DIR/Configs/EcoTelemetry.json"
+  if [[ -f "$live_cfg" ]] && command -v jq >/dev/null; then
+    tmp="$(mktemp)"
+    if jq '.EmitConsoleAlongsideOtlp = true' "$live_cfg" > "$tmp"; then
+      mv "$tmp" "$live_cfg"
+      echo ">>> set EmitConsoleAlongsideOtlp=true in $live_cfg"
+    else
+      rm -f "$tmp"
+    fi
+  fi
 fi
 
 echo ">>> done. server not restarted; run 'coily eco restart' when ready."
