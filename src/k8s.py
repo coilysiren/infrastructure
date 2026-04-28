@@ -84,7 +84,14 @@ def observability(ctx: invoke.Context):
         echo=True,
         warn=True,
     )
-    ctx.run("helm repo add grafana https://grafana.github.io/helm-charts", echo=True, warn=True)
+    # The old grafana/helm-charts repo deprecated the grafana chart on
+    # 2026-01-30 and pointed users at grafana-community/helm-charts. Same
+    # maintainers, same values schema, drop-in replacement.
+    ctx.run(
+        "helm repo add grafana-community https://grafana-community.github.io/helm-charts",
+        echo=True,
+        warn=True,
+    )
     ctx.run("helm repo update", echo=True)
 
     ctx.run("kubectl apply -f deploy/observability/namespace.yml", echo=True)
@@ -102,7 +109,7 @@ def observability(ctx: invoke.Context):
         echo=True,
     )
     ctx.run(
-        "helm upgrade --install grafana grafana/grafana "
+        "helm upgrade --install grafana grafana-community/grafana "
         "--namespace observability "
         "-f deploy/observability/grafana-values.yml",
         echo=True,

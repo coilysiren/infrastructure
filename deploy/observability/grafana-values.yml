@@ -1,5 +1,9 @@
-# Helm values for the grafana/grafana chart.
-# https://github.com/grafana/helm-charts/tree/main/charts/grafana
+# Helm values for the grafana-community/grafana chart.
+# https://github.com/grafana-community/helm-charts/tree/main/charts/grafana
+#
+# Note: the original `grafana/helm-charts` repo deprecated this chart on
+# 2026-01-30 and pointed users at `grafana-community/helm-charts`. Same
+# maintainers, same values schema. Repo URL: https://grafana-community.github.io/helm-charts
 #
 # Public at https://grafana.coilysiren.me, login required (anon disabled).
 # VM datasource pre-provisioned; "Node Exporter Full" dashboard auto-loaded.

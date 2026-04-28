@@ -25,7 +25,7 @@ Run from `infrastructure/` with kubectl context pointing at kai-server:
 # 1. Helm repos
 helm repo add vm https://victoriametrics.github.io/helm-charts/
 helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
-helm repo add grafana https://grafana.github.io/helm-charts
+helm repo add grafana-community https://grafana-community.github.io/helm-charts
 helm repo update
 
 # 2. Namespace
@@ -42,7 +42,7 @@ helm install victoria-metrics vm/victoria-metrics-single \
   -f deploy/observability/victoria-metrics-values.yml
 
 # 5. Grafana
-helm install grafana grafana/grafana \
+helm install grafana grafana-community/grafana \
   --namespace observability \
   -f deploy/observability/grafana-values.yml
 
