@@ -18,13 +18,13 @@ persistence:
   size: 2Gi
   storageClassName: local-path
 
-# Admin password. Chart auto-generates one and stores it in the
-# `grafana` Secret on first install:
-#   kubectl get secret -n observability grafana \
-#     -o jsonpath='{.data.admin-password}' | base64 -d
-# Rotate by deleting the secret and `helm upgrade`ing, or set explicitly here.
-adminUser: admin
-# adminPassword: ""  # leave unset -> chart generates
+# Admin user/password come from the `grafana-admin` k8s Secret, which
+# external-secrets syncs from SSM /grafana/admin-password. See
+# admin-password-externalsecret.yml in this directory.
+admin:
+  existingSecret: grafana-admin
+  userKey: admin-user
+  passwordKey: admin-password
 
 # Anonymous viewer OFF. Public visitors land on the login page.
 # When ready to expose specific dashboards publicly, flip this to true and

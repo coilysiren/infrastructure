@@ -95,6 +95,13 @@ def observability(ctx: invoke.Context):
     ctx.run("helm repo update", echo=True)
 
     ctx.run("kubectl apply -f deploy/observability/namespace.yml", echo=True)
+    # Sync admin password from SSM /grafana/admin-password into a k8s
+    # Secret before grafana renders, so the chart can mount it via
+    # admin.existingSecret without a chicken-and-egg.
+    ctx.run(
+        "kubectl apply -f deploy/observability/admin-password-externalsecret.yml",
+        echo=True,
+    )
 
     ctx.run(
         "helm upgrade --install node-exporter prometheus-community/prometheus-node-exporter "
