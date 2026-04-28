@@ -25,3 +25,14 @@ When you resolve a new deploy pitfall, add it to §7 and §9 of that doc. Don't 
 ## Write-op discipline
 
 Never print decrypted SSM values to the transcript. Pipe them directly into `gh secret set` or equivalent. Reach for the `coily` CLI before raw `aws` / `kubectl` whenever possible - these ops are migrating there.
+
+---
+
+## Post-push follow-up (auto-schedule)
+
+Per the workspace "Default to proactive scheduling" rule: after pushing to `main`, schedule a wake-up to verify CI passed. The infrastructure repo's CI is config-validation only - it doesn't deploy anything by itself, but a regression in validation usually means a downstream sibling repo's deploy will break next time it ships.
+
+- **Cadence**: 300s after push.
+- **Verify CI**: `coily gh run list --repo coilysiren/infrastructure --limit 1` should show `completed/success`. Re-schedule once at +180s if in progress.
+- **On failure**: surface the failed step's log (`coily gh run view <id> --log-failed --repo coilysiren/infrastructure`) and stop. Don't auto-retry - infra CI failures are usually real.
+- **Skip** for docs-only pushes.
