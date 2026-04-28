@@ -121,4 +121,23 @@ if [[ $found_any -eq 0 ]]; then
   exit 1
 fi
 
+# OpenTelemetry .NET self-diagnostics. The SDK reads OTEL_DIAGNOSTICS.json
+# from the process CWD ($SERVER_DIR for the eco-server unit) and dumps
+# exporter / SDK errors to LogDirectory. Without this we have no surface
+# for OTLP export failures, since the SDK swallows them by default.
+# Tracked in coilysiren/eco-telemetry#5 (metrics not reaching vmsingle).
+if [[ "$NAME" == "EcoTelemetry" ]]; then
+  diag="$SERVER_DIR/OTEL_DIAGNOSTICS.json"
+  log_dir="$SERVER_DIR/Logs/EcoTelemetry"
+  mkdir -p "$log_dir"
+  cat > "$diag" <<'JSON'
+{
+  "LogDirectory": "/home/kai/Steam/steamapps/common/EcoServer/Logs/EcoTelemetry",
+  "FileSize": 32768,
+  "LogLevel": "Warning"
+}
+JSON
+  echo ">>> wrote $diag (OTel self-diagnostics -> $log_dir)"
+fi
+
 echo ">>> done. server not restarted; run 'coily eco restart' when ready."
