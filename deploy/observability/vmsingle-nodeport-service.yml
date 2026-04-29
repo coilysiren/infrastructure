@@ -1,0 +1,40 @@
+# NodePort sibling for vmsingle: lets host-userspace processes on
+# kai-server (e.g. eco-server.service) reach vmsingle without going
+# through the tailnet ts-proxy.
+#
+# Why this exists: kai-server's host userspace cannot reach the
+# vmsingle ts-proxy at its tailnet IP, even though kai-server is
+# itself a tailnet member. Tailnet loopback breaks down when the
+# target peer is a ts-proxy StatefulSet running in k3s on the same
+# host as the originating tailscaled. Reachable from a laptop on the
+# tailnet, dead from on-host userspace.
+#
+# A NodePort works because k3s installs host-level iptables for
+# Service NodePorts, so traffic to localhost:30428 lands at the
+# vmsingle pod without ever touching tailscale0. The tailscale
+# ClusterIP service stays in place for off-host peers.
+#
+# Tracked in coilysiren/infrastructure#71. See §7 of
+# docs/k3s-deploy-notes.md for the full pitfall write-up.
+#
+# Apply alongside the helm chart and the tailscale service:
+#   kubectl apply -f deploy/observability/vmsingle-nodeport-service.yml
+apiVersion: v1
+kind: Service
+metadata:
+  name: vmsingle-nodeport
+  namespace: observability
+  labels:
+    app: vmsingle-nodeport
+spec:
+  type: NodePort
+  selector:
+    app: server
+    app.kubernetes.io/instance: victoria-metrics
+    app.kubernetes.io/name: victoria-metrics-single
+  ports:
+    - name: http
+      port: 8428
+      targetPort: http
+      nodePort: 30428
+      protocol: TCP

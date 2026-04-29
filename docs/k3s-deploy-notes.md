@@ -589,6 +589,18 @@ One line per trap. Every fix here has a commit in some repo's history.
 - **Stale `docker-registry` secret causing `ImagePullBackOff` for
   minutes after a rotation** → bounce the deployment:
   `kubectl rollout restart deployment/${NAME}-app -n ${NAME}`.
+- **Host-userspace process on kai-server (e.g. `eco-server.service`)
+  can't reach a tailnet IP that belongs to a ts-proxy running on the
+  same host** → tailnet loopback gap. Same URL works fine from any
+  off-host tailnet peer (laptop, phone). Symptom is a 5s connect
+  timeout from in-process HTTP, no packets observed at the ts-proxy
+  pod. Fix: add a NodePort sibling Service (the tailnet-exposed
+  ClusterIP can't double as one) and point the host-userspace client
+  at `http://localhost:<nodePort>/...`. k3s installs host-level
+  iptables for NodePorts so traffic never touches `tailscale0`. The
+  ts-proxy stays in place for off-host access. Reference manifest:
+  `deploy/observability/vmsingle-nodeport-service.yml`.
+  (coilysiren/infrastructure#71, eco-telemetry#5)
 - **`ExternalSecret` in an app namespace stuck on `SecretSyncedError:
   aws-credentials not found`** → the `ClusterSecretStore`'s auth
   `secretRef` must pin `namespace: external-secrets` on both
