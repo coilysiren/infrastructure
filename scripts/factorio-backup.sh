@@ -24,8 +24,19 @@ STAMP="$(date -u +%Y%m%dT%H%M%SZ)"
 PREFIX="factorio/${HOST}/${STAMP}"
 
 if [ ! -d "${SAVES_DIR}" ]; then
-  echo "factorio-backup: saves dir not found: ${SAVES_DIR}" >&2
-  exit 2
+  # Cleanly no-op when the server has been installed but not yet run
+  # (no saves dir created yet). The nightly timer fires before the
+  # first session is normal during onboarding; we don't want it to
+  # generate failure notifications. Exit 0 with a one-liner.
+  echo "factorio-backup: nothing to back up (saves dir does not exist yet): ${SAVES_DIR}"
+  exit 0
+fi
+
+# Saves dir exists but is empty (server ran, no autosave fired, or
+# all saves got deleted). Same handling: clean no-op.
+if [ -z "$(find "${SAVES_DIR}" -maxdepth 1 -name '*.zip' -print -quit)" ]; then
+  echo "factorio-backup: nothing to back up (no .zip saves under ${SAVES_DIR})"
+  exit 0
 fi
 
 # --size-only because Factorio rewrites autosave files with new mtimes
