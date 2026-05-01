@@ -1,0 +1,18 @@
+[Unit]
+Description=thermal heartbeat - read sensors, write prom textfile, ping Sentry
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=root
+# Need root for nvme smart-log; lm-sensors works as user but nvme-cli does not.
+WorkingDirectory=/home/kai/projects/infrastructure
+EnvironmentFile=-/etc/thermal-heartbeat.env
+ExecStart=/usr/bin/env python3 /home/kai/projects/infrastructure/scripts/thermal-heartbeat.py
+# Don't fail the unit on transient sensor read errors; the script handles them
+# and will surface them via Sentry / missing heartbeat.
+SuccessExitStatus=0
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,15 @@
+[Unit]
+Description=Tick thermal-heartbeat.service every 30s
+Requires=thermal-heartbeat.service
+
+[Timer]
+# 30s cadence matches the vmagent scrape_interval in
+# deploy/observability/vmagent-values.yml. AccuracySec=1s keeps the textfile
+# fresh enough that node-exporter never serves stale samples.
+OnBootSec=30s
+OnUnitActiveSec=30s
+AccuracySec=1s
+Persistent=true
+
+[Install]
+WantedBy=timers.target

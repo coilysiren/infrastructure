@@ -84,6 +84,55 @@ kubectl delete pvc -n observability --all   # PVCs survive helm uninstall
 kubectl delete namespace observability
 ```
 
+## Thermal heartbeat (host-side)
+
+Tracked in [coilysiren/infrastructure#85](https://github.com/coilysiren/infrastructure/issues/85). Dual-push: VM/Grafana via the textfile collector, Sentry via cron monitor + threshold-breach events.
+
+Wired components:
+
+- `scripts/thermal-heartbeat.py` reads `sensors -j`, `nvme smart-log`, and `/sys/class/thermal/*`, then writes `/var/lib/node-exporter/textfile/thermal.prom` atomically.
+- `systemd/thermal-heartbeat.{service,timer}` runs the script every 30s on each host that should report.
+- `node-exporter-values.yml` mounts `/var/lib/node-exporter/textfile` read-only and points the textfile collector at it.
+- Sentry side reads from `/etc/thermal-heartbeat.env` (not in git):
+
+  ```
+  SENTRY_CRON_URL=https://o<org>.ingest.sentry.io/api/<project>/cron/kai-server-thermal/<key>/
+  SENTRY_DSN=https://<key>@o<org>.ingest.sentry.io/<project>
+  ```
+
+Bring-up on a node:
+
+```bash
+# Host-side prereqs.
+sudo apt-get install -y lm-sensors nvme-cli
+sudo sensors-detect --auto
+
+# Drop the host bits in place (run from the repo checkout on the node).
+sudo install -d -m 0755 -o root /var/lib/node-exporter/textfile
+sudo install -m 0644 systemd/thermal-heartbeat.service /etc/systemd/system/
+sudo install -m 0644 systemd/thermal-heartbeat.timer   /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable --now thermal-heartbeat.timer
+
+# Apply the helm-values change so node-exporter mounts the textfile dir.
+helm upgrade node-exporter prometheus-community/prometheus-node-exporter \
+  --namespace observability \
+  -f deploy/observability/node-exporter-values.yml
+```
+
+Verify:
+
+```bash
+# Latest sample from the host, served by the local node-exporter pod.
+kubectl exec -n observability ds/node-exporter-prometheus-node-exporter -- \
+  wget -qO- http://localhost:9100/metrics | grep node_thermal_
+
+# Last run status on the host.
+journalctl -u thermal-heartbeat.service -n 1 --no-pager
+```
+
+Then in Sentry, create a cron monitor with slug `kai-server-thermal`, schedule `* * * * *` (every minute, with a 1-min margin) since cron monitors don't have sub-minute granularity. The script pings every 30s so a 60s missed-checkin window means at least two missed beats are required to fire. An alert rule on `level:warning` + `logger:thermal-heartbeat` covers threshold-breach events.
+
 ## Where eco-telemetry will plug in
 
 `eco-telemetry` writes OTLP HTTP. Point its `OtlpEndpoint` at vmsingle over the tailnet:

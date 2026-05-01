@@ -7,11 +7,23 @@
 # graphs that may eventually go public.
 
 # Default args list runs CPU/mem/disk/net/etc. Explicitly disable a couple
-# more that have no signal value here and ship label-heavy data.
+# more that have no signal value here and ship label-heavy data. hwmon stays
+# enabled (kernel-derived temps; the thermal-heartbeat textfile collector
+# also uses /sys/class/hwmon as a backstop). textfile collector is pointed
+# at the hostPath below.
 extraArgs:
   - --no-collector.wifi
-  - --no-collector.hwmon
   - --no-collector.infiniband
+  - --collector.textfile.directory=/var/lib/node-exporter/textfile
+
+# Host path read-only mount for the textfile collector. systemd-managed
+# scripts on the host (currently: thermal-heartbeat) drop *.prom files here
+# every 30s and node-exporter reads them on the next scrape.
+extraHostVolumeMounts:
+  - name: textfile
+    hostPath: /var/lib/node-exporter/textfile
+    mountPath: /var/lib/node-exporter/textfile
+    readOnly: true
 
 resources:
   requests:
