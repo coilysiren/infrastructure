@@ -14,6 +14,13 @@
 
 set -euo pipefail
 
+# Source brew's shellenv when running non-interactively so coily and helm
+# (both installed via Linuxbrew) land on PATH. ~/.bashrc isn't read by
+# `bash scripts/foo.sh`, only by interactive logins.
+if [ -x /home/linuxbrew/.linuxbrew/bin/brew ]; then
+  eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
+fi
+
 REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 TEXTFILE_DIR="/var/lib/node-exporter/textfile"
 ENV_FILE="/etc/thermal-heartbeat.env"
