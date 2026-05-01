@@ -1,0 +1,13 @@
+[Unit]
+Description=factorio-backup
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=kai
+WorkingDirectory=/home/kai
+ExecStart=bash -c /home/kai/projects/infrastructure/scripts/factorio-backup.sh
+
+[Install]
+WantedBy=multi-user.target

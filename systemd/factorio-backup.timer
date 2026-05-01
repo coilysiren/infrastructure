@@ -1,0 +1,13 @@
+[Unit]
+Description=Nightly off-cluster snapshot of factorio saves
+Requires=factorio-backup.service
+
+[Timer]
+# 04:30 local time daily, with 30min jitter so a fleet of kai-* hosts
+# wouldn't hammer S3 at the same wall-clock moment if this gets reused.
+OnCalendar=*-*-* 04:30:00
+RandomizedDelaySec=1800
+Persistent=true
+
+[Install]
+WantedBy=timers.target
