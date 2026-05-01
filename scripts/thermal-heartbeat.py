@@ -151,7 +151,38 @@ def collect() -> list[Reading]:
     return readings
 
 
-def render_textfile(readings: list[Reading], breach: bool, ts: int) -> str:
+def read_cpu_usage_pct(delay_s: float = 0.25) -> float | None:
+    # Sample /proc/stat's `cpu` aggregate row twice and diff. Fields:
+    # user nice system idle iowait irq softirq steal guest guest_nice.
+    proc_stat = pathlib.Path("/proc/stat")
+    try:
+        a = [int(x) for x in proc_stat.read_text().splitlines()[0].split()[1:]]
+        time.sleep(delay_s)
+        b = [int(x) for x in proc_stat.read_text().splitlines()[0].split()[1:]]
+    except (OSError, ValueError, IndexError):
+        return None
+    total = sum(b) - sum(a)
+    idle = (b[3] + b[4]) - (a[3] + a[4])
+    if total <= 0:
+        return None
+    return 100.0 * (total - idle) / total
+
+
+def read_loadavg() -> tuple[float, float, float] | None:
+    try:
+        parts = pathlib.Path("/proc/loadavg").read_text().split()
+        return float(parts[0]), float(parts[1]), float(parts[2])
+    except (OSError, ValueError, IndexError):
+        return None
+
+
+def render_textfile(
+    readings: list[Reading],
+    breach: bool,
+    ts: int,
+    cpu_usage_pct: float | None,
+    loadavg: tuple[float, float, float] | None,
+) -> str:
     lines = [
         "# HELP node_thermal_celsius Temperature in degrees Celsius from lm-sensors, nvme, and kernel thermal zones.",
         "# TYPE node_thermal_celsius gauge",
@@ -168,6 +199,27 @@ def render_textfile(readings: list[Reading], breach: bool, ts: int) -> str:
             f"node_thermal_breach {1 if breach else 0}",
         ]
     )
+    if cpu_usage_pct is not None:
+        # Pair-with-thermal CPU util: node-exporter exposes the raw counters
+        # too, but emitting the gauge alongside the temps keeps the breach
+        # narrative ("hot AND loaded" vs "hot AND idle") in one panel.
+        lines.extend(
+            [
+                "# HELP node_thermal_cpu_usage_pct Instantaneous system-wide CPU usage % over a 250ms sample.",
+                "# TYPE node_thermal_cpu_usage_pct gauge",
+                f"node_thermal_cpu_usage_pct {cpu_usage_pct:.2f}",
+            ]
+        )
+    if loadavg is not None:
+        lines.extend(
+            [
+                "# HELP node_thermal_loadavg System load average paired with the thermal sample.",
+                "# TYPE node_thermal_loadavg gauge",
+                f'node_thermal_loadavg{{window="1m"}} {loadavg[0]:.2f}',
+                f'node_thermal_loadavg{{window="5m"}} {loadavg[1]:.2f}',
+                f'node_thermal_loadavg{{window="15m"}} {loadavg[2]:.2f}',
+            ]
+        )
     return "\n".join(lines) + "\n"
 
 
@@ -204,7 +256,12 @@ def sentry_check_in(cron_url: str, status: str, duration_ms: int) -> int | None:
     return post(f"{cron_url}{sep}{qs}", body=b"", headers={"Content-Length": "0"})
 
 
-def sentry_event(dsn: str, breaches: list[tuple[Reading, float]]) -> int | None:
+def sentry_event(
+    dsn: str,
+    breaches: list[tuple[Reading, float]],
+    cpu_usage_pct: float | None,
+    loadavg: tuple[float, float, float] | None,
+) -> int | None:
     # Parse a DSN of the form https://<key>@<host>/<project>.
     parsed = urllib.parse.urlparse(dsn)
     if not parsed.username or not parsed.path.lstrip("/"):
@@ -215,6 +272,11 @@ def sentry_event(dsn: str, breaches: list[tuple[Reading, float]]) -> int | None:
     event_id = uuid.uuid4().hex
     ts = time.time()
     tags = {"host": HOSTNAME, "breach_count": str(len(breaches))}
+    if cpu_usage_pct is not None:
+        tags["cpu_usage_pct"] = f"{cpu_usage_pct:.1f}"
+    if loadavg is not None:
+        tags["loadavg_1m"] = f"{loadavg[0]:.2f}"
+        tags["loadavg_5m"] = f"{loadavg[1]:.2f}"
     for i, (r, limit) in enumerate(breaches[:10]):
         tags[f"breach_{i}_source"] = r.source
         tags[f"breach_{i}_sensor"] = f"{r.chip}/{r.sensor}"
@@ -263,10 +325,12 @@ def main() -> int:
 
     started = time.monotonic()
     readings = collect()
+    cpu_usage_pct = read_cpu_usage_pct()
+    loadavg = read_loadavg()
     breaches = find_breaches(readings, DEFAULT_THRESHOLDS)
     breach = bool(breaches)
     ts = int(time.time())
-    body = render_textfile(readings, breach, ts)
+    body = render_textfile(readings, breach, ts, cpu_usage_pct, loadavg)
 
     if args.dry_run:
         sys.stdout.write(body)
@@ -282,7 +346,7 @@ def main() -> int:
     if cron_url:
         sentry_check_in(cron_url, "error" if breach else "ok", duration_ms)
     if dsn and breaches:
-        sentry_event(dsn, breaches)
+        sentry_event(dsn, breaches, cpu_usage_pct, loadavg)
 
     if not readings:
         # Don't fail the unit; the textfile still has the heartbeat metric and
