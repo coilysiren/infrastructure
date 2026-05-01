@@ -25,8 +25,10 @@ if [ ! -d "${SAVES_DIR}" ] || [ -z "$(find "${SAVES_DIR}" -maxdepth 1 -name '*.z
 fi
 
 cd "${SERVER_DIR}"
-# --write-data . tells factorio to use ${SERVER_DIR}/saves/, mods/,
-# config/ - the dirs that live next to the binary - instead of the
-# default ~/.factorio/. Without this, --start-server-load-latest hunts
-# for saves under ~/.factorio/saves/ and fails on this layout.
-exec ./bin/x64/factorio --write-data . --start-server-load-latest
+# Pick the newest .zip explicitly. --start-server-load-latest looks in
+# ~/.factorio/saves/ (a path we don't control), and --write-data isn't
+# a recognized flag. The explicit-path approach is more portable and
+# robust to multiple saves.
+LATEST=$(find "${SAVES_DIR}" -maxdepth 1 -name '*.zip' -printf '%T@ %p\n' | sort -nr | head -1 | cut -d' ' -f2-)
+echo "factorio-server-start: loading ${LATEST}"
+exec ./bin/x64/factorio --start-server "${LATEST}" --server-settings ./server-settings.json --server-whitelist ./server-whitelist.json --use-server-whitelist --server-adminlist ./server-adminlist.json
