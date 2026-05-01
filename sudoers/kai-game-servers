@@ -1,0 +1,31 @@
+# /etc/sudoers.d/kai-game-servers
+#
+# NOPASSWD entries that let the kai user drive the kai-server game-server
+# systemd units without an interactive prompt. The TTY-less golang ssh
+# client used by `coily gaming <name> {start,stop,restart,status}` cannot
+# answer a sudo password prompt, so each unit needs an explicit entry
+# below. Per-verb scoping (no `systemctl *`) keeps the blast radius
+# narrow.
+#
+# Install on kai-server:
+#   sudo install -m 0440 -o root -g root \
+#     /home/kai/projects/infrastructure/sudoers/kai-game-servers \
+#     /etc/sudoers.d/kai-game-servers
+#   sudo visudo -cf /etc/sudoers.d/kai-game-servers
+#
+# Validate locally before committing:
+#   visudo -cf sudoers/kai-game-servers
+#
+# Add a new game server by appending its four-verb line plus any
+# secondary units (timers, oneshot services) it needs.
+
+kai ALL=(root) NOPASSWD: /bin/systemctl restart eco-server, /bin/systemctl stop eco-server, /bin/systemctl start eco-server, /bin/systemctl status eco-server
+kai ALL=(root) NOPASSWD: /bin/systemctl restart core-keeper-server, /bin/systemctl stop core-keeper-server, /bin/systemctl start core-keeper-server, /bin/systemctl status core-keeper-server
+kai ALL=(root) NOPASSWD: /bin/systemctl restart icarus-server, /bin/systemctl stop icarus-server, /bin/systemctl start icarus-server, /bin/systemctl status icarus-server
+kai ALL=(root) NOPASSWD: /bin/systemctl restart factorio-server, /bin/systemctl stop factorio-server, /bin/systemctl start factorio-server, /bin/systemctl status factorio-server
+
+# factorio-backup ships as a oneshot + timer pair. The timer needs
+# enable/disable in addition to the lifecycle four; daemon-reload is
+# required when copying updated unit files into /etc/systemd/system.
+kai ALL=(root) NOPASSWD: /bin/systemctl restart factorio-backup.timer, /bin/systemctl stop factorio-backup.timer, /bin/systemctl start factorio-backup.timer, /bin/systemctl status factorio-backup.timer, /bin/systemctl enable factorio-backup.timer, /bin/systemctl disable factorio-backup.timer
+kai ALL=(root) NOPASSWD: /bin/systemctl daemon-reload
