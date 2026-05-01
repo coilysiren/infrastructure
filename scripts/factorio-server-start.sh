@@ -25,4 +25,8 @@ if [ ! -d "${SAVES_DIR}" ] || [ -z "$(find "${SAVES_DIR}" -maxdepth 1 -name '*.z
 fi
 
 cd "${SERVER_DIR}"
-exec ./bin/x64/factorio --start-server-load-latest
+# --write-data . tells factorio to use ${SERVER_DIR}/saves/, mods/,
+# config/ - the dirs that live next to the binary - instead of the
+# default ~/.factorio/. Without this, --start-server-load-latest hunts
+# for saves under ~/.factorio/saves/ and fails on this layout.
+exec ./bin/x64/factorio --write-data . --start-server-load-latest
