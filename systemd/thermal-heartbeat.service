@@ -7,9 +7,9 @@ Wants=network-online.target
 Type=oneshot
 User=root
 # Need root for nvme smart-log; lm-sensors works as user but nvme-cli does not.
-WorkingDirectory=/home/kai/projects/infrastructure
+WorkingDirectory=/home/kai/projects/coilysiren/infrastructure
 EnvironmentFile=-/etc/thermal-heartbeat.env
-ExecStart=/usr/bin/env python3 /home/kai/projects/infrastructure/scripts/thermal-heartbeat.py
+ExecStart=/usr/bin/env python3 /home/kai/projects/coilysiren/infrastructure/scripts/thermal-heartbeat.py
 # Don't fail the unit on transient sensor read errors; the script handles them
 # and will surface them via Sentry / missing heartbeat.
 SuccessExitStatus=0
