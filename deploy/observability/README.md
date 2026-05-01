@@ -100,25 +100,15 @@ Wired components:
   SENTRY_DSN=https://<key>@o<org>.ingest.sentry.io/<project>
   ```
 
-Bring-up on a node:
+Bring-up on a node (one script, idempotent, safe to re-run on future updates):
 
 ```bash
-# Host-side prereqs.
-sudo apt-get install -y lm-sensors nvme-cli
-sudo sensors-detect --auto
-
-# Drop the host bits in place (run from the repo checkout on the node).
-sudo install -d -m 0755 -o root /var/lib/node-exporter/textfile
-sudo install -m 0644 systemd/thermal-heartbeat.service /etc/systemd/system/
-sudo install -m 0644 systemd/thermal-heartbeat.timer   /etc/systemd/system/
-sudo systemctl daemon-reload
-sudo systemctl enable --now thermal-heartbeat.timer
-
-# Apply the helm-values change so node-exporter mounts the textfile dir.
-helm upgrade node-exporter prometheus-community/prometheus-node-exporter \
-  --namespace observability \
-  -f deploy/observability/node-exporter-values.yml
+cd /home/kai/projects/coilysiren/infrastructure
+git pull --ff-only
+bash scripts/thermal-heartbeat-install.sh
 ```
+
+The script apt-installs `lm-sensors` + `nvme-cli`, writes `/etc/thermal-heartbeat.env` from the two SSM params, drops in the systemd units, runs `helm upgrade` on the node-exporter values, and prints first-run status. See [scripts/thermal-heartbeat-install.sh](../../scripts/thermal-heartbeat-install.sh) for the exact steps.
 
 Verify:
 
