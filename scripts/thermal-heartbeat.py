@@ -97,9 +97,12 @@ def read_lm_sensors() -> Iterable[Reading]:
         for sensor_name, sensor_body in chip_body.items():
             if not isinstance(sensor_body, dict):
                 continue
-            # lm-sensors keys look like "temp1_input", "Package id 0".
+            # lm-sensors keys look like "temp1_input" (Celsius) or
+            # "fan1_input" (RPM). Both have the same `_input` suffix, so
+            # narrow on the `temp` prefix to avoid reporting fan speeds as
+            # temperatures.
             for key, value in sensor_body.items():
-                if isinstance(value, (int, float)) and key.endswith("_input"):
+                if isinstance(value, (int, float)) and key.startswith("temp") and key.endswith("_input"):
                     yield Reading("lm_sensors", chip, sensor_name, float(value))
 
 
