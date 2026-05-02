@@ -15,7 +15,7 @@ The infrastructure repo is the **source of truth for homelab deploy knowledge** 
 - The actual `kai-server` topology (IPs, ports, traffic paths).
 - The SSM parameter inventory - including which params are orphaned and which are load-bearing (with typo intact).
 - The six GitHub repo secrets every deployable repo needs, and which SSM path to sync each from.
-- The canonical GHA workflow, k8s manifest, and Makefile shapes - eco-spec-tracker is authoritative; backend set the pattern.
+- The canonical GHA workflow, k8s manifest, and Makefile shapes - eco-jobs-tracker is authoritative; backend set the pattern.
 - Every trap we've hit across four repos (WASM `Table.grow`, MagicDNS hostname vs tailnet IP, `/tailscale/k3s/*` orphans, hairpin NAT, the 6-hour `tailscale up` hang, binaryen apt version, etc.) with one-line fixes.
 - A first-time-setup checklist for adding a new repo to the rig.
 - A triage tree for when a deploy is failing.

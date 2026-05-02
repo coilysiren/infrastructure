@@ -80,7 +80,7 @@ Three steps, same for every mod regardless of source-level vs compiled:
 | Mod shape | Zip internal layout | Lands at |
 |---|---|---|
 | UserCode source mod (eco-mods, eco-mods-public) | `./Mods/UserCode/<Name>/*.cs` | `…/EcoServer/Mods/UserCode/<Name>/` |
-| Compiled ModKit mod (eco-spec-tracker) | `./Mods/<Name>/<Name>.dll` (+ `.deps.json`, `.pdb` when present) | `…/EcoServer/Mods/<Name>/` |
+| Compiled ModKit mod (eco-jobs-tracker) | `./Mods/<Name>/<Name>.dll` (+ `.deps.json`, `.pdb` when present) | `…/EcoServer/Mods/<Name>/` |
 
 The zip naming convention is `<Name>.zip` (one mod per zip for individual pushes) or `EcoUserModsFolder.zip` / `EcoPrivateModsFolder.zip` for bulk drops of a whole `Mods/` subtree.
 
@@ -96,7 +96,7 @@ Implementation: `github.com/coilysiren/coily/cmd/coily/ops_eco_mod.go`. SFTP upl
 
 ### Sequencing: web apps that depend on mod endpoints
 
-`eco-spec-tracker` (and future web apps reading from a mod-exposed endpoint) expect the mod to be live **before** the web app gets `UPSTREAM_URL` set. The app's `upstream.py` calls `raise_for_status()` with no fallback: if `UPSTREAM_URL` is set and the mod isn't responding, every request returns 500.
+`eco-jobs-tracker` (and future web apps reading from a mod-exposed endpoint) expect the mod to be live **before** the web app gets `UPSTREAM_URL` set. The app's `upstream.py` calls `raise_for_status()` with no fallback: if `UPSTREAM_URL` is set and the mod isn't responding, every request returns 500.
 
 Push order:
 

@@ -8,7 +8,7 @@ times across four repos.
 
 Authoritative reference stack (what works today):
 [coilysiren/backend](https://github.com/coilysiren/backend) set the
-shape; [coilysiren/eco-spec-tracker](https://github.com/coilysiren/eco-spec-tracker)
+shape; [coilysiren/eco-jobs-tracker](https://github.com/coilysiren/eco-jobs-tracker)
 is the cleanest modern instance (see `49f99e4 CI: revert to
 backend-shape direct kubectl deploy`);
 [coilysiren/eco-mcp-app](https://github.com/coilysiren/eco-mcp-app)
@@ -158,7 +158,7 @@ decrypted value prints to stdout and ends up in the transcript.
 
 ## 4. Canonical GitHub Actions workflow shape
 
-Authoritative: `eco-spec-tracker/.github/workflows/build-and-publish.yml`
+Authoritative: `eco-jobs-tracker/.github/workflows/build-and-publish.yml`
 after `49f99e4 CI: revert to backend-shape direct kubectl deploy`. The
 SSH-pipe path was tried and abandoned; the tailnet IP direct-kubectl
 path is what works today.
@@ -167,7 +167,7 @@ Three jobs: `test` → `build-publish` → `deploy`.
 
 ### `test` (language-specific)
 
-eco-spec-tracker uses `astral-sh/setup-uv@v5` + `uv run pytest` /
+eco-jobs-tracker uses `astral-sh/setup-uv@v5` + `uv run pytest` /
 `ruff check` / `ruff format --check` / `mypy`. galaxy-gen uses
 `actions/setup-node@v4` + Playwright. Backend has no `test` job
 (migrated to uv in `2dc5a85` but the test coverage never got wired in).
@@ -308,7 +308,7 @@ Known divergences the next migration should fix:
 
 ## 5. Canonical k8s manifest shape
 
-Authoritative: `eco-spec-tracker/deploy/main.yml`. `envsubst`
+Authoritative: `eco-jobs-tracker/deploy/main.yml`. `envsubst`
 variables: `${NAME}` (the dashed repo name, e.g.
 `coilysiren-galaxy-gen`), `${DNS_NAME}` (e.g.
 `galaxy-gen.coilysiren.me`), `${IMAGE}` (the GHCR URL with SHA tag).
@@ -542,7 +542,7 @@ One line per trap. Every fix here has a commit in some repo's history.
 - **`sudo tailscale up` hangs 6 hours** → `tailscale/github-action@v3`
   already brought tailscale up with a single-use key. The second `up`
   tries to reauth and deadlocks. Fold flags into the action's
-  `args` / `hostname` inputs. (eco-spec-tracker `f7cd461`)
+  `args` / `hostname` inputs. (eco-jobs-tracker `f7cd461`)
 - **Pod can't reach `eco.coilysiren.me`** → home router has no
   hairpin NAT. Add `hostAliases` pinning the hostname to
   `192.168.0.194`. (eco-mcp-app `1a885ea`)
@@ -643,12 +643,12 @@ One line per trap. Every fix here has a commit in some repo's history.
    # port: 4100   # if you want a dev-server port
    ```
 6. **`Dockerfile`** — `EXPOSE $PORT` and `CMD` that honours `$PORT`.
-7. **`deploy/main.yml`** — copy from eco-spec-tracker; add
+7. **`deploy/main.yml`** — copy from eco-jobs-tracker; add
    `hostAliases` if the pod will talk to any `*.coilysiren.me`.
-8. **`Makefile`** (or `makefile`) — copy from eco-spec-tracker;
+8. **`Makefile`** (or `makefile`) — copy from eco-jobs-tracker;
    adjust the container name in the `.build-docker` invocation.
 9. **`.github/workflows/build-and-publish.yml`** — copy byte-for-byte
-   from eco-spec-tracker; change the `name=coilysiren-<name>` arg in
+   from eco-jobs-tracker; change the `name=coilysiren-<name>` arg in
    the `.build-docker` step.
 10. **First push to `main`.** Watch `gh run watch`. Expected: test →
     build-publish → deploy all green within ~2-3 minutes. The first
@@ -760,12 +760,15 @@ One line per trap. Every fix here has a commit in some repo's history.
 - **Commit subject convention**: `deploy:` / `CI:` / `wasm:`
   prefixes so `git log --grep=deploy` stays useful. Every deploy
   commit cited in this doc follows it.
-- **The authoritative deploy shape is `eco-spec-tracker`**, not
+- **The authoritative deploy shape is `eco-jobs-tracker`** (renamed
+  from `eco-spec-tracker` 2026-05-02; deploy internals like the k8s
+  namespace `coilysiren-eco-spec-tracker` and Python package
+  `eco_spec_tracker` are still on the old name), not
   `backend`. Backend set the pattern but hasn't been touched since
-  the pre-DNS-01 era; eco-spec-tracker has the fresher shape after
+  the pre-DNS-01 era; eco-jobs-tracker has the fresher shape after
   `49f99e4 CI: revert to backend-shape direct kubectl deploy`.
   galaxy-gen's `bddec18 workflow: match eco-spec-tracker
-  byte-for-byte` codifies that eco-spec-tracker is canon.
+  byte-for-byte` codifies that eco-jobs-tracker is canon.
 
 ---
 

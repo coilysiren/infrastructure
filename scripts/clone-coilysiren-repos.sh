@@ -22,7 +22,7 @@ REPOS=(
   eco-mcp-app
   eco-mods
   eco-mods-public
-  eco-spec-tracker
+  eco-jobs-tracker
   eco-telemetry
   galaxy-gen
   gauntlet
