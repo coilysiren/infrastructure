@@ -1,0 +1,17 @@
+[Unit]
+Description=process memory heartbeat - sample per-process RSS, push OTLP to vmsingle
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=root
+# Need root to read /proc/<pid>/status for processes owned by other users
+# (k3s-server, factorio, EcoServer, etc.).
+WorkingDirectory=/home/kai/projects/coilysiren/infrastructure
+EnvironmentFile=-/etc/process-memory-heartbeat.env
+ExecStart=/usr/bin/env python3 /home/kai/projects/coilysiren/infrastructure/scripts/process-memory-heartbeat.py
+SuccessExitStatus=0
+
+[Install]
+WantedBy=multi-user.target

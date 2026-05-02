@@ -1,0 +1,13 @@
+[Unit]
+Description=Tick process-memory-heartbeat.service every 30s
+Requires=process-memory-heartbeat.service
+
+[Timer]
+# 30s cadence matches the existing thermal-heartbeat / vmagent scrape rhythm.
+OnBootSec=30s
+OnUnitActiveSec=30s
+AccuracySec=1s
+Persistent=true
+
+[Install]
+WantedBy=timers.target
