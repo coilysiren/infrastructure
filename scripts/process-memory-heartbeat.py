@@ -29,7 +29,7 @@ import urllib.error
 import urllib.request
 
 DEFAULT_URL = "http://localhost:30428/opentelemetry/v1/metrics"
-DEFAULT_TOP_N = 50
+DEFAULT_TOP_N = 20
 HOSTNAME = socket.gethostname()
 
 # Python entry-points where the interesting name lives in the next argv,
@@ -66,13 +66,31 @@ def read_status(pid: int) -> dict[str, str]:
     return out
 
 
+_DIGIT_RUN = re.compile(r"\d+")
+
+
+def _collapse_digits(name: str) -> str:
+    """Replace runs of digits with a single 'X' to keep churning IDs (kworker
+    thread indices, jest-worker PIDs, etc.) from minting a fresh timeseries
+    per invocation. 'kworker/u32:5' -> 'kworker/uX:X', 'jest-worker-12345.js'
+    -> 'jest-worker-X.js'. Python version suffixes are handled before this
+    runs, so 'python3.12' has already become 'python'.
+    """
+    return _DIGIT_RUN.sub("X", name)
+
+
 def humanize(comm: str, argv: list[str]) -> str:
     """Map (comm, argv) to a stable, readable process name.
 
     Generic interpreters (python, node) get rewritten using the script or
     module they're running so 'python' doesn't collapse three uvicorn apps
-    into one timeseries.
+    into one timeseries. Digit runs are collapsed to 'X' so kworker thread
+    indices, jest-worker PIDs, etc., don't churn series.
     """
+    return _collapse_digits(_humanize_inner(comm, argv))
+
+
+def _humanize_inner(comm: str, argv: list[str]) -> str:
     if not comm:
         return "?"
 
