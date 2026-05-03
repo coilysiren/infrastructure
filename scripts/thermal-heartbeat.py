@@ -419,6 +419,26 @@ def should_send_breach_event(state: dict, breaches: list[tuple[Reading, float]],
     return (now - last_ts) >= SENTRY_EVENT_MIN_INTERVAL_S
 
 
+def maybe_emit_sentry_event(
+    state_path: pathlib.Path,
+    dsn: str,
+    breaches: list[tuple[Reading, float]],
+    cpu_usage_pct: float | None,
+    loadavg: tuple[float, float, float] | None,
+) -> None:
+    state = load_state(state_path)
+    now = time.time()
+    if dsn and breaches and should_send_breach_event(state, breaches, now):
+        sentry_event(dsn, breaches, cpu_usage_pct, loadavg)
+        state["last_event_ts"] = now
+        state["last_breach_signature"] = breach_signature(breaches)
+        save_state(state_path, state)
+    elif not breaches and state.get("last_breach_signature"):
+        # Clear the signature on recovery so the next breach re-fires.
+        state["last_breach_signature"] = []
+        save_state(state_path, state)
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="thermal heartbeat for kai-server")
     parser.add_argument("--textfile", default=os.environ.get("THERMAL_TEXTFILE", TEXTFILE_DEFAULT))
@@ -449,18 +469,7 @@ def main() -> int:
     if cron_url:
         sentry_check_in(cron_url, "error" if breach else "ok", duration_ms)
 
-    state_path = pathlib.Path(args.state)
-    state = load_state(state_path)
-    now = time.time()
-    if dsn and breaches and should_send_breach_event(state, breaches, now):
-        sentry_event(dsn, breaches, cpu_usage_pct, loadavg)
-        state["last_event_ts"] = now
-        state["last_breach_signature"] = breach_signature(breaches)
-        save_state(state_path, state)
-    elif not breaches and state.get("last_breach_signature"):
-        # Clear the signature on recovery so the next breach re-fires.
-        state["last_breach_signature"] = []
-        save_state(state_path, state)
+    maybe_emit_sentry_event(pathlib.Path(args.state), dsn, breaches, cpu_usage_pct, loadavg)
 
     if not readings:
         # Don't fail the unit; the textfile still has the heartbeat metric and
