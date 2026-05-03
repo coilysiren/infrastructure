@@ -41,12 +41,20 @@ import uuid
 from typing import Iterable
 
 TEXTFILE_DEFAULT = "/var/lib/node-exporter/textfile/thermal.prom"
+STATE_DEFAULT = "/var/lib/thermal-heartbeat/state.json"
 DEFAULT_THRESHOLDS = {
     # source -> celsius. Anything not listed never breaches.
-    "lm_sensors_cpu": 85.0,
+    # CPU pkg in the 80-85 range under load is normal for this box; modern
+    # desktop CPUs throttle in the high 90s. 90C is the "actually warm" line.
+    "lm_sensors_cpu": 90.0,
     "nvme": 70.0,
     "thermal_zone": 95.0,
 }
+# Minimum gap between Sentry breach events while the *same* set of sensors
+# stays in breach. New sensors entering breach re-fire immediately. Without
+# this, a sustained breach at 30s cadence drains the Sentry error budget in
+# under a day.
+SENTRY_EVENT_MIN_INTERVAL_S = 3600
 HOSTNAME = socket.gethostname()
 
 
@@ -317,9 +325,44 @@ def sentry_event(
     return post(envelope_url, body, headers)
 
 
+def load_state(path: pathlib.Path) -> dict:
+    try:
+        return json.loads(path.read_text())
+    except (OSError, json.JSONDecodeError):
+        return {}
+
+
+def save_state(path: pathlib.Path, state: dict) -> None:
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        tmp = path.with_suffix(path.suffix + ".tmp")
+        tmp.write_text(json.dumps(state))
+        tmp.replace(path)
+    except OSError:
+        pass
+
+
+def breach_signature(breaches: list[tuple[Reading, float]]) -> list[str]:
+    return sorted(f"{r.source}/{r.chip}/{r.sensor}" for r, _ in breaches)
+
+
+def should_send_breach_event(state: dict, breaches: list[tuple[Reading, float]], now: float) -> bool:
+    # Fire if: never fired, OR new sensors entered breach, OR
+    # SENTRY_EVENT_MIN_INTERVAL_S elapsed since last event while sustained.
+    sig = breach_signature(breaches)
+    last_sig = state.get("last_breach_signature") or []
+    last_ts = state.get("last_event_ts") or 0
+    if not last_sig:
+        return True
+    if set(sig) - set(last_sig):
+        return True
+    return (now - last_ts) >= SENTRY_EVENT_MIN_INTERVAL_S
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="thermal heartbeat for kai-server")
     parser.add_argument("--textfile", default=os.environ.get("THERMAL_TEXTFILE", TEXTFILE_DEFAULT))
+    parser.add_argument("--state", default=os.environ.get("THERMAL_STATE", STATE_DEFAULT))
     parser.add_argument("--dry-run", action="store_true", help="print textfile to stdout, skip writes and Sentry calls")
     args = parser.parse_args()
 
@@ -345,8 +388,19 @@ def main() -> int:
     dsn = os.environ.get("SENTRY_DSN", "").strip()
     if cron_url:
         sentry_check_in(cron_url, "error" if breach else "ok", duration_ms)
-    if dsn and breaches:
+
+    state_path = pathlib.Path(args.state)
+    state = load_state(state_path)
+    now = time.time()
+    if dsn and breaches and should_send_breach_event(state, breaches, now):
         sentry_event(dsn, breaches, cpu_usage_pct, loadavg)
+        state["last_event_ts"] = now
+        state["last_breach_signature"] = breach_signature(breaches)
+        save_state(state_path, state)
+    elif not breaches and state.get("last_breach_signature"):
+        # Clear the signature on recovery so the next breach re-fires.
+        state["last_breach_signature"] = []
+        save_state(state_path, state)
 
     if not readings:
         # Don't fail the unit; the textfile still has the heartbeat metric and
