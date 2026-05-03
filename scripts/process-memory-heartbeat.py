@@ -90,7 +90,7 @@ def humanize(comm: str, argv: list[str]) -> str:
     return _collapse_digits(_humanize_inner(comm, argv))
 
 
-def _humanize_inner(comm: str, argv: list[str]) -> str:  # pylint: disable=too-many-return-statements,too-many-nested-blocks
+def _humanize_inner(comm: str, argv: list[str]) -> str:  # pylint: disable=too-many-return-statements
     if not comm:
         return "?"
 
