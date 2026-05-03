@@ -1,13 +1,13 @@
 [Unit]
-Description=Tick thermal-heartbeat.service every 30s
+Description=Tick thermal-heartbeat.service every 60s
 Requires=thermal-heartbeat.service
 
 [Timer]
-# 30s cadence matches the vmagent scrape_interval in
-# deploy/observability/vmagent-values.yml. AccuracySec=1s keeps the textfile
-# fresh enough that node-exporter never serves stale samples.
-OnBootSec=30s
-OnUnitActiveSec=30s
+# 60s cadence: half the rate of vmagent's 30s scrape_interval, which is
+# fine for thermal samples and keeps Sentry cron check-ins inside the
+# error budget.
+OnBootSec=60s
+OnUnitActiveSec=60s
 AccuracySec=1s
 Persistent=true
 

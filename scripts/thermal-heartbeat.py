@@ -41,7 +41,7 @@ import uuid
 from typing import Iterable
 
 TEXTFILE_DEFAULT = "/var/lib/node-exporter/textfile/thermal.prom"
-STATE_DEFAULT = "/var/lib/thermal-heartbeat/state.json"
+STATE_DEFAULT = "/var/lib/thermal-heartbeat/state.yaml"
 DEFAULT_THRESHOLDS = {
     # source -> celsius. Anything not listed never breaches.
     # CPU pkg in the 80-85 range under load is normal for this box; modern
@@ -326,20 +326,80 @@ def sentry_event(
 
 
 def load_state(path: pathlib.Path) -> dict:
+    # Hand-rolled YAML reader for this fixed shape:
+    #   last_event_ts: <float>
+    #   last_breach_signature:
+    #     - <string>
+    #     - ...
+    # Stdlib has no yaml; the shape is small enough to parse inline.
     try:
-        return json.loads(path.read_text())
-    except (OSError, json.JSONDecodeError):
+        text = path.read_text()
+    except OSError:
         return {}
+    state: dict = {}
+    current_list: list | None = None
+    for raw in text.splitlines():
+        line = raw.rstrip()
+        if not line or line.lstrip().startswith("#"):
+            continue
+        if line.startswith("  - "):
+            if current_list is not None:
+                current_list.append(_yaml_unquote(line[4:].strip()))
+            continue
+        current_list = None
+        if ":" not in line:
+            continue
+        key, _, value = line.partition(":")
+        key = key.strip()
+        value = value.strip()
+        if value == "[]":
+            state[key] = []
+        elif not value:
+            current_list = []
+            state[key] = current_list
+        elif key == "last_event_ts":
+            try:
+                state[key] = float(value)
+            except ValueError:
+                pass
+        else:
+            state[key] = _yaml_unquote(value)
+    return state
 
 
 def save_state(path: pathlib.Path, state: dict) -> None:
     try:
         path.parent.mkdir(parents=True, exist_ok=True)
         tmp = path.with_suffix(path.suffix + ".tmp")
-        tmp.write_text(json.dumps(state))
+        tmp.write_text(_dump_state_yaml(state))
         tmp.replace(path)
     except OSError:
         pass
+
+
+def _yaml_quote(value: str) -> str:
+    return '"' + value.replace("\\", "\\\\").replace('"', '\\"') + '"'
+
+
+def _yaml_unquote(value: str) -> str:
+    if len(value) >= 2 and value[0] == '"' and value[-1] == '"':
+        return value[1:-1].replace('\\"', '"').replace("\\\\", "\\")
+    return value
+
+
+def _dump_state_yaml(state: dict) -> str:
+    lines = []
+    ts = state.get("last_event_ts")
+    if isinstance(ts, (int, float)):
+        lines.append(f"last_event_ts: {ts}")
+    sig = state.get("last_breach_signature") or []
+    if sig:
+        lines.append("last_breach_signature:")
+        for item in sig:
+            lines.append(f"  - {_yaml_quote(str(item))}")
+    else:
+        lines.append("last_breach_signature: []")
+    return "\n".join(lines) + "\n"
 
 
 def breach_signature(breaches: list[tuple[Reading, float]]) -> list[str]:
