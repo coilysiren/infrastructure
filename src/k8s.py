@@ -140,6 +140,28 @@ def observability_admin_password(ctx: invoke.Context):
     )
 
 
+@invoke.task(help={"action": "terraform subcommand: init, plan, apply, destroy. Default: plan."})
+def terraform_grafana(ctx: invoke.Context, action: str = "plan"):
+    """Run terraform against `terraform/grafana/` to manage Grafana dashboards.
+
+    Pulls the admin password from SSM (/grafana/admin-password) and exports
+    GRAFANA_URL + GRAFANA_AUTH for the grafana provider. The plaintext
+    password is passed to terraform via env, never echoed or persisted.
+    """
+    password = ssm.get_parameter(
+        Name="/grafana/admin-password",
+        WithDecryption=True,
+    )["Parameter"]["Value"]
+    env = {
+        "GRAFANA_URL": "https://grafana.coilysiren.me",
+        "GRAFANA_AUTH": f"admin:{password}",
+    }
+    if action == "init":
+        ctx.run("terraform -chdir=terraform/grafana init", echo=True, env=env)
+        return
+    ctx.run(f"terraform -chdir=terraform/grafana {action}", echo=True, env=env)
+
+
 k8s_collection = invoke.Collection(
     "k8s",
     cert_manager,
@@ -150,4 +172,5 @@ k8s_collection = invoke.Collection(
     aws_secrets,
     observability,
     observability_admin_password,
+    terraform_grafana,
 )

@@ -13,7 +13,7 @@ Two panes:
 - **VictoriaMetrics single-node** (`vmsingle`) on `kai-server`, 10 GiB PVC on local-path. Tailnet-only (`tailscale.com/expose`). HTTP API on `:8428` for both queries and OTLP ingest.
 - **vmagent** (separate `victoria-metrics-agent` chart, not bundled) scrapes node-exporter every 30s and remote-writes to vmsingle. Relabels `instance` to the k8s node name so the tailnet IP never lands on a graph.
 - **prometheus-node-exporter** DaemonSet on every node. Defaults disable `systemd`/`processes`/`login` collectors; we additionally drop `wifi`/`hwmon`/`infiniband` (no signal, label noise).
-- **Grafana** on `kai-server` with a 2 GiB PVC, public ingress at `https://grafana.coilysiren.me`, anon viewer **off**, VM datasource pre-provisioned, "Node Exporter Full" dashboard auto-imported.
+- **Grafana** on `kai-server` with a 2 GiB PVC, public ingress at `https://grafana.coilysiren.me`, anon viewer **off**, VM datasource pre-provisioned, "Node Exporter Full" dashboard auto-imported. All other dashboards live in [`terraform/grafana/`](../../terraform/grafana/) and are managed via the grafana provider, not this helm values file.
 
 ## First-time install
 
@@ -75,6 +75,17 @@ helm upgrade <release> <chart> --namespace observability -f deploy/observability
 ```
 
 Where `<release>` is `node-exporter` / `victoria-metrics` / `grafana` and `<chart>` is the chart name from the install step.
+
+## Dashboards
+
+`node-exporter-full` (gnetId 1860) is auto-imported by the helm chart. Everything else is in [`terraform/grafana/`](../../terraform/grafana/):
+
+```bash
+inv k8s.terraform-grafana --action plan
+inv k8s.terraform-grafana --action apply
+```
+
+Don't add JSON dashboards back to `grafana-values.yml` - the file-based provisioner stomps API-managed copies on every grafana pod restart, so dashboards must live in exactly one source.
 
 ## Uninstall
 
