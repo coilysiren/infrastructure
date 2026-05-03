@@ -60,6 +60,8 @@ HOSTNAME = socket.gethostname()
 
 @dataclasses.dataclass
 class Reading:
+    """One temperature sample from a single sensor."""
+
     source: str
     chip: str
     sensor: str
@@ -164,9 +166,9 @@ def read_cpu_usage_pct(delay_s: float = 0.25) -> float | None:
     # user nice system idle iowait irq softirq steal guest guest_nice.
     proc_stat = pathlib.Path("/proc/stat")
     try:
-        a = [int(x) for x in proc_stat.read_text().splitlines()[0].split()[1:]]
+        a = [int(x) for x in proc_stat.read_text(encoding="utf-8").splitlines()[0].split()[1:]]
         time.sleep(delay_s)
-        b = [int(x) for x in proc_stat.read_text().splitlines()[0].split()[1:]]
+        b = [int(x) for x in proc_stat.read_text(encoding="utf-8").splitlines()[0].split()[1:]]
     except (OSError, ValueError, IndexError):
         return None
     total = sum(b) - sum(a)
@@ -178,7 +180,7 @@ def read_cpu_usage_pct(delay_s: float = 0.25) -> float | None:
 
 def read_loadavg() -> tuple[float, float, float] | None:
     try:
-        parts = pathlib.Path("/proc/loadavg").read_text().split()
+        parts = pathlib.Path("/proc/loadavg").read_text(encoding="utf-8").split()
         return float(parts[0]), float(parts[1]), float(parts[2])
     except (OSError, ValueError, IndexError):
         return None
@@ -264,7 +266,7 @@ def sentry_check_in(cron_url: str, status: str, duration_ms: int) -> int | None:
     return post(f"{cron_url}{sep}{qs}", body=b"", headers={"Content-Length": "0"})
 
 
-def sentry_event(
+def sentry_event(  # pylint: disable=too-many-locals
     dsn: str,
     breaches: list[tuple[Reading, float]],
     cpu_usage_pct: float | None,

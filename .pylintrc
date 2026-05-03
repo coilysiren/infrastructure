@@ -2,4 +2,5 @@
 disable=missing-function-docstring,
         broad-exception-raised,
         line-too-long,
-        missing-module-docstring
+        missing-module-docstring,
+        invalid-name
