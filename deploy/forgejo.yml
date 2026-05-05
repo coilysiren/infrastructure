@@ -209,6 +209,13 @@ spec:
                 secretKeyRef:
                   name: forgejo-secrets
                   key: db-password
+            # INSTALL_LOCK skips the web installer and is also required
+            # for the `forgejo admin user create` CLI to run (otherwise
+            # MustInstalled() fails with "Unable to load config file for
+            # an installed Forgejo instance"). Env-driven config makes
+            # the web installer redundant.
+            - name: FORGEJO__security__INSTALL_LOCK
+              value: "true"
             - name: FORGEJO__database__DB_TYPE
               value: postgres
             - name: FORGEJO__database__HOST
