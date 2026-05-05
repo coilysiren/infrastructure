@@ -1,0 +1,286 @@
+# Forgejo (self-hosted git) on kai-server k3s.
+#
+# Phase 1 of the rollout in docs/forgejo-deploy-plan.md: tailnet-only,
+# no Ingress, no Route 53. The Service carries `tailscale.com/expose:
+# "true"` + `tailscale.com/hostname: forgejo` so the tailscale operator
+# stands up a ts-proxy and assigns the deterministic MagicDNS name
+# `forgejo.<tailnet>.ts.net`. Phase 2 will add the Ingress block (and
+# the Route 53 A record for forgejo.coilysiren.me) once tailnet smoke
+# passes end-to-end.
+#
+# Apply: sudo k3s kubectl apply -f deploy/forgejo.yml
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: forgejo
+---
+apiVersion: external-secrets.io/v1beta1
+kind: ExternalSecret
+metadata:
+  name: forgejo-secrets
+  namespace: forgejo
+spec:
+  refreshInterval: 1h
+  secretStoreRef:
+    name: aws-parameter-store
+    kind: ClusterSecretStore
+  target:
+    name: forgejo-secrets
+    creationPolicy: Owner
+  data:
+    - secretKey: secret-key
+      remoteRef:
+        key: /forgejo/secret-key
+    - secretKey: internal-token
+      remoteRef:
+        key: /forgejo/internal-token
+    - secretKey: lfs-jwt-secret
+      remoteRef:
+        key: /forgejo/lfs-jwt-secret
+    - secretKey: db-password
+      remoteRef:
+        key: /forgejo/db-password
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: forgejo-data
+  namespace: forgejo
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: local-path
+  resources:
+    requests:
+      storage: 20Gi
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: forgejo-db-data
+  namespace: forgejo
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: local-path
+  resources:
+    requests:
+      storage: 5Gi
+---
+# Headless Service for the Postgres StatefulSet's pod-DNS.
+apiVersion: v1
+kind: Service
+metadata:
+  name: forgejo-db
+  namespace: forgejo
+  labels:
+    app: forgejo-db
+spec:
+  type: ClusterIP
+  ports:
+    - name: postgres
+      port: 5432
+      targetPort: 5432
+      protocol: TCP
+  selector:
+    app: forgejo-db
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: forgejo-db
+  namespace: forgejo
+spec:
+  replicas: 1
+  serviceName: forgejo-db
+  selector:
+    matchLabels:
+      app: forgejo-db
+  template:
+    metadata:
+      labels:
+        app: forgejo-db
+    spec:
+      containers:
+        - name: postgres
+          image: postgres:17
+          ports:
+            - name: postgres
+              containerPort: 5432
+          env:
+            - name: POSTGRES_DB
+              value: forgejo
+            - name: POSTGRES_USER
+              value: forgejo
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: forgejo-secrets
+                  key: db-password
+            - name: PGDATA
+              value: /var/lib/postgresql/data/pgdata
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 768Mi
+          volumeMounts:
+            - name: forgejo-db-data
+              mountPath: /var/lib/postgresql/data
+          readinessProbe:
+            exec:
+              command:
+                - pg_isready
+                - -U
+                - forgejo
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            exec:
+              command:
+                - pg_isready
+                - -U
+                - forgejo
+            initialDelaySeconds: 30
+            periodSeconds: 30
+      volumes:
+        - name: forgejo-db-data
+          persistentVolumeClaim:
+            claimName: forgejo-db-data
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: forgejo
+  namespace: forgejo
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: forgejo
+  template:
+    metadata:
+      labels:
+        app: forgejo
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+      hostAliases:
+        # Pin *.coilysiren.me back to the homelab LAN IP so any
+        # in-pod call back into the cluster (webhooks, mirrors)
+        # doesn't egress to the public internet. See
+        # docs/k3s-deploy-notes.md §10.
+        - ip: 192.168.0.194
+          hostnames:
+            - eco.coilysiren.me
+            - forgejo.coilysiren.me
+      containers:
+        - name: forgejo
+          image: codeberg.org/forgejo/forgejo:15.0.1-rootless
+          ports:
+            - name: http
+              containerPort: 3000
+          env:
+            - name: FORGEJO__security__SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: forgejo-secrets
+                  key: secret-key
+            - name: FORGEJO__security__INTERNAL_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: forgejo-secrets
+                  key: internal-token
+            - name: FORGEJO__server__LFS_JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: forgejo-secrets
+                  key: lfs-jwt-secret
+            - name: FORGEJO__database__PASSWD
+              valueFrom:
+                secretKeyRef:
+                  name: forgejo-secrets
+                  key: db-password
+            - name: FORGEJO__database__DB_TYPE
+              value: postgres
+            - name: FORGEJO__database__HOST
+              value: forgejo-db:5432
+            - name: FORGEJO__database__NAME
+              value: forgejo
+            - name: FORGEJO__database__USER
+              value: forgejo
+            - name: FORGEJO__database__SSL_MODE
+              value: disable
+            - name: FORGEJO__server__DOMAIN
+              value: forgejo.coilysiren.me
+            - name: FORGEJO__server__ROOT_URL
+              value: https://forgejo.coilysiren.me/
+            - name: FORGEJO__server__HTTP_PORT
+              value: "3000"
+            - name: FORGEJO__server__DISABLE_SSH
+              value: "true"
+            - name: FORGEJO__server__LFS_START_SERVER
+              value: "true"
+            - name: FORGEJO__service__DISABLE_REGISTRATION
+              value: "true"
+            - name: FORGEJO__metrics__ENABLED
+              value: "true"
+            - name: FORGEJO__mailer__ENABLED
+              value: "false"
+          resources:
+            requests:
+              cpu: 200m
+              memory: 512Mi
+            limits:
+              cpu: 1000m
+              memory: 1500Mi
+          readinessProbe:
+            httpGet:
+              path: /api/healthz
+              port: 3000
+            initialDelaySeconds: 15
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /api/healthz
+              port: 3000
+            # Rootless first-boot does a recursive chown on the PVC.
+            # 60s buys it room before liveness starts killing.
+            initialDelaySeconds: 60
+            periodSeconds: 30
+          volumeMounts:
+            - name: forgejo-data
+              mountPath: /var/lib/gitea
+      volumes:
+        - name: forgejo-data
+          persistentVolumeClaim:
+            claimName: forgejo-data
+---
+# tailnet-exposed front door. The tailscale operator picks up the
+# annotations and stands up a ts-proxy StatefulSet with the
+# pinned MagicDNS hostname `forgejo.<tailnet>.ts.net`.
+apiVersion: v1
+kind: Service
+metadata:
+  name: forgejo
+  namespace: forgejo
+  annotations:
+    tailscale.com/expose: "true"
+    tailscale.com/hostname: forgejo
+spec:
+  type: ClusterIP
+  selector:
+    app: forgejo
+  ports:
+    - name: http
+      port: 80
+      targetPort: 3000
+      protocol: TCP
