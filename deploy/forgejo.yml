@@ -236,6 +236,16 @@ spec:
               value: "true"
             - name: FORGEJO__server__LFS_START_SERVER
               value: "true"
+            # Phase-1 only: tailnet front door is HTTP (the ts-proxy
+            # doesn't terminate TLS, encryption is at the WireGuard
+            # layer), but ROOT_URL above is https://forgejo.coilysiren.me/
+            # for phase 2. Default `[session] COOKIE_SECURE=auto` follows
+            # ROOT_URL's scheme, so the session cookie comes back Secure-
+            # only and gets dropped over HTTP, breaking login. Force it
+            # off until the public Ingress lands; remove this block when
+            # phase 2 ships.
+            - name: FORGEJO__session__COOKIE_SECURE
+              value: "false"
             - name: FORGEJO__service__DISABLE_REGISTRATION
               value: "true"
             - name: FORGEJO__metrics__ENABLED
