@@ -1,6 +1,6 @@
 # Forgejo deploy plan
 
-Drafted 2026-05-04. Revised 2026-05-05. Not yet executed.
+Drafted 2026-05-04. Revised 2026-05-05. Phase 1 executed 2026-05-05 (commits [`37c90b1`](https://github.com/coilysiren/infrastructure/commit/37c90b1), [`b8fdd47`](https://github.com/coilysiren/infrastructure/commit/b8fdd47), [`7b2512b`](https://github.com/coilysiren/infrastructure/commit/7b2512b)). Phase 2 not yet executed.
 
 Background: [`coilyco-vault/Obsidian Vault/Notes/forgejo-evaluation.md`](../../coilyco-vault/Obsidian%20Vault/Notes/forgejo-evaluation.md). General homelab pattern: [`k3s-deploy-notes.md`](k3s-deploy-notes.md).
 
@@ -165,15 +165,140 @@ Tailscale on this Mac is up (verified 2026-05-05).
 
 10. Schedule the post-push CI check on the infrastructure push per `infrastructure/AGENTS.md`. (CI is pylint-only, but the post-push verify rule still applies.)
 
+## Phase 1 retrospective (executed 2026-05-05)
+
+Phase 1 completed end-to-end. Smoke passed: clone → push → re-clone → delete → `/metrics` (206 lines of Prometheus text). Three deviations from the original plan, captured here so phase 2 doesn't re-discover them:
+
+1. **`FORGEJO__security__INSTALL_LOCK=true` is required** for the `forgejo` admin CLI to work. Without it the rootless image leaves `INSTALL_LOCK=false` in app.ini, and every CLI verb (`admin user create`, `doctor`, `dump`) bails with `MustInstalled() [F] Unable to load config file for an installed Forgejo instance`. With env-driven config the web installer is redundant; setting the lock skips it. Already in the manifest as of [`b8fdd47`](https://github.com/coilysiren/infrastructure/commit/b8fdd47).
+
+2. **`FORGEJO__session__COOKIE_SECURE=false` is required for the phase-1 tailnet-only window.** With `ROOT_URL=https://forgejo.coilysiren.me/` the default `[session] COOKIE_SECURE=auto` follows that scheme and marks session cookies Secure-only, so login over plain HTTP succeeds but the cookie gets dropped on the next request, breaking every authenticated flow. Already in the manifest as of [`7b2512b`](https://github.com/coilysiren/infrastructure/commit/7b2512b), with a comment marking it as phase-1-only. **This env block must be removed in phase 2** (see step 3 below) - leaving it in once the public Ingress lands would weaken cookie security on the public surface.
+
+3. **Tailnet HTTPS is not terminated by the ts-proxy on a default `tailscale.com/expose: "true"` Service.** The operator forwards plain HTTP at the Service port; encryption is provided at the WireGuard layer. The plan's phase-1 step 9 said "HTTPS git push" but the smoke ran over HTTP and is still real. Phase 2 ingress + cert-manager provides actual TLS termination at the public hostname. No manifest change needed for this one; just don't expect TLS on the tailnet URL.
+
+`coily ssh kubectl` blocker mentioned in §"Apply path" turned out to be solvable: `k3s kubectl ...` directly via `ssh kai-server '...'` works without sudo because `/etc/rancher/k3s/k3s.yaml` is mode 644. Coily's wrapper added an unnecessary `sudo` prefix. Filed as [coily#56](https://github.com/coilysiren/coily/issues/56). The `coily ops forgejo ...` verb group that would have removed the harness friction around `kubectl exec` is filed as [coily#57](https://github.com/coilysiren/coily/issues/57).
+
+The rotated admin password landed in SSM as `/forgejo/admin-password` (added 2026-05-05). The original plan said no admin-password in SSM; revised to keep it for password-manager retrieval since the rotated value is the actual long-lived credential, not the throwaway random one. Rotate manually via the UI then `coily aws ssm put-parameter --overwrite`.
+
 ## Apply order - phase 2 (public)
 
-Only after phase-1 smoke passes.
+Only after phase-1 smoke passes (it has).
 
-1. Add the Route 53 A record `forgejo.coilysiren.me → 99.110.50.213` in zone `Z06714552N3MO04UBWF33` via `coily aws route53 change-resource-record-sets`.
-2. Add the Ingress (manifest item 9) to `infrastructure/deploy/forgejo.yml`. Commit + push.
-3. SSH to kai-server, `git pull`, `sudo k3s kubectl apply -f deploy/forgejo.yml`.
-4. Watch certificate (on kai-server): `sudo k3s kubectl -n forgejo get certificate forgejo-tls -w`. DNS-01 takes 1-2 min on first issuance.
-5. Re-run the phase-1 smoke against `https://forgejo.coilysiren.me/` (replace tailnet URL).
+1. **Route 53 A record.** Add `forgejo.coilysiren.me → 99.110.50.213` in zone `Z06714552N3MO04UBWF33`:
+
+    ```sh
+    coily --commit-scope=infrastructure aws route53 change-resource-record-sets \
+      --hosted-zone-id Z06714552N3MO04UBWF33 \
+      --change-batch '{
+        "Changes": [{
+          "Action": "CREATE",
+          "ResourceRecordSet": {
+            "Name": "forgejo.coilysiren.me.",
+            "Type": "A",
+            "TTL": 300,
+            "ResourceRecords": [{"Value": "99.110.50.213"}]
+          }
+        }]
+      }'
+    ```
+
+    Verify with `dig +short forgejo.coilysiren.me`. Should return `99.110.50.213` within ~5 minutes.
+
+2. **Add the Ingress to the manifest** (item 9 in §"Manifest shape"). Append at the bottom of `infrastructure/deploy/forgejo.yml`:
+
+    ```yaml
+    ---
+    apiVersion: networking.k8s.io/v1
+    kind: Ingress
+    metadata:
+      name: forgejo
+      namespace: forgejo
+      annotations:
+        cert-manager.io/cluster-issuer: letsencrypt-production
+        kubernetes.io/tls-acme: "true"
+    spec:
+      ingressClassName: traefik
+      tls:
+        - hosts:
+            - forgejo.coilysiren.me
+          secretName: forgejo-tls
+      rules:
+        - host: forgejo.coilysiren.me
+          http:
+            paths:
+              - path: /
+                pathType: Prefix
+                backend:
+                  service:
+                    name: forgejo
+                    port:
+                      number: 80
+    ```
+
+3. **Remove the phase-1-only `FORGEJO__session__COOKIE_SECURE` env block** from the Deployment (the one with the "Phase-1 only" comment). Leaving it in weakens cookie security on the public HTTPS surface, since `auto` will correctly mark cookies Secure-only once `ROOT_URL` resolves to a real HTTPS endpoint.
+
+4. **Commit + push.** Single commit covers both edits (add Ingress, drop COOKIE_SECURE override). Suggested subject:
+
+    > forgejo: phase-2 public Ingress (cert-manager DNS-01 + drop COOKIE_SECURE override)
+
+5. **Pull + apply on kai-server:**
+
+    ```sh
+    coily --commit-scope=infrastructure ssh git pull /home/kai/projects/coilysiren/infrastructure
+    ssh kai-server 'cd /home/kai/projects/coilysiren/infrastructure && k3s kubectl apply -f deploy/forgejo.yml'
+    ```
+
+    The Recreate strategy will roll the forgejo pod (cookie env drop forces a restart). Wait for ready:
+
+    ```sh
+    until [ "$(ssh kai-server 'k3s kubectl -n forgejo get pod -l app=forgejo -o jsonpath="{.items[0].status.containerStatuses[0].ready}"')" = "true" ]; do sleep 5; done
+    ```
+
+6. **Watch the certificate.** DNS-01 takes 1-2 min on first issuance:
+
+    ```sh
+    ssh kai-server 'k3s kubectl -n forgejo get certificate forgejo-tls -w'
+    ```
+
+    Wait for `READY=True`. If it stalls, check the Order: `k3s kubectl -n forgejo describe order` and `k3s kubectl -n forgejo describe challenge`. Most common failure mode here is the cert-manager service account missing the route53 perms; re-derive from the existing `eco.coilysiren.me` cert if so.
+
+7. **Re-run the smoke against the public hostname.** Same shape as the phase-1 smoke loop, swap the tailnet URL for the public one:
+
+    - Create a temporary `coilysiren/scratch` repo via the UI at `https://forgejo.coilysiren.me/`.
+    - Clone over HTTPS using the per-call `GIT_ASKPASS` shape from phase 1, with credentials `coilysiren` / SSM `/forgejo/admin-password`.
+    - Add a file, commit, push.
+    - Re-clone fresh, diff matches.
+    - Delete the repo via the UI (Settings → Delete Repository → typed-name confirm).
+    - `curl https://forgejo.coilysiren.me/metrics` returns Prometheus text.
+
+8. **Verify TLS chain explicitly:**
+
+    ```sh
+    curl -sI https://forgejo.coilysiren.me/ | head -3
+    openssl s_client -connect forgejo.coilysiren.me:443 -servername forgejo.coilysiren.me </dev/null 2>/dev/null \
+      | openssl x509 -noout -issuer -subject -dates
+    ```
+
+    Issuer should be Let's Encrypt R3/R10/R11 (whatever's current). `notAfter` ~90 days out.
+
+9. **Verify session cookies are Secure-only over HTTPS** (sanity check that the COOKIE_SECURE drop took effect correctly):
+
+    ```sh
+    curl -sI https://forgejo.coilysiren.me/user/login | grep -i set-cookie
+    ```
+
+    The `i_like_gitea` (or similar) session cookie should carry `Secure; HttpOnly`.
+
+10. **Schedule the post-push CI verification** per `infrastructure/AGENTS.md` (300s after push, re-check at +180s if in progress). Run `coily gh run list --limit 5` from the infra repo.
+
+## Phase 2 rollback
+
+If the cert never issues, or the public surface breaks in a way that can't be hot-fixed:
+
+1. `k3s kubectl -n forgejo delete ingress forgejo` on kai-server.
+2. Revert the manifest commit, push, re-apply.
+3. The tailnet front door (`http://forgejo/`) keeps working throughout - nothing in phase 2 touches the tailnet Service or the ts-proxy.
+
+The Route 53 record is safe to leave in place; without the Ingress it just resolves to a public IP that returns nothing on port 443.
 
 ## Followups (not blocking first deploy)
 
@@ -181,7 +306,8 @@ Only after phase-1 smoke passes.
 - **Confirm RAM floor**: eval Watch-item #1. Run `coily ssh kubectl top pod -n forgejo` after a week of light use, retune limits.
 - **Forgejo Actions runner**: separate decision. Skip on first deploy.
 - **Federation (ActivityPub)**: experimental, skip.
-- **`coily ssh kubectl` sudo path**: currently fails with `sudo: a password is required`. Wrapped command is `sudo k3s kubectl ...`. Either configure NOPASSWD for k3s on kai-server or change the wrapper to read sudo password from SSM. Track as a coily issue. Not blocking the deploy (kai-server SSH session works fine), but blocks ergonomic Mac-side watching.
+- **`coily ssh kubectl` sudo path**: filed as [coily#56](https://github.com/coilysiren/coily/issues/56). The wrapped command is `sudo k3s kubectl ...` but the kubeconfig at `/etc/rancher/k3s/k3s.yaml` is mode 644, so the sudo prefix is unnecessary. Fix is a one-line change in `ops_ssh.go`. Workaround in the meantime: plain `ssh kai-server 'k3s kubectl ...'` works fine.
+- **`coily ops forgejo` verb group**: filed as [coily#57](https://github.com/coilysiren/coily/issues/57). Wraps the in-pod `forgejo` CLI (admin user create/list/change-password, doctor, dump, regenerate hooks/keys, actions generate-runner-token) so future admin work doesn't need to wave through harness deny-rules on `kubectl exec`. Depends on #56.
 
 ## Traps to remember (from k3s-deploy-notes.md)
 
