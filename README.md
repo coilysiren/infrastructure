@@ -37,4 +37,3 @@ See `docs/` for:
 
 - `architecture.md` — top-down view of what runs on kai-server
 - `certificates.md` — DNS-01 via Route 53 cert flow (no more HTTP-01 / hairpin-NAT hacks)
-- `security.md` — readonly kubectl wrapper used by Claude Code sessions

@@ -28,7 +28,7 @@ material that §8 and §9 cite.
 - **kai-server**: single-node k3s cluster, Ubuntu 22.04, kernel 6.8,
   18-core, 32 GiB RAM, 480 GB NVMe. Also a GNOME desktop with xrdp
   (:3389) and game servers (Eco, Factorio, Icarus, Core Keeper) via
-  systemd. Source: `coilysiren/kai-server/README.md`.
+  systemd.
 - **Tailscale node `kai-server`** at `100.69.164.66` (this is the
   tailnet IPv4).
 - **LAN IP**: `192.168.0.194`.
@@ -752,11 +752,6 @@ One line per trap. Every fix here has a commit in some repo's history.
   sudo ln -sf /usr/local/bin/k3s /usr/local/bin/kubectl
   ```
   (k3s detects its argv[0]).
-- **Read-only kubectl wrapper**: `/usr/local/bin/k3s-readonly-kubectl`
-  plus NOPASSWD sudoers in `/etc/sudoers.d/kai-k3s-readonly`. Allows
-  get/describe/logs/events, rejects writes and Secret reads
-  regardless of flag order. Used when Claude is driving and we
-  don't want it doing kubectl writes.
 - **Commit subject convention**: `deploy:` / `CI:` / `wasm:`
   prefixes so `git log --grep=deploy` stays useful. Every deploy
   commit cited in this doc follows it.
