@@ -1,0 +1,23 @@
+[Unit]
+Description=Claude Code remote-control daemon (kai-server, outbound HTTPS only)
+After=syslog.target network.target nss-lookup.target network-online.target
+Wants=network-online.target
+StartLimitBurst=5
+StartLimitIntervalSec=60
+
+[Service]
+Type=simple
+Restart=on-failure
+RestartSec=10
+User=kai
+WorkingDirectory=/home/kai
+# `claude` is installed via the user's package manager (npm/brew); the
+# wrapper at /usr/local/bin/claude must point at it. `claude login` must
+# have been run once as kai with the active claude.ai subscription.
+Environment=PATH=/usr/local/bin:/usr/bin:/bin
+Environment=HOME=/home/kai
+ExecStart=/usr/local/bin/claude remote-control --spawn worktree --name kai-server
+ExecStop=/bin/kill -TERM $MAINPID
+
+[Install]
+WantedBy=multi-user.target
