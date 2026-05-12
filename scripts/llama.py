@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# pylint: disable=duplicate-code
 """Llama deploy verbs.
 
 Replaces the old src/llama.py invoke layer. Driven from Makefile targets,

@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# pylint: disable=duplicate-code
 """K3s cluster operator verbs.
 
 Subcommands replace the old tasks.py + src/k8s.py invoke layer. Driven
@@ -11,6 +12,7 @@ and are intentionally not exposed as verbs here.
 """
 
 import argparse
+import os
 import shlex
 import subprocess
 import sys
@@ -138,7 +140,6 @@ def terraform_grafana(action: str = "plan"):
         Name="/grafana/admin-password",
         WithDecryption=True,
     )["Parameter"]["Value"]
-    import os
     env = os.environ.copy()
     env["GRAFANA_URL"] = "https://grafana.coilysiren.me"
     env["GRAFANA_AUTH"] = f"admin:{password}"
