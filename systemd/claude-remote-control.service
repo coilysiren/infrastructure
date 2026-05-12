@@ -11,12 +11,14 @@ Restart=on-failure
 RestartSec=10
 User=kai
 WorkingDirectory=/home/kai
-# `claude` is installed via the user's package manager (npm/brew); the
-# wrapper at /usr/local/bin/claude must point at it. `claude login` must
-# have been run once as kai with the active claude.ai subscription.
-Environment=PATH=/usr/local/bin:/usr/bin:/bin
+# `claude` is the npm-installed CLI under nvm. Source nvm.sh to pick up
+# whichever node version nvm has set as default for kai, then exec so
+# systemd tracks the claude process directly (no bash wrapper holding
+# MAINPID). `claude login` must have been run once as kai with the
+# active claude.ai subscription.
 Environment=HOME=/home/kai
-ExecStart=/usr/local/bin/claude remote-control --spawn worktree --name kai-server
+Environment=NVM_DIR=/home/kai/.nvm
+ExecStart=/bin/bash -c 'source $NVM_DIR/nvm.sh && exec claude remote-control --spawn worktree --name kai-server'
 ExecStop=/bin/kill -TERM $MAINPID
 
 [Install]
