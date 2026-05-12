@@ -1,5 +1,5 @@
 #!/usr/bin/bash
-# install-coily.sh - bootstrap Linuxbrew + coily on a fresh node.
+# coily-install.sh - bootstrap Linuxbrew + coily on a fresh node.
 #
 # Idempotent: re-running upgrades coily and re-applies `coily setup`.
 # Safe to run as the `kai` user; sudo is invoked per-step for apt only.

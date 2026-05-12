@@ -23,7 +23,7 @@ shape.
   coilysiren/repo-recall#14), `REPO_RECALL_PORT=7777`,
   `REPO_RECALL_CWD=/home/kai/projects/coilysiren`.
 - **Install script**:
-  [`scripts/install-repo-recall.sh`](../scripts/install-repo-recall.sh).
+  [`scripts/repo-recall-install.sh`](../scripts/repo-recall-install.sh).
   Idempotent. Builds + installs binary + installs unit + reloads + restarts.
 - **Tailnet exposure**: one-shot `tailscale serve` invocation, see below.
 - **Repo bootstrap**:
@@ -38,7 +38,7 @@ shape.
 bash /home/kai/projects/coilysiren/infrastructure/scripts/clone-coilysiren-repos.sh
 
 # 2. Build + install the binary, drop the unit, start the service
-sudo bash /home/kai/projects/coilysiren/infrastructure/scripts/install-repo-recall.sh
+sudo bash /home/kai/projects/coilysiren/infrastructure/scripts/repo-recall-install.sh
 
 # 3. Expose over tailscale (run once, as kai). `serve` config persists in
 #    tailscaled state across reboots; no need to put this in a unit.
@@ -62,13 +62,13 @@ session metadata, switch to header-based gating using the
 
 ## Upgrades
 
-Re-running `install-repo-recall.sh` rebuilds from the latest source in
+Re-running `repo-recall-install.sh` rebuilds from the latest source in
 `/home/kai/projects/coilysiren/repo-recall` and restarts the unit. Pull
 new commits first:
 
 ```sh
 git -C /home/kai/projects/coilysiren/repo-recall pull --ff-only
-sudo bash /home/kai/projects/coilysiren/infrastructure/scripts/install-repo-recall.sh
+sudo bash /home/kai/projects/coilysiren/infrastructure/scripts/repo-recall-install.sh
 ```
 
 The `clone-coilysiren-repos.sh` bootstrap script can be re-run any time to

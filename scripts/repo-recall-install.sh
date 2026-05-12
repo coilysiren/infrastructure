@@ -2,7 +2,7 @@
 # Build repo-recall on kai-server and install it as a systemd service.
 # Idempotent: run again to upgrade.
 #
-# Run as: sudo bash /home/kai/projects/coilysiren/infrastructure/scripts/install-repo-recall.sh
+# Run as: sudo bash /home/kai/projects/coilysiren/infrastructure/scripts/repo-recall-install.sh
 # (the build step needs to run as `kai`; the install step needs root.)
 
 set -euo pipefail
