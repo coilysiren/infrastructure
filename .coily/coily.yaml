@@ -1,13 +1,37 @@
 # Per-repo command allowlist for infrastructure. Loaded by pkg/repocfg when
 # coily is invoked inside this checkout.
 #
-# Scope: diagnostic helpers that run locally against the cluster via
-# kubectl. Systemd-unit ops live in coily core (coily eco / coily backend /
-# coily core-keeper / coily icarus). The *-pre.sh / *-start.sh scripts are
-# invoked by systemd on kai-server and aren't runnable from a workstation,
-# so they stay out.
+# Scope: dev verbs that run locally against the cluster via kubectl, helm,
+# and terraform, plus the llama deploy bootstrap. Systemd-unit ops live in
+# coily core (coily ssh systemctl, coily gaming eco / coily gaming
+# core-keeper / coily gaming icarus). The *-pre.sh / *-start.sh scripts
+# are invoked by systemd on kai-server and aren't runnable from a
+# workstation, so they stay out.
+#
+# Each verb below delegates to a Make target.
 
 commands:
   k3s-list-dns:
-    run: bash scripts/k3s-list-dns.sh
+    run: make k3s-list-dns
     description: Spin up a diagnostic ubuntu pod and dump every Service DNS record.
+  cert-manager:
+    run: make cert-manager
+    description: Install or refresh cert-manager + ClusterIssuers (deploy/cert_manager.yml).
+  aws-secrets:
+    run: make aws-secrets
+    description: Bootstrap external-secrets + aws-credentials. Args - aws_access_key_id=ID aws_secret_access_key=SECRET.
+  observability:
+    run: make observability
+    description: Install or upgrade the VictoriaMetrics + Grafana stack.
+  observability-admin-password:
+    run: make observability-admin-password
+    description: Print the auto-generated Grafana admin password.
+  terraform-grafana:
+    run: make terraform-grafana
+    description: Run terraform against terraform/grafana/ (GRAFANA_AUTH wired from SSM). Args - action=plan|apply|init|destroy.
+  llama-deploy:
+    run: make llama-deploy
+    description: Apply llama/deploy.yml into the llama namespace.
+  llama-deploy-secrets:
+    run: make llama-deploy-secrets
+    description: Bootstrap the llama ghcr.io docker-registry secret from SSM /github/pat.

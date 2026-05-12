@@ -1,37 +1,36 @@
 # infrastructure
 
-Everything Kai needs to stand up and operate **kai-server** — systemd units, shell scripts, k3s cluster manifests, and a small invoke-based task runner.
+Everything Kai needs to stand up and operate **kai-server**. Systemd units, shell scripts, k3s cluster manifests, and a small set of coily verbs for cluster-side bootstrap.
 
 ## Layout
 
 ```
 .
 ├── caddy/            # (legacy, pre-traefik caddy config)
-├── deploy/           # cluster-wide manifests applied via `inv k8s.*` tasks
+├── deploy/           # cluster-wide manifests applied via coily verbs
 │   ├── cert_manager.yml     # cert-manager ClusterIssuers (DNS-01 via Route 53)
 │   ├── externalsecret.yml   # external-secrets sync rules
 │   └── secretstore.yml      # SecretStore -> AWS SSM Parameter Store
 ├── docs/             # durable ops documentation
-├── eco-server/       # Eco game server configs
 ├── llama/            # llama-service k8s manifests
-├── scripts/          # systemd unit ExecStart/ExecPre scripts
-├── src/              # python source for the invoke tasks
+├── scripts/          # systemd unit ExecStart/ExecPre scripts + Python helpers for coily verbs
 ├── systemd/          # systemd unit files
-├── tasks.py          # invoke entry point
+├── Makefile          # entry points for coily verbs
 └── eco.md            # Eco server configuration notes
 ```
 
 ## Operating the cluster
 
-Everything is driven from `tasks.py` via [pyinvoke](https://www.pyinvoke.org/). Run `inv -l` for a full list.
-
-Common targets:
+Cluster-bootstrap verbs are declared in [`.coily/coily.yaml`](.coily/coily.yaml) and driven by `Makefile` targets that call `scripts/k8s.py` / `scripts/llama.py`. Common verbs:
 
 ```bash
-inv k8s.cert-manager       # re-apply cert-manager + ClusterIssuers
-inv k8s.aws-secrets <id> <secret>  # bootstrap external-secrets + aws-credentials
-inv k8s.service-restart    # restart k3s itself
+coily cert-manager                                                        # re-apply cert-manager + ClusterIssuers
+coily aws-secrets aws_access_key_id=<ID> aws_secret_access_key=<SECRET>   # bootstrap external-secrets + aws-credentials
+coily observability                                                       # install / upgrade VictoriaMetrics + Grafana
+coily terraform-grafana action=plan                                       # plan / apply Grafana dashboards via terraform
 ```
+
+K3s service ops and game-server systemd ops live in coily core. Restart k3s with `coily ssh systemctl restart k3s.service`; tail / restart game servers with `coily gaming <eco|core-keeper|icarus|factorio> ...`.
 
 See `docs/` for:
 

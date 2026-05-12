@@ -16,7 +16,7 @@ cert-manager proves domain ownership to Let's Encrypt by writing a TXT record in
 
 ```bash
 cd ~/projects/infrastructure
-inv k8s.cert-manager        # applies upstream cert-manager + our deploy/cert_manager.yml
+coily cert-manager          # applies upstream cert-manager + our deploy/cert_manager.yml
 ```
 
 Or just the issuers:
