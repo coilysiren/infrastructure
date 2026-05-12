@@ -1,0 +1,14 @@
+[Unit]
+Description=Daily 03:00 tick for claude-remote-control-restart.service
+Requires=claude-remote-control-restart.service
+
+[Timer]
+# 03:00 local time, daily. Catches slow leaks and stale remote-control
+# sessions without manual intervention. Randomized 5min so multiple
+# kai-server timers don't fire at the exact same second.
+OnCalendar=*-*-* 03:00:00
+RandomizedDelaySec=300
+Persistent=true
+
+[Install]
+WantedBy=timers.target
