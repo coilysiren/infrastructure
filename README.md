@@ -37,3 +37,7 @@ See `docs/` for:
 
 - `architecture.md` — top-down view of what runs on kai-server
 - `certificates.md` — DNS-01 via Route 53 cert flow (no more HTTP-01 / hairpin-NAT hacks)
+
+## Commands
+
+Dev commands are declared in [`.coily/coily.yaml`](.coily/coily.yaml). Run them as `coily exec <verb>`.
