@@ -15,6 +15,7 @@ Environment=REPO_RECALL_HOST=0.0.0.0
 Environment=REPO_RECALL_PORT=7777
 Environment=REPO_RECALL_CWD=/home/kai/projects/coilysiren
 Environment=REPO_RECALL_DEPTH=3
+Environment=REPO_RECALL_MCP_ORIGINS=http://kai-server:7777
 ExecStart=/home/linuxbrew/.linuxbrew/bin/repo-recall
 ExecStop=/bin/kill -TERM $MAINPID
 
