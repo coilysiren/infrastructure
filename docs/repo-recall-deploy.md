@@ -15,16 +15,22 @@ shape.
 
 ## Pieces
 
-- **Binary**: `/usr/local/bin/repo-recall`. Built from
-  `/home/kai/projects/coilysiren/repo-recall` on kai-server (rust toolchain
-  is present).
+- **Binary**: `/home/linuxbrew/.linuxbrew/bin/repo-recall`. Installed
+  from the [`coilysiren/tap`](https://github.com/coilysiren/homebrew-tap)
+  Homebrew formula via Linuxbrew. No on-host cargo build.
 - **Unit**: [`systemd/repo-recall.service`](../systemd/repo-recall.service).
   Runs as `kai`, sets `REPO_RECALL_HOST=0.0.0.0` (the env var added in
   coilysiren/repo-recall#14), `REPO_RECALL_PORT=7777`,
   `REPO_RECALL_CWD=/home/kai/projects/coilysiren`.
 - **Install script**:
   [`scripts/repo-recall-install.sh`](../scripts/repo-recall-install.sh).
-  Idempotent. Builds + installs binary + installs unit + reloads + restarts.
+  Idempotent. brew-installs the formula, installs the unit, reloads,
+  (re)starts.
+- **Auto-update**:
+  [`scripts/repo-recall-update-install.sh`](../scripts/repo-recall-update-install.sh)
+  wires a weekly `repo-recall-update.timer` that runs `brew upgrade` and
+  try-restarts the daemon. The same unit can be triggered on-demand
+  after a tap push via `sudo systemctl start repo-recall-update.service`.
 - **Tailnet exposure**: one-shot `tailscale serve` invocation, see below.
 - **Repo bootstrap**:
   [`scripts/clone-coilysiren-repos.sh`](../scripts/clone-coilysiren-repos.sh)
@@ -37,8 +43,11 @@ shape.
 # 1. Clone the active coilysiren repo set (run as kai)
 bash /home/kai/projects/coilysiren/infrastructure/scripts/clone-coilysiren-repos.sh
 
-# 2. Build + install the binary, drop the unit, start the service
-sudo bash /home/kai/projects/coilysiren/infrastructure/scripts/repo-recall-install.sh
+# 2. brew-install the binary, drop the unit, start the service
+bash /home/kai/projects/coilysiren/infrastructure/scripts/repo-recall-install.sh
+
+# 2b. Wire the weekly auto-update timer
+bash /home/kai/projects/coilysiren/infrastructure/scripts/repo-recall-update-install.sh
 
 # 3. Expose over tailscale (run once, as kai). `serve` config persists in
 #    tailscaled state across reboots; no need to put this in a unit.
@@ -62,18 +71,21 @@ session metadata, switch to header-based gating using the
 
 ## Upgrades
 
-Re-running `repo-recall-install.sh` rebuilds from the latest source in
-`/home/kai/projects/coilysiren/repo-recall` and restarts the unit. Pull
-new commits first:
+The weekly `repo-recall-update.timer` runs `brew upgrade` and
+try-restarts the daemon on Sundays at 04:30 local. To pick up a new tap
+version immediately after a release push without waiting for the timer:
 
 ```sh
-git -C /home/kai/projects/coilysiren/repo-recall pull --ff-only
-sudo bash /home/kai/projects/coilysiren/infrastructure/scripts/repo-recall-install.sh
+sudo systemctl start repo-recall-update.service
+systemctl status repo-recall-update.service repo-recall.service
 ```
 
+The on-demand path is what the agent's `coilysiren/repo-recall` post-push
+auto-schedule reaches for.
+
 The `clone-coilysiren-repos.sh` bootstrap script can be re-run any time to
-fetch new commits across the whole repo set without auto-pulling dirty
-trees.
+fetch new commits across the whole repo set; it's independent of the
+binary upgrade path now that the binary is brew-installed.
 
 ## Why `REPO_RECALL_HOST=0.0.0.0` is safe here
 

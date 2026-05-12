@@ -1,50 +1,44 @@
 #!/usr/bin/env bash
-# Build repo-recall on kai-server and install it as a systemd service.
-# Idempotent: run again to upgrade.
+# repo-recall-install.sh - install repo-recall from the coilysiren tap
+# and wire it up as a systemd service on kai-server.
 #
-# Run as: sudo bash /home/kai/projects/coilysiren/infrastructure/scripts/repo-recall-install.sh
-# (the build step needs to run as `kai`; the install step needs root.)
+# Idempotent: re-run to upgrade. For automated weekly upgrades see
+# scripts/repo-recall-update-install.sh.
+#
+# Run as: bash /home/kai/projects/coilysiren/infrastructure/scripts/repo-recall-install.sh
+# (sudo is invoked per-step, no need to run the whole script as root.)
 
 set -euo pipefail
 
-REPO_RECALL_SRC="${REPO_RECALL_SRC:-/home/kai/projects/coilysiren/repo-recall}"
 INFRA_SRC="${INFRA_SRC:-/home/kai/projects/coilysiren/infrastructure}"
-BIN_DST="/usr/local/bin/repo-recall"
 UNIT_DST="/etc/systemd/system/repo-recall.service"
 
-if [[ "$(id -u)" -ne 0 ]]; then
-  echo "must run as root (sudo)" >&2
+# Non-interactive shells skip ~/.bashrc, so brew is not on PATH by
+# default. Source shellenv explicitly.
+if [ -x /home/linuxbrew/.linuxbrew/bin/brew ]; then
+  eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
+else
+  echo "Linuxbrew not found at /home/linuxbrew/.linuxbrew/bin/brew" >&2
+  echo "run scripts/coily-install.sh first to bootstrap brew" >&2
   exit 1
 fi
 
-if [[ ! -d "$REPO_RECALL_SRC" ]]; then
-  echo "repo-recall source not found at $REPO_RECALL_SRC" >&2
-  echo "run scripts/clone-coilysiren-repos.sh first" >&2
-  exit 1
-fi
-
-echo ">>> building repo-recall as kai (release)"
-# `sudo -u kai bash -c` is non-login non-interactive: it skips ~/.bashrc and
-# ~/.profile, so a rustup-managed cargo at ~/.cargo/bin is invisible. Source
-# ~/.cargo/env explicitly so we don't fall through to an older apt-managed
-# cargo (which on kai-server is 1.75 and rejects edition2024 deps).
-sudo -u kai bash -c "source ~kai/.cargo/env && cd '$REPO_RECALL_SRC' && cargo build --release"
-
-echo ">>> installing binary -> $BIN_DST"
-install -m 0755 "$REPO_RECALL_SRC/target/release/repo-recall" "$BIN_DST"
+echo ">>> brew tap + install/upgrade repo-recall"
+brew tap coilysiren/tap
+brew install coilysiren/tap/repo-recall || brew upgrade coilysiren/tap/repo-recall
 
 echo ">>> installing unit -> $UNIT_DST"
-install -m 0644 "$INFRA_SRC/systemd/repo-recall.service" "$UNIT_DST"
+sudo install -m 0644 "$INFRA_SRC/systemd/repo-recall.service" "$UNIT_DST"
 
 echo ">>> reloading systemd"
-systemctl daemon-reload
+sudo systemctl daemon-reload
 
 echo ">>> enabling + (re)starting repo-recall.service"
-systemctl enable repo-recall.service
-systemctl restart repo-recall.service
+sudo systemctl enable repo-recall.service
+sudo systemctl restart repo-recall.service
 
 sleep 2
-systemctl --no-pager --full status repo-recall.service || true
+sudo systemctl --no-pager --full status repo-recall.service || true
 
 echo
 echo "next: expose over tailscale (run as kai, once):"

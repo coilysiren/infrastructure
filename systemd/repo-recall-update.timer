@@ -1,0 +1,13 @@
+[Unit]
+Description=Weekly tick for repo-recall-update.service
+Requires=repo-recall-update.service
+
+[Timer]
+# Sunday 04:30 local time, weekly. Staggered behind coily-update.timer
+# (04:00) so the two don't fight over brew's update lock.
+OnCalendar=Sun *-*-* 04:30:00
+RandomizedDelaySec=600
+Persistent=true
+
+[Install]
+WantedBy=timers.target

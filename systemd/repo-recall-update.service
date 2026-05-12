@@ -1,0 +1,13 @@
+[Unit]
+Description=repo-recall auto-update (brew upgrade + try-restart daemon)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=kai
+WorkingDirectory=/home/kai
+ExecStart=/home/kai/projects/coilysiren/infrastructure/scripts/repo-recall-update.sh
+
+[Install]
+WantedBy=multi-user.target
