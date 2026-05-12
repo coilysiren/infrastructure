@@ -1,7 +1,7 @@
 # /etc/sudoers.d/kai-coilysiren-updates
 #
-# NOPASSWD entries for the coilysiren-app auto-update timers and their
-# on-demand trigger path. Two surfaces:
+# NOPASSWD entries for kai-server operator surfaces that get triggered
+# over non-TTY ssh. Three surfaces:
 #
 #   1. The wrapper scripts run as `kai` under the *-update.service units.
 #      They need to try-restart the long-lived repo-recall daemon after
@@ -10,6 +10,9 @@
 #        sudo systemctl start <name>-update.service
 #      to skip the next-timer-fire wait. Without NOPASSWD that prompt
 #      would block since the golang ssh client has no TTY.
+#   3. The termux one-tap widget rolls the claude-remote-control daemon
+#      via the existing claude-remote-control-restart.service oneshot.
+#      Same no-TTY constraint as (2).
 #
 # Per-verb scoping (no `systemctl *`) keeps the blast radius narrow.
 #
@@ -25,3 +28,4 @@
 kai ALL=(root) NOPASSWD: /bin/systemctl start coily-update.service
 kai ALL=(root) NOPASSWD: /bin/systemctl start repo-recall-update.service
 kai ALL=(root) NOPASSWD: /bin/systemctl try-restart repo-recall.service
+kai ALL=(root) NOPASSWD: /bin/systemctl start claude-remote-control-restart.service
