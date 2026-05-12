@@ -74,7 +74,8 @@ def main(argv: list[str]) -> int:
     if len(argv) < 2:
         sys.stderr.write("usage: check-commit-closes-issue.py <commit-msg-file>\n")
         return 2
-    raw = open(argv[1], encoding="utf-8").read()
+    with open(argv[1], encoding="utf-8") as fh:
+        raw = fh.read()
     body = re.sub(r"(?m)^#.*\n?", "", raw).strip()
     if not body:
         return 0
