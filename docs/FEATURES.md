@@ -57,3 +57,11 @@ Last refreshed: 2026-05-08.
 - Automatic sudoers rollout.
 - HTTP-01 ACME (replaced by DNS-01).
 - DynamoDB-backed Terraform locking (replaced by S3 native locking).
+
+## See also
+
+- [README.md](../README.md) - human-facing intro.
+- [AGENTS.md](../AGENTS.md) - agent-facing operating rules.
+- [.coily/coily.yaml](../.coily/coily.yaml) - allowlisted commands.
+
+Cross-reference convention from [coilysiren/coilyco-ai#313](https://github.com/coilysiren/coilyco-ai/issues/313).
