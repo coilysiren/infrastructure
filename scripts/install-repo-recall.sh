@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
-# repo-recall-install.sh - install repo-recall from the coilysiren tap
+# install-repo-recall.sh - install repo-recall from the coilysiren tap
 # and wire it up as a systemd service on kai-server.
 #
 # Idempotent: re-run to upgrade. For automated weekly upgrades see
 # scripts/repo-recall-update-install.sh.
 #
-# Run as: bash /home/kai/projects/coilysiren/infrastructure/scripts/repo-recall-install.sh
+# Run as: bash /home/kai/projects/coilysiren/infrastructure/scripts/install-repo-recall.sh
 # (sudo is invoked per-step, no need to run the whole script as root.)
 
 set -euo pipefail

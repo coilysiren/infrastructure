@@ -3,7 +3,7 @@
 # unit + timer on kai-server. Idempotent.
 #
 # Prereqs:
-#   - repo-recall already installed via scripts/repo-recall-install.sh.
+#   - repo-recall already installed via scripts/install-repo-recall.sh.
 #   - sudoers/kai-coilysiren-updates already in place (for the
 #     `sudo systemctl try-restart repo-recall.service` step inside the
 #     wrapper script, plus the on-demand `start repo-recall-update.service`

@@ -23,7 +23,7 @@ shape.
   coilysiren/repo-recall#14), `REPO_RECALL_PORT=7777`,
   `REPO_RECALL_CWD=/home/kai/projects/coilysiren`.
 - **Install script**:
-  [`scripts/repo-recall-install.sh`](../scripts/repo-recall-install.sh).
+  [`scripts/install-repo-recall.sh`](../scripts/install-repo-recall.sh).
   Idempotent. brew-installs the formula, installs the unit, reloads,
   (re)starts.
 - **Auto-update**:
@@ -44,7 +44,7 @@ shape.
 bash /home/kai/projects/coilysiren/infrastructure/scripts/clone-coilysiren-repos.sh
 
 # 2. brew-install the binary, drop the unit, start the service
-bash /home/kai/projects/coilysiren/infrastructure/scripts/repo-recall-install.sh
+bash /home/kai/projects/coilysiren/infrastructure/scripts/install-repo-recall.sh
 
 # 2b. Wire the weekly auto-update timer
 bash /home/kai/projects/coilysiren/infrastructure/scripts/repo-recall-update-install.sh
