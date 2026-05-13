@@ -1,0 +1,6 @@
+# Hand-written shortcut snippets land here. Each file follows the same
+# handle_path block shape as the generated ones in ../sites/, but the
+# upstream can be anything: a local file_server, a non-Traefik daemon
+# bound to localhost, etc.
+#
+# Files here are NOT touched by scripts/generate-caddy-shortcuts.py.

@@ -1,0 +1,12 @@
+# hand-written: coily audit dashboard. static file served from
+# /var/lib/coily/dashboard.html, regenerated every 5 min by
+# coily-audit-dashboard.timer (see coilysiren/infrastructure#127).
+#
+# The handle_path strip leaves us at "/", which file_server then resolves
+# to dashboard.html via the try_files directive. Direct hits to other
+# paths under /audit/* would 404 (only dashboard.html exists today).
+handle_path /audit/* {
+    root * /var/lib/coily
+    try_files {path} /dashboard.html
+    file_server
+}
