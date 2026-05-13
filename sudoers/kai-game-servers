@@ -24,6 +24,12 @@ kai ALL=(root) NOPASSWD: /bin/systemctl restart core-keeper-server, /bin/systemc
 kai ALL=(root) NOPASSWD: /bin/systemctl restart icarus-server, /bin/systemctl stop icarus-server, /bin/systemctl start icarus-server, /bin/systemctl status icarus-server
 kai ALL=(root) NOPASSWD: /bin/systemctl restart factorio-server, /bin/systemctl stop factorio-server, /bin/systemctl start factorio-server, /bin/systemctl status factorio-server
 
+# fdr-remake is a sidecar bound to factorio-server.service via PartOf=,
+# so stopping/restarting factorio-server cascades. The four-verb line
+# below is for direct ops (debugging the bridge without bouncing the
+# game). See coilysiren/infrastructure#101.
+kai ALL=(root) NOPASSWD: /bin/systemctl restart fdr-remake, /bin/systemctl stop fdr-remake, /bin/systemctl start fdr-remake, /bin/systemctl status fdr-remake
+
 # factorio-backup ships as a oneshot + timer pair. The timer needs
 # enable/disable in addition to the lifecycle four; daemon-reload is
 # required when copying updated unit files into /etc/systemd/system.

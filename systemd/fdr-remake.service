@@ -1,0 +1,23 @@
+[Unit]
+Description=fdr-remake (Factorio<>Discord chat relay sidecar)
+Documentation=https://codeberg.org/Jaskowicz/fdr-remake
+Documentation=https://github.com/coilysiren/infrastructure/issues/101
+After=factorio-server.service network-online.target
+Wants=factorio-server.service
+PartOf=factorio-server.service
+StartLimitBurst=5
+StartLimitIntervalSec=60
+
+[Service]
+Type=simple
+Restart=on-failure
+RestartSec=30
+TimeoutStopSec=30
+User=kai
+WorkingDirectory=/home/kai/.local/share/fdr-remake
+ExecStartPre=bash -c /home/kai/projects/infrastructure/scripts/fdr-remake-pre.sh
+ExecStart=/home/kai/.local/share/fdr-remake/fdr
+ExecStop=kill -TERM $MAINPID
+
+[Install]
+WantedBy=factorio-server.service

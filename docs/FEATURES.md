@@ -2,7 +2,7 @@
 
 Baseline inventory of what `coilysiren/infrastructure` does. Update when scope changes (added/removed/migrated features) so we can evaluate scope drift over time.
 
-Last refreshed: 2026-05-11.
+Last refreshed: 2026-05-13.
 
 ## Kubernetes and container orchestration
 
@@ -23,6 +23,7 @@ Last refreshed: 2026-05-11.
 - **Eco mod deployment** - Three-step push (zip, scp, unzip) for UserCode mods (eco-mods, eco-mods-public) and ModKit DLLs (eco-jobs-tracker). Canonical entry: `coily gaming eco mod push --src <zip>`. Sequencing: push mod, restart server, verify, then deploy web app. Reference: `eco.md` §4.
 - **Eco config-as-code** - Configs sync from `coilysiren/eco-configs` (git clone with `.git` backup). World, skill-gain, and config rewrites live in `eco-cycle-prep` (`coily server-*`, `coily roll`). Reference: `eco.md` §3-8.
 - **Core Keeper, Icarus, Factorio servers** - Parallel systemd units with tail/restart/start/stop in coily core: `coily gaming <core-keeper|icarus|factorio> ...`. Factorio adds a backup timer plus script. Files: `systemd/`, `scripts/factorio-backup.sh`.
+- **Factorio<>Discord chat bridge** - `fdr-remake` (https://codeberg.org/Jaskowicz/fdr-remake), a C++ sidecar pinned to `factorio-server.service` via `PartOf=`. Reads in-game chat by tailing `--console-log` and pushes Discord chat back via localhost RCON. Files: `systemd/fdr-remake.service`, `scripts/fdr-remake-pre.sh`, plus RCON + `--console-log` flags added to `scripts/factorio-server-start.sh`. SSM keys: `/factorio/fdr/discord-bot-token`, `/factorio/fdr/channel-id`, `/factorio/rcon-password`. First-time setup: clone fdr-remake on kai-server, install D++ 10.0.30+ per dpp.dev/installing.html, cmake build, drop the binary at `/home/kai/.local/share/fdr-remake/fdr`, then `systemctl enable --now fdr-remake.service`. Reference: `coilysiren/infrastructure#101`.
 
 ## Observability
 
