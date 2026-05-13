@@ -5,8 +5,9 @@
   systemd/coily-audit-dashboard.{service,timer} on kai-server, firing every
   5 minutes; this is the Mac analog.
 
-  Regenerates ~/Library/Application Support/coily/dashboard.html every
-  5 minutes by shelling out to `coily audit dashboard --since 7d --out ...`.
+  Regenerates ~/.coily/dashboard.html every 5 minutes by shelling out to
+  `coily audit dashboard --since 7d`. That path matches the coily default
+  so `coily audit open` (no args) finds it.
 
   Install / uninstall via:
     scripts/coily-audit-dashboard-install-mac.py
@@ -28,8 +29,6 @@
       <string>dashboard</string>
       <string>--since</string>
       <string>7d</string>
-      <string>--out</string>
-      <string>{{HOME}}/Library/Application Support/coily/dashboard.html</string>
     </array>
 
     <key>StartInterval</key>

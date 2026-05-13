@@ -7,8 +7,9 @@ scripts/launchd/me.coilysiren.coily-audit-dashboard.plist, expands {{HOME}}
 to the current user's home, copies the result to ~/Library/LaunchAgents/,
 and bootstraps the agent into launchd's gui/UID domain. Idempotent.
 
-The agent re-runs `coily audit dashboard --since 7d --out
-~/Library/Application Support/coily/dashboard.html` every 5 minutes.
+The agent re-runs `coily audit dashboard --since 7d` every 5 minutes,
+writing to coily's default ~/.coily/dashboard.html so `coily audit open`
+(no args) finds it.
 """
 
 from __future__ import annotations
@@ -23,7 +24,7 @@ LABEL = "me.coilysiren.coily-audit-dashboard"
 SOURCE = Path(__file__).resolve().parent / "launchd" / f"{LABEL}.plist"
 AGENT_DIR = Path.home() / "Library" / "LaunchAgents"
 TARGET = AGENT_DIR / f"{LABEL}.plist"
-OUT_DIR = Path.home() / "Library" / "Application Support" / "coily"
+OUT_DIR = Path.home() / ".coily"
 LOG_DIR = Path.home() / "Library" / "Logs"
 
 
