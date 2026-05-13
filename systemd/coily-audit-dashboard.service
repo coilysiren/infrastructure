@@ -1,0 +1,14 @@
+[Unit]
+Description=Regenerate the coily audit dashboard HTML
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=kai
+WorkingDirectory=/home/kai
+Environment=COILY_LOCKDOWN_ROOT=/home/kai/projects/coilysiren
+ExecStart=/home/linuxbrew/.linuxbrew/bin/coily audit dashboard --since 7d --out /var/lib/coily/dashboard.html
+
+[Install]
+WantedBy=multi-user.target

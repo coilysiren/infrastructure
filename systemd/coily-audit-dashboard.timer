@@ -1,0 +1,15 @@
+[Unit]
+Description=Five-minute tick for coily-audit-dashboard.service
+Requires=coily-audit-dashboard.service
+
+[Timer]
+# Fire 1 minute after boot, then every 5 minutes. RandomizedDelaySec keeps
+# multiple cron-aligned timers from hammering disk on the same wall-clock
+# second.
+OnBootSec=1min
+OnUnitActiveSec=5min
+RandomizedDelaySec=30
+Persistent=true
+
+[Install]
+WantedBy=timers.target

@@ -12,6 +12,16 @@ api.coilysiren.me {
     reverse_proxy localhost:4000
 }
 
+# Static file serve for the coily audit dashboard. Regenerated every
+# 5 minutes by coily-audit-dashboard.timer to /var/lib/coily/. Tailnet-
+# internal only - no TLS, no auth, since the file already contains
+# operator-private audit data and only authenticated tailnet peers can
+# reach this port.
+:8082 {
+    root * /var/lib/coily
+    file_server
+}
+
 :80 {
 	# Set this path to your site's directory.
 	root * /usr/share/caddy
