@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  Mac launchd agent for serving the local audit dashboard over HTTP.
+
+  Pairs with me.coilysiren.coily-audit-dashboard.plist (the 5-minute
+  regeneration tick). This agent runs a long-lived Caddy file-server
+  bound to 127.0.0.1:8082 so Safari's "File -> Add to Dock" works
+  (file:// URLs are not eligible, http(s):// are).
+
+  Once installed, open http://localhost:8082/dashboard.html in Safari,
+  then File -> Add to Dock -> name it "Coily Dashboard". You get a real
+  standalone web-app window, Launchpad entry, and Dock icon.
+
+  Install / uninstall via:
+    scripts/coily-audit-dashboard-install-mac.py
+    scripts/coily-audit-dashboard-install-mac.py --uninstall
+-->
+<plist version="1.0">
+  <dict>
+    <key>Label</key>
+    <string>me.coilysiren.coily-dashboard-server</string>
+
+    <key>ProgramArguments</key>
+    <array>
+      <string>/opt/homebrew/bin/caddy</string>
+      <string>file-server</string>
+      <string>--listen</string>
+      <string>127.0.0.1:8082</string>
+      <string>--root</string>
+      <string>{{HOME}}/.coily</string>
+    </array>
+
+    <key>KeepAlive</key>
+    <true/>
+
+    <key>RunAtLoad</key>
+    <true/>
+
+    <key>StandardOutPath</key>
+    <string>{{HOME}}/Library/Logs/coily-dashboard-server.log</string>
+
+    <key>StandardErrorPath</key>
+    <string>{{HOME}}/Library/Logs/coily-dashboard-server.log</string>
+
+    <key>ProcessType</key>
+    <string>Background</string>
+  </dict>
+</plist>
