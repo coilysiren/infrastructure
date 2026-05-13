@@ -1,0 +1,49 @@
+name: caddy-shortcuts
+
+# Daily regen of caddy/sites/*.caddy from sibling repos' config.yml.
+# See coilysiren/infrastructure#129 for the design.
+#
+# Reload on kai-server is manual today:
+#   cd ~/projects/coilysiren/infrastructure && git pull
+#   sudo caddy reload --config /etc/caddy/Caddyfile
+#
+# No untrusted-input interpolation. Only ${{ secrets.GITHUB_TOKEN }}, which
+# is a vetted secret context per GitHub's own threat model.
+
+on:
+  schedule:
+    - cron: "17 6 * * *"   # 06:17 UTC daily, staggered from common cron alignment
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  regenerate:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: install yq
+        run: |
+          sudo wget -qO /usr/local/bin/yq https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64
+          sudo chmod +x /usr/local/bin/yq
+          yq --version
+
+      - name: regenerate snippets
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          python3 scripts/generate-caddy-shortcuts.py
+
+      - name: commit if changed
+        run: |
+          if git diff --quiet caddy/sites/; then
+            echo "no shortcut changes"
+            exit 0
+          fi
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add caddy/sites/
+          git commit -m "caddy: regenerate tailnet shortcut snippets, refs #129"
+          git push

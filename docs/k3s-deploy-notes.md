@@ -58,6 +58,18 @@ material that §8 and §9 cite.
   `Z06714552N3MO04UBWF33`.
 - **Service A records** (all point at `99.110.50.213`):
   `api`, `eco-mcp`, `eco-jobs-tracker`, `eco`, `galaxy-gen`.
+- **Host-side Caddy** runs natively on kai-server. Two roles, both
+  tailnet-internal, neither affecting the public Traefik path:
+  - `:8082` serves `/var/lib/coily/dashboard.html` (the audit dashboard
+    regenerated every 5 min by `coily-audit-dashboard.timer`).
+  - `http://kai-server { import sites/*.caddy }` aggregates tailnet
+    shortcuts to cluster services. Each shortcut is a `handle_path`
+    block generated from a sibling repo's `config.yml`
+    `tailnet.shortcut` field. Generator:
+    `scripts/generate-caddy-shortcuts.py`. Workflow:
+    `.github/workflows/caddy-shortcuts.yml` (daily cron + dispatch).
+    Reload on kai-server is manual today: `git pull` then
+    `sudo caddy reload --config /etc/caddy/Caddyfile`.
 
 ## 2. SSM parameter inventory
 

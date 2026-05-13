@@ -1,0 +1,4 @@
+# Generated snippets land here from scripts/generate-caddy-shortcuts.py.
+# This .gitkeep is intentional: an empty dir would otherwise not survive
+# git, but the dir must exist before Caddy boots so the `import sites/*`
+# directive does not error on a missing glob.
