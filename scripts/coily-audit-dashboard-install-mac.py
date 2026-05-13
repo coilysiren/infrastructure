@@ -79,7 +79,7 @@ def install() -> int:
             return rc
 
     print(f"[coily-audit-dashboard-install-mac] output: {OUT_DIR}/dashboard.html")
-    print(f"[coily-audit-dashboard-install-mac] dashboard URL: http://localhost:8082/dashboard.html")
+    print("[coily-audit-dashboard-install-mac] dashboard URL: http://localhost:8082/dashboard.html")
     print(f"[coily-audit-dashboard-install-mac] regen logs: {LOG_DIR}/coily-audit-dashboard.log")
     print(f"[coily-audit-dashboard-install-mac] server logs: {LOG_DIR}/coily-dashboard-server.log")
     return 0
