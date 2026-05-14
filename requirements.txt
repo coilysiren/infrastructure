@@ -1,4 +1,4 @@
 boto3
 requests
-pylint
+pylint==3.3.9
 jinja2
