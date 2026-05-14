@@ -10,7 +10,11 @@ Type=simple
 Restart=on-failure
 RestartSec=10
 User=kai
-WorkingDirectory=/home/kai
+# projects/coilysiren is the parent of git repos, not a repo itself, so
+# `--spawn worktree` cannot apply. All three hosts (kai-server, WSL,
+# Windows-native) now operate on the projects/coilysiren parent dir
+# with --spawn same-dir for consistency.
+WorkingDirectory=/home/kai/projects/coilysiren
 # `claude` is the npm-installed CLI under nvm. Source nvm.sh to pick up
 # whichever node version nvm has set as default for kai, then exec so
 # systemd tracks the claude process directly (no bash wrapper holding
@@ -18,7 +22,7 @@ WorkingDirectory=/home/kai
 # active claude.ai subscription.
 Environment=HOME=/home/kai
 Environment=NVM_DIR=/home/kai/.nvm
-ExecStart=/bin/bash -c 'source $NVM_DIR/nvm.sh && exec claude remote-control --spawn worktree --name kai-server'
+ExecStart=/bin/bash -c 'source $NVM_DIR/nvm.sh && exec claude remote-control --spawn same-dir --name kai-server'
 ExecStop=/bin/kill -TERM $MAINPID
 
 [Install]

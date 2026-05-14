@@ -4,16 +4,13 @@ The three hosts that drive claude.ai/code's Remote Control dropdown:
 
 | Host                       | OS / runtime | Workdir                            | `--name`                    | Installer |
 |----------------------------|--------------|------------------------------------|-----------------------------|-----------|
-| kai-server                 | Linux (systemd) | `/home/kai`                     | `kai-server`                | [`scripts/claude-remote-control-install.sh`](../scripts/claude-remote-control-install.sh) |
+| kai-server                 | Linux (systemd) | `/home/kai/projects/coilysiren` | `kai-server`                | [`scripts/claude-remote-control-install.sh`](../scripts/claude-remote-control-install.sh) |
 | kai-desktop-tower (WSL)    | Linux (systemd inside WSL2) | `/mnt/x/projects-x/coilysiren` | `kai-desktop-tower-wsl`    | [`scripts/claude-remote-control-install-wsl.sh`](../scripts/claude-remote-control-install-wsl.sh) |
 | kai-desktop-tower (native) | Windows (Scheduled Task) | `X:\projects-x\coilysiren`       | `kai-desktop-tower-native` | [`scripts/claude-remote-control-install-windows.ps1`](../scripts/claude-remote-control-install-windows.ps1) |
 
 All three pass `--name` explicitly. None derive it from `hostname` — inside WSL `hostname` returns the Windows host name, which is what produced the duplicate-entry bug in the dropdown.
 
-Spawn mode:
-
-- kai-server: `--spawn worktree` (current; workdir is `/home/kai`).
-- WSL / Windows-native: `--spawn same-dir`. The workdir on both desktop hosts is `projects-x/coilysiren`, which is the **parent** of git repos, not a repo. `--spawn worktree` cannot apply there.
+Spawn mode: `--spawn same-dir` on all three. The workdir on every host is `projects/coilysiren` (or `projects-x/coilysiren` on the desktop hosts), which is the **parent** of git repos, not a repo. `--spawn worktree` cannot apply there.
 
 ## First-time install per host
 
