@@ -1,4 +1,0 @@
-boto3
-requests
-pylint==3.3.9
-jinja2
