@@ -1,0 +1,26 @@
+[Unit]
+Description=Claude Code remote-control daemon (kai-desktop-tower WSL)
+After=syslog.target network.target nss-lookup.target network-online.target
+Wants=network-online.target
+StartLimitBurst=5
+StartLimitIntervalSec=60
+
+[Service]
+Type=simple
+Restart=on-failure
+RestartSec=10
+User=kai
+# /mnt/x is a DrvFs mount of the Windows X: drive; the same physical
+# tree is also driven by the Windows-native Claude under
+# X:\projects-x\coilysiren. Two distinct `--name`s keep the
+# remote-control dropdown unambiguous.
+WorkingDirectory=/mnt/x/projects-x/coilysiren
+Environment=HOME=/home/kai
+Environment=NVM_DIR=/home/kai/.nvm
+# `--spawn same-dir` because projects/coilysiren is the parent of git
+# repos, not a repo itself; worktree spawn cannot apply here.
+ExecStart=/bin/bash -c 'source $NVM_DIR/nvm.sh && exec claude remote-control --spawn same-dir --name kai-desktop-tower-wsl'
+ExecStop=/bin/kill -TERM $MAINPID
+
+[Install]
+WantedBy=multi-user.target
