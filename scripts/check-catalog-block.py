@@ -53,7 +53,7 @@ def main() -> int:
         fail(f"{path} not found. Every coilysiren/* repo needs a coily.yaml.")
 
     try:
-        data = yaml.safe_load(path.read_text())
+        data = yaml.safe_load(path.read_text(encoding="utf-8"))
     except yaml.YAMLError as exc:
         fail(f"{path} is not valid YAML: {exc}")
     if not isinstance(data, dict):
