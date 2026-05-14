@@ -42,20 +42,30 @@ if (-not (Test-Path -LiteralPath $WorkDir)) {
 
 # --- locate claude ----------------------------------------------------
 # Get-Command at install time, bake the resolved path into the Scheduled
-# Task action. No hardcoded paths.
+# Task action. No hardcoded paths. Prefer .cmd over .ps1: Task Scheduler
+# can launch a .cmd directly, but a .ps1 has to be wrapped in
+# powershell.exe -File.
 $claudeCmd = Get-Command claude -ErrorAction SilentlyContinue
 if (-not $claudeCmd) {
   Fail "claude not found on PATH for user $env:USERNAME. Install the npm package and re-run (do NOT hardcode a path)."
 }
 $claudeExe = $claudeCmd.Source
+if ($claudeExe -like '*.ps1') {
+  $siblingCmd = [System.IO.Path]::ChangeExtension($claudeExe, 'cmd')
+  if (Test-Path -LiteralPath $siblingCmd) {
+    $claudeExe = $siblingCmd
+  } else {
+    Fail "Resolved claude as $claudeExe but no sibling .cmd found. Task Scheduler cannot launch a .ps1 directly."
+  }
+}
 Write-Host "==> resolved claude: $claudeExe"
 
 # --- verify remote-control subcommand exists --------------------------
-# Per the cleanup spec: surface this as a blocker if the Windows-native
-# build of `claude` doesn't ship `remote-control` yet.
-$helpText = & $claudeExe --help 2>&1 | Out-String
-if ($helpText -notmatch '(?m)^\s*remote-control\b') {
-  Fail "`$claudeExe --help` does not list a 'remote-control' subcommand. The Windows-native Claude build is too old; upgrade before re-running."
+# Run the subcommand's own --help and check exit code; help-text parsing
+# of `claude --help` is brittle across platforms.
+$null = & $claudeExe remote-control --help 2>&1
+if ($LASTEXITCODE -ne 0) {
+  Fail "``$claudeExe remote-control --help`` exited with $LASTEXITCODE. The Windows-native Claude build does not support remote-control; upgrade before re-running."
 }
 Write-Host '==> claude remote-control subcommand present'
 
@@ -106,8 +116,9 @@ Write-Host "==> patched $claudeJson"
 
 # --- register main Scheduled Task (run at logon) ----------------------
 # Run as the interactive user, not SYSTEM, so the user-scoped claude
-# config and PATH apply.
-$argLine = "remote-control --spawn same-dir --name $Name --working-directory `"$WorkDir`""
+# config and PATH apply. The task's own -WorkingDirectory handles cwd;
+# `claude remote-control` does not accept a --working-directory flag.
+$argLine = "remote-control --spawn same-dir --name $Name"
 $action = New-ScheduledTaskAction -Execute $claudeExe -Argument $argLine -WorkingDirectory $WorkDir
 $trigger = New-ScheduledTaskTrigger -AtLogOn -User "$env:USERDOMAIN\$env:USERNAME"
 $settings = New-ScheduledTaskSettingsSet `
