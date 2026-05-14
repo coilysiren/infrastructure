@@ -1,0 +1,24 @@
+[Unit]
+Description=personal-dashboard (kai-server tailnet-only)
+Documentation=https://github.com/coilysiren/personal-dashboard
+After=syslog.target network.target nss-lookup.target network-online.target tailscaled.service
+Wants=network-online.target tailscaled.service
+StartLimitBurst=5
+StartLimitIntervalSec=60
+
+[Service]
+Type=simple
+Restart=on-failure
+RestartSec=10
+User=kai
+WorkingDirectory=/home/kai
+# Daemon binds 127.0.0.1:31337 by default. `tailscale serve` fronts it onto
+# the tailnet; no public bind, no laptop-localhost bind. Secrets and source
+# paths come from EnvironmentFile (optional; service still starts without
+# it, just with empty integrations).
+EnvironmentFile=-/etc/personal-dashboard.env
+ExecStart=/home/linuxbrew/.linuxbrew/bin/personal-dashboard --addr=127.0.0.1:31337
+ExecStop=/bin/kill -TERM $MAINPID
+
+[Install]
+WantedBy=multi-user.target

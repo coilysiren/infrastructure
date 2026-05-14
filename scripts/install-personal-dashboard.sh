@@ -1,0 +1,50 @@
+#!/usr/bin/env bash
+# install-personal-dashboard.sh - install personal-dashboard from the
+# coilysiren tap and wire it up as a systemd service on kai-server.
+#
+# Idempotent: re-run to upgrade.
+#
+# Run as: bash /home/kai/projects/coilysiren/infrastructure/scripts/install-personal-dashboard.sh
+# (sudo is invoked per-step, no need to run the whole script as root.)
+
+set -euo pipefail
+
+INFRA_SRC="${INFRA_SRC:-/home/kai/projects/coilysiren/infrastructure}"
+UNIT_DST="/etc/systemd/system/personal-dashboard.service"
+
+# Non-interactive shells skip ~/.bashrc, so brew is not on PATH by
+# default. Source shellenv explicitly.
+if [ -x /home/linuxbrew/.linuxbrew/bin/brew ]; then
+  eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
+else
+  echo "Linuxbrew not found at /home/linuxbrew/.linuxbrew/bin/brew" >&2
+  echo "run scripts/coily-install.sh first to bootstrap brew" >&2
+  exit 1
+fi
+
+echo ">>> brew tap + install/upgrade personal-dashboard"
+brew tap coilysiren/tap
+brew install coilysiren/tap/personal-dashboard || brew upgrade coilysiren/tap/personal-dashboard
+
+echo ">>> installing unit -> $UNIT_DST"
+sudo install -m 0644 "$INFRA_SRC/systemd/personal-dashboard.service" "$UNIT_DST"
+
+echo ">>> reloading systemd"
+sudo systemctl daemon-reload
+
+echo ">>> enabling + (re)starting personal-dashboard.service"
+sudo systemctl enable personal-dashboard.service
+sudo systemctl restart personal-dashboard.service
+
+sleep 2
+sudo systemctl --no-pager --full status personal-dashboard.service || true
+
+echo
+echo "next: expose over tailscale (run as kai, once):"
+echo "  sudo tailscale serve --bg --https=8443 http://127.0.0.1:31337"
+echo "verify with:"
+echo "  tailscale serve status"
+echo "  curl -sfI https://kai-server.<tailnet>.ts.net:8443/"
+echo
+echo "secrets (optional): populate /etc/personal-dashboard.env from"
+echo "coilyco-ai/SSM.md, then 'sudo systemctl restart personal-dashboard'."
