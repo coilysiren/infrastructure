@@ -11,6 +11,8 @@ set -euo pipefail
 
 INFRA_SRC="${INFRA_SRC:-/home/kai/projects/coilysiren/infrastructure}"
 UNIT_DST="/etc/systemd/system/personal-dashboard.service"
+UPDATE_UNIT_DST="/etc/systemd/system/personal-dashboard-update.service"
+UPDATE_TIMER_DST="/etc/systemd/system/personal-dashboard-update.timer"
 
 # Non-interactive shells skip ~/.bashrc, so brew is not on PATH by
 # default. Source shellenv explicitly.
@@ -29,12 +31,20 @@ brew install coilysiren/tap/personal-dashboard || brew upgrade coilysiren/tap/pe
 echo ">>> installing unit -> $UNIT_DST"
 sudo install -m 0644 "$INFRA_SRC/systemd/personal-dashboard.service" "$UNIT_DST"
 
+echo ">>> installing auto-update unit + timer"
+sudo install -m 0644 "$INFRA_SRC/systemd/personal-dashboard-update.service" "$UPDATE_UNIT_DST"
+sudo install -m 0644 "$INFRA_SRC/systemd/personal-dashboard-update.timer" "$UPDATE_TIMER_DST"
+
 echo ">>> reloading systemd"
 sudo systemctl daemon-reload
 
 echo ">>> enabling + (re)starting personal-dashboard.service"
 sudo systemctl enable personal-dashboard.service
 sudo systemctl restart personal-dashboard.service
+
+echo ">>> enabling + starting personal-dashboard-update.timer"
+sudo systemctl enable personal-dashboard-update.timer
+sudo systemctl start personal-dashboard-update.timer
 
 sleep 2
 sudo systemctl --no-pager --full status personal-dashboard.service || true
