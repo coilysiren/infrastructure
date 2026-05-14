@@ -22,7 +22,12 @@ WorkingDirectory=/home/kai/projects/coilysiren
 # active claude.ai subscription.
 Environment=HOME=/home/kai
 Environment=NVM_DIR=/home/kai/.nvm
-ExecStart=/bin/bash -c 'source $NVM_DIR/nvm.sh && exec claude remote-control --spawn same-dir --name kai-server'
+# `--name` labels the pre-created session inside the daemon.
+# `--remote-control-session-name-prefix` drives the bottom line of the
+# claude.ai/code Remote Control dropdown row (default is `hostname`,
+# which happens to be `kai-server` here but we set it explicitly so the
+# dropdown stays correct if the host is ever renamed).
+ExecStart=/bin/bash -c 'source $NVM_DIR/nvm.sh && exec claude remote-control --spawn same-dir --name kai-server --remote-control-session-name-prefix kai-server'
 ExecStop=/bin/kill -TERM $MAINPID
 
 [Install]

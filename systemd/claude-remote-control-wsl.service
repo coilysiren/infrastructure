@@ -23,7 +23,10 @@ Environment=HOME=/home/kai
 Environment=PATH=/home/kai/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 # `--spawn same-dir` because projects/coilysiren is the parent of git
 # repos, not a repo itself; worktree spawn cannot apply here.
-ExecStart=/home/kai/.local/bin/claude remote-control --spawn same-dir --name kai-desktop-tower-wsl
+# `--remote-control-session-name-prefix` overrides the default
+# (`hostname`), which inside WSL returns the Windows host's name and
+# collides with the Windows-native daemon in the dropdown.
+ExecStart=/home/kai/.local/bin/claude remote-control --spawn same-dir --name kai-desktop-tower-wsl --remote-control-session-name-prefix kai-desktop-tower-wsl
 ExecStop=/bin/kill -TERM $MAINPID
 
 [Install]

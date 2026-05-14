@@ -118,7 +118,10 @@ Write-Host "==> patched $claudeJson"
 # Run as the interactive user, not SYSTEM, so the user-scoped claude
 # config and PATH apply. The task's own -WorkingDirectory handles cwd;
 # `claude remote-control` does not accept a --working-directory flag.
-$argLine = "remote-control --spawn same-dir --name $Name"
+# --name labels the pre-created session; --remote-control-session-name-prefix
+# drives the bottom line of the dropdown row (default `hostname` would
+# collide with WSL inside this same tower).
+$argLine = "remote-control --spawn same-dir --name $Name --remote-control-session-name-prefix $Name"
 $action = New-ScheduledTaskAction -Execute $claudeExe -Argument $argLine -WorkingDirectory $WorkDir
 $trigger = New-ScheduledTaskTrigger -AtLogOn -User "$env:USERDOMAIN\$env:USERNAME"
 $settings = New-ScheduledTaskSettingsSet `
