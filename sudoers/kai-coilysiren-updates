@@ -28,4 +28,6 @@
 kai ALL=(root) NOPASSWD: /bin/systemctl start coily-update.service
 kai ALL=(root) NOPASSWD: /bin/systemctl start repo-recall-update.service
 kai ALL=(root) NOPASSWD: /bin/systemctl try-restart repo-recall.service
+kai ALL=(root) NOPASSWD: /bin/systemctl start personal-dashboard-update.service
+kai ALL=(root) NOPASSWD: /bin/systemctl try-restart personal-dashboard.service
 kai ALL=(root) NOPASSWD: /bin/systemctl start claude-remote-control-restart.service
