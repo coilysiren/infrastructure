@@ -1,0 +1,14 @@
+[Unit]
+Description=Daily tick for coilysiren-pull-all.service
+Requires=coilysiren-pull-all.service
+
+[Timer]
+# 02:45 local time daily. Runs before the *-update timers (coily 03:00,
+# repo-recall 03:15, personal-dashboard 03:30) so kai-server has fresh
+# checkouts in time for anything that reads them directly.
+OnCalendar=*-*-* 02:45:00
+RandomizedDelaySec=600
+Persistent=true
+
+[Install]
+WantedBy=timers.target
