@@ -37,13 +37,48 @@ jobs:
           python3 scripts/generate-caddy-shortcuts.py
 
       - name: commit if changed
+        # Uses GraphQL createCommitOnBranch so the commit is auto-signed by
+        # GitHub's web-flow key. Required because the repo ruleset enforces
+        # verified-signed commits. See #144.
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          BRANCH: ${{ github.ref_name }}
+          HEAD_SHA: ${{ github.sha }}
         run: |
+          set -euo pipefail
           if git diff --quiet caddy/sites/; then
             echo "no shortcut changes"
             exit 0
           fi
-          git config user.name  "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add caddy/sites/
-          git commit -m "caddy: regenerate tailnet shortcut snippets, refs #129"
-          git push
+
+          additions_json=$(
+            git diff --name-only --diff-filter=ACMR -- caddy/sites/ \
+              | while IFS= read -r p; do
+                  jq -n --arg path "$p" --arg b64 "$(base64 < "$p" | tr -d '\n')" \
+                    '{path: $path, contents: $b64}'
+                done \
+              | jq -cs '.'
+          )
+          deletions_json=$(
+            git diff --name-only --diff-filter=D -- caddy/sites/ \
+              | jq -R '{path: .}' \
+              | jq -cs '.'
+          )
+
+          jq -n \
+            --arg repo "$REPO" \
+            --arg branch "$BRANCH" \
+            --arg head "$HEAD_SHA" \
+            --argjson additions "$additions_json" \
+            --argjson deletions "$deletions_json" \
+            '{
+              branch: {repositoryNameWithOwner: $repo, branchName: $branch},
+              message: {headline: "caddy: regenerate tailnet shortcut snippets, refs #129"},
+              expectedHeadOid: $head,
+              fileChanges: {additions: $additions, deletions: $deletions}
+            }' > "$RUNNER_TEMP/commit-input.json"
+
+          gh api graphql \
+            -f query='mutation($input: CreateCommitOnBranchInput!) { createCommitOnBranch(input: $input) { commit { url oid } } }' \
+            -F "input=@$RUNNER_TEMP/commit-input.json"
