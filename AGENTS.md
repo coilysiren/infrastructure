@@ -41,6 +41,8 @@ Per the workspace "Default to proactive scheduling" rule: after pushing to `main
 
 Codex won't review draft PRs and won't auto-review when one leaves draft. The [`undraft-and-poke-codex`](.github/workflows/undraft-and-poke-codex.yml) workflow handles both: on `pull_request: opened` it marks any draft ready for review and posts an `@codex review` comment. You can still create PRs as draft - the bot will flip them.
 
+Bot-authored PRs (anything where `pull_request.user.type == 'Bot'`) also get squash auto-merge enabled by the same workflow, so they ship as soon as required checks pass. Human PRs are not auto-merged. The repo setting "Allow auto-merge" must stay enabled for this to work.
+
 ## Commands
 
 Route every dev command through coily, which reads [`.coily/coily.yaml`](.coily/coily.yaml). The lockdown denies bare invocations of the underlying tools (`kubectl`, `make`, etc.). Add new verbs to that file before invoking them.
