@@ -31,6 +31,8 @@ cd ~/infrastructure   # or wherever this repo is checked out
 
 Prereqs: `claude login` already run once as `kai` inside WSL; `/mnt/x/projects-x/coilysiren` reachable.
 
+First run also drops a `[network] hostname=kai-desktop-tower-wsl` block into `/etc/wsl.conf`. WSL otherwise inherits the Windows host's `COMPUTERNAME` from `gethostname(2)`, which collides with the Windows-native daemon in the dropdown (the bottom-line label is keyed off `gethostname`, not the session-name-prefix). After the installer writes the file, run `wsl --shutdown` once from Windows so `/init` re-reads it on next boot.
+
 ### kai-desktop-tower, Windows native
 
 In a non-elevated PowerShell as `firem`:
