@@ -16,10 +16,14 @@ User=kai
 # remote-control dropdown unambiguous.
 WorkingDirectory=/mnt/x/projects-x/coilysiren
 Environment=HOME=/home/kai
-Environment=NVM_DIR=/home/kai/.nvm
+# WSL host uses the Claude native installer (no nvm, no Node wrapper):
+# stable shim at ~/.local/bin/claude points at the versioned binary
+# under ~/.local/share/claude/versions/. Call the shim directly so
+# systemd tracks the claude process without a bash wrapper.
+Environment=PATH=/home/kai/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 # `--spawn same-dir` because projects/coilysiren is the parent of git
 # repos, not a repo itself; worktree spawn cannot apply here.
-ExecStart=/bin/bash -c 'source $NVM_DIR/nvm.sh && exec claude remote-control --spawn same-dir --name kai-desktop-tower-wsl'
+ExecStart=/home/kai/.local/bin/claude remote-control --spawn same-dir --name kai-desktop-tower-wsl
 ExecStop=/bin/kill -TERM $MAINPID
 
 [Install]
