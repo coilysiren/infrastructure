@@ -39,7 +39,7 @@ See `docs/` for:
 
 ## Commands
 
-Dev commands are declared in [`.coily/coily.yaml`](.coily/coily.yaml). Run them as `coily exec <verb>`.
+Dev commands are declared in [`.coily/coily.yaml`](.coily/coily.yaml). Run them as `coily exec <verb>`. Add new verbs there before invoking them — bare tool calls are denied by the lockdown.
 
 ## See also
 
