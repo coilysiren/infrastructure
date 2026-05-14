@@ -2,13 +2,13 @@
 
 The three hosts that drive claude.ai/code's Remote Control dropdown:
 
-| Host                       | OS / runtime | Workdir                            | `--name`                    | Installer |
-|----------------------------|--------------|------------------------------------|-----------------------------|-----------|
-| kai-server                 | Linux (systemd) | `/home/kai/projects/coilysiren` | `kai-server`                | [`scripts/claude-remote-control-install.sh`](../scripts/claude-remote-control-install.sh) |
-| kai-desktop-tower (WSL)    | Linux (systemd inside WSL2) | `/mnt/x/projects-x/coilysiren` | `kai-desktop-tower-wsl`    | [`scripts/claude-remote-control-install-wsl.sh`](../scripts/claude-remote-control-install-wsl.sh) |
-| kai-desktop-tower (native) | Windows (Scheduled Task) | `X:\projects-x\coilysiren`       | `kai-desktop-tower-native` | [`scripts/claude-remote-control-install-windows.ps1`](../scripts/claude-remote-control-install-windows.ps1) |
+| Host                       | OS / runtime | Workdir                            | `--name` / session-name-prefix | Installer |
+|----------------------------|--------------|------------------------------------|--------------------------------|-----------|
+| kai-server                 | Linux (systemd) | `/home/kai/projects/coilysiren` | `kai-server`                  | [`scripts/claude-remote-control-install.sh`](../scripts/claude-remote-control-install.sh) |
+| kai-desktop-tower (WSL)    | Linux (systemd inside WSL2) | `/mnt/x/projects-x/coilysiren` | `kai-desktop-tower-wsl`      | [`scripts/claude-remote-control-install-wsl.sh`](../scripts/claude-remote-control-install-wsl.sh) |
+| kai-desktop-tower (native) | Windows (Scheduled Task) | `X:\projects-x\coilysiren`       | `kai-desktop-tower-native`   | [`scripts/claude-remote-control-install-windows.ps1`](../scripts/claude-remote-control-install-windows.ps1) |
 
-All three pass `--name` explicitly. None derive it from `hostname` — inside WSL `hostname` returns the Windows host name, which is what produced the duplicate-entry bug in the dropdown.
+All three pass both `--name` and `--remote-control-session-name-prefix` set to the same value. The dropdown row in claude.ai/code is keyed off the **prefix** (default: `hostname`), not `--name`; `--name` labels the pre-created session inside the daemon. Passing both keeps every surface labelled. Setting the prefix explicitly is what prevents the WSL/Windows-native collision: inside WSL `hostname` returns the Windows host name, so the unscoped default produced two indistinguishable dropdown rows.
 
 Spawn mode: `--spawn same-dir` on all three. The workdir on every host is `projects/coilysiren` (or `projects-x/coilysiren` on the desktop hosts), which is the **parent** of git repos, not a repo. `--spawn worktree` cannot apply there.
 
@@ -86,10 +86,10 @@ systemctl --user daemon-reload
 
 ## Where the canonical names live
 
-Hard-coded, no env-var fallback to `hostname`:
+Hard-coded, no env-var fallback to `hostname`. Each installer passes both `--name` and `--remote-control-session-name-prefix` set to the same value:
 
-- `systemd/claude-remote-control.service` -> `--name kai-server`
-- `systemd/claude-remote-control-wsl.service` -> `--name kai-desktop-tower-wsl`
+- `systemd/claude-remote-control.service` -> `kai-server`
+- `systemd/claude-remote-control-wsl.service` -> `kai-desktop-tower-wsl`
 - `scripts/claude-remote-control-install-windows.ps1` -> default `-Name kai-desktop-tower-native`
 
 If you ever add a fourth host, give it a distinct `--name` and add a row to the table above before shipping the installer.
