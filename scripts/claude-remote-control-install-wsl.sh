@@ -29,6 +29,33 @@ if [[ ! -d "${WORKDIR}" ]]; then
   exit 1
 fi
 
+# Without this WSL inherits the Windows host's COMPUTERNAME, which
+# collides with the Windows-native daemon in the claude.ai/code Remote
+# Control dropdown (both report the same gethostname(2)). /etc/wsl.conf
+# is read by /init at distro boot, so the change takes effect after the
+# next `wsl --shutdown` on Windows. Bail-don't-overwrite if a different
+# hostname is already configured.
+WSL_HOSTNAME="kai-desktop-tower-wsl"
+echo "==> ensure /etc/wsl.conf sets hostname=${WSL_HOSTNAME}"
+if [[ -f /etc/wsl.conf ]] && grep -Eq '^\s*hostname\s*=' /etc/wsl.conf; then
+  current="$(awk -F= '/^[[:space:]]*hostname[[:space:]]*=/ {gsub(/[[:space:]]/,"",$2); print $2; exit}' /etc/wsl.conf)"
+  if [[ "${current}" != "${WSL_HOSTNAME}" ]]; then
+    echo "ERROR: /etc/wsl.conf already has hostname=${current}; refusing to overwrite. Resolve by hand." >&2
+    exit 1
+  fi
+  echo "    (already set to ${WSL_HOSTNAME})"
+else
+  # Append [network] block; preserves any unrelated sections already present.
+  sudo tee -a /etc/wsl.conf >/dev/null <<EOF
+
+[network]
+hostname=${WSL_HOSTNAME}
+generateHosts=true
+EOF
+  echo "    wrote [network] hostname=${WSL_HOSTNAME} to /etc/wsl.conf"
+  echo "    NOTE: run \`wsl --shutdown\` from Windows once to apply; the daemon will read the new hostname on next start."
+fi
+
 echo "==> install unit files"
 # The WSL service file in the repo is named *-wsl.service so the
 # kai-server and WSL units can coexist in version control; on disk the
