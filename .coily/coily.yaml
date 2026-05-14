@@ -35,3 +35,17 @@ commands:
   llama-deploy-secrets:
     run: make llama-deploy-secrets
     description: Bootstrap the llama ghcr.io docker-registry secret from SSM /github/pat.
+
+# Catalog metadata for the cross-repo knowledge graph.
+# Schema: coilysiren/coilyco-ai#420 (tracker).
+catalog:
+  kind: Component
+  type: configuration
+  system: ops
+  owner: kai
+  lifecycle: production
+  description: "k3s cluster, systemd units, and invoke tasks that run kai-server, the host behind personal apps and sites."
+  dependsOn: []
+  providesApis:
+    - k3s-cluster
+    - systemd-units
