@@ -15,7 +15,7 @@ ORG="coilysiren"
 REPOS=(
   backend
   coily
-  coilyco-ai
+  agentic-os-kai
   coilysiren
   eco-configs
   eco-cycle-prep

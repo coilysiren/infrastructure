@@ -57,4 +57,4 @@ echo "  tailscale serve status"
 echo "  curl -sfI https://kai-server.<tailnet>.ts.net:8443/"
 echo
 echo "secrets (optional): populate /etc/personal-dashboard.env from"
-echo "coilyco-ai/SSM.md, then 'sudo systemctl restart personal-dashboard'."
+echo "agentic-os-kai/SSM.md, then 'sudo systemctl restart personal-dashboard'."

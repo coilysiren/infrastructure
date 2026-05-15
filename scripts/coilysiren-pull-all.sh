@@ -8,7 +8,7 @@
 #
 # Why: several long-lived services on kai-server read local checkouts
 # directly:
-#   - personal-dashboard.service reads coilyco-ai/data/catalog-graph.yaml
+#   - personal-dashboard.service reads agentic-os-kai/data/catalog-graph.yaml
 #   - coily ssh deploy <target> calls scripts under infrastructure
 #   - eco-mods rsync deploys read from eco-mods / eco-mods-public
 # Stale checkouts silently feed stale data to running services.

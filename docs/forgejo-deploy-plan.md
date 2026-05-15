@@ -31,7 +31,7 @@ This keeps Route 53 + cert-manager DNS-01 + public ingress off the table until f
 
 ## SSM secrets to mint (4, not 5)
 
-Four `coily aws ssm put-parameter --type SecureString` calls, all under `/forgejo/*`. Generate with `openssl rand` and pipe via `--value file:///dev/stdin` so the secret never lands in argv. Update `coilyco-ai/SSM.md` (not `infrastructure/SSM.md` - that file does not exist; SSM inventory lives in coilyco-ai) in the same logical change set, adding one bullet under the `/forgejo/*` prefix listing the four keys.
+Four `coily aws ssm put-parameter --type SecureString` calls, all under `/forgejo/*`. Generate with `openssl rand` and pipe via `--value file:///dev/stdin` so the secret never lands in argv. Update `agentic-os-kai/SSM.md` (not `infrastructure/SSM.md` - that file does not exist; SSM inventory lives in agentic-os-kai) in the same logical change set, adding one bullet under the `/forgejo/*` prefix listing the four keys.
 
 | SSM path | Length / format | Forgejo env binding |
 |---|---|---|
@@ -121,7 +121,7 @@ Tailscale on this Mac is up (verified 2026-05-05).
 ## Apply order - phase 1 (tailnet-only)
 
 1. Mint the 4 SSM params via the stdin pipe pattern. Verify with `coily aws ssm describe-parameters --filters Key=Name,Values=/forgejo/`.
-2. Update `coilyco-ai/SSM.md` with a `/forgejo/*` bullet listing the four keys. Commit + push (coilyco-ai repo).
+2. Update `agentic-os-kai/SSM.md` with a `/forgejo/*` bullet listing the four keys. Commit + push (agentic-os-kai repo).
 3. Write `infrastructure/deploy/forgejo.yml` per shape above, **omitting the Ingress (item 9)**. Commit + push (infrastructure repo).
 4. SSH to kai-server. `cd` into the infrastructure clone there, `git pull`, then:
 

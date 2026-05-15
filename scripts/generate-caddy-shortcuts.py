@@ -5,7 +5,7 @@ declarations.
 
 Walks every coilysiren/* repo via `gh repo list`, fetches each default
 branch's coily.yaml (falling back to config.yml during the
-coilyco-ai#439 rename), and writes one Caddy site snippet per
+agentic-os-kai#439 rename), and writes one Caddy site snippet per
 declared shortcut. Stale files (snippets whose owning repo no longer
 declares a shortcut, or was removed) are deleted.
 
@@ -97,7 +97,7 @@ def fetch_config(owner: str, repo: str) -> dict | None:
     """Fetch coily.yaml (or legacy config.yml) from a repo's default branch
     and parse it via yq. Returns None if neither file is present.
 
-    Transition: coilysiren/coilyco-ai#439 renames per-repo deploy configs from
+    Transition: coilysiren/agentic-os-kai#439 renames per-repo deploy configs from
     `config.yml` to `coily.yaml`. Try the new name first, fall back to legacy.
     """
     raw: str | None = None

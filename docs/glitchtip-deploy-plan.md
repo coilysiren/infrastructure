@@ -35,7 +35,7 @@ This keeps Route 53 + cert-manager DNS-01 + public ingress off the table until G
 
 ## SSM secrets to mint (1 on phase 1, +1 after admin rotation)
 
-One `coily aws ssm put-parameter --type SecureString` call under `/glitchtip/*`. Generate with `openssl rand` and pipe via `--value file:///dev/stdin` so the secret never lands in argv. Update `coilyco-ai/SSM.md` in the same logical change set with a `/glitchtip/*` bullet.
+One `coily aws ssm put-parameter --type SecureString` call under `/glitchtip/*`. Generate with `openssl rand` and pipe via `--value file:///dev/stdin` so the secret never lands in argv. Update `agentic-os-kai/SSM.md` in the same logical change set with a `/glitchtip/*` bullet.
 
 | SSM path | Length / format | GlitchTip env binding |
 |---|---|---|
@@ -128,7 +128,7 @@ Document the helm install + upgrade commands for GlitchTip, alongside the existi
 
 2. Mint the SSM param via the stdin pipe pattern. Verify with `coily aws ssm describe-parameters --filters Key=Name,Values=/glitchtip/`.
 
-3. Update `coilyco-ai/SSM.md` with a `/glitchtip/*` bullet (one key for now, `secret-key`). Commit + push (coilyco-ai repo).
+3. Update `agentic-os-kai/SSM.md` with a `/glitchtip/*` bullet (one key for now, `secret-key`). Commit + push (agentic-os-kai repo).
 
 4. Write `infrastructure/deploy/observability/glitchtip-externalsecret.yml` and `glitchtip-values.yml`. Update `deploy/observability/README.md` with the install + upgrade commands. Commit + push (infrastructure repo).
 
@@ -273,7 +273,7 @@ The Route 53 record is safe to leave in place. Without the Ingress it just resol
 
 ## Followups (not blocking first deploy)
 
-- **GlitchTip MCP**. Enable `GLITCHTIP_ENABLE_MCP=true` once the instance has at least one project with events. Lands as a new MCP entry in `coilyco-ai/mcp-servers/` and a one-liner in `tooling-mcp-servers`.
+- **GlitchTip MCP**. Enable `GLITCHTIP_ENABLE_MCP=true` once the instance has at least one project with events. Lands as a new MCP entry in `agentic-os-kai/mcp-servers/` and a one-liner in `tooling-mcp-servers`.
 - **Webhook receiver for the agentic-bug-finder loop.** Owned by `eco-telemetry`, not infrastructure. File as a follow-up issue on that repo once GlitchTip is up.
 - **DSN swap across the 5 already-instrumented apps**: backend, eco-mcp-app, eco-spec-tracker, eco-telemetry, coily. One issue per app on each app's repo.
 - **Mailer**. Wire SMTP (SES creds via SSM) when password reset over email becomes worth having.

@@ -9,7 +9,7 @@
 # the config file via a here-doc, which is rendered as 0600 by the
 # leading umask.
 #
-# SSM keys (see coilyco-ai/SSM.md /factorio/* section):
+# SSM keys (see agentic-os-kai/SSM.md /factorio/* section):
 #   /factorio/fdr/discord-bot-token (SecureString)
 #   /factorio/fdr/channel-id        (String)
 #   /factorio/rcon-password         (SecureString) - shared with

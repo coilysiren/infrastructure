@@ -14,7 +14,7 @@
 # produces a working binary.
 #
 # Does not enable or start fdr-remake.service. SSM creds must land
-# first (see coilysiren/coilyco-ai SSM.md /factorio/* section). The
+# first (see coilysiren/agentic-os-kai SSM.md /factorio/* section). The
 # script prints the exact next commands to run.
 #
 # Run as: bash /home/kai/projects/coilysiren/infrastructure/scripts/install-fdr-remake.sh
