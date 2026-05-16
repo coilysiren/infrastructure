@@ -7,7 +7,7 @@ Last refreshed: 2026-05-13.
 ## Kubernetes and container orchestration
 
 - **K3s single-node cluster** - Lightweight Kubernetes runtime on `kai-server` (Ubuntu 22.04, 18-core, 32 GiB). Traefik LoadBalancer routes host :80/:443. Files: `systemd/k3s.service`, `scripts/k3s-start.sh`. K3s service ops live in coily core: `coily ssh systemctl <verb> k3s.service`.
-- **Tailscale operator integration** - Per-Service StatefulSet proxies, MagicDNS for tailnet peers, kubeconfig pinned to `100.69.164.66:6443`. OAuth via `tag:ci`. Reference: `docs/k3s-deploy-notes.md` §1.
+- **Tailscale operator integration** - Per-Service StatefulSet proxies, MagicDNS for tailnet peers, kubeconfig pinned to the `kai-server` MagicDNS name on port 6443. OAuth via `tag:ci`. Reference: `docs/k3s-deploy-notes.md` §1.
 - **cert-manager with DNS-01 (Route 53)** - ClusterIssuers (prod + staging) prove ownership via TXT records in zone `Z06714552N3MO04UBWF33`. Replaces retired HTTP-01 hairpin-NAT path. Files: `deploy/cert_manager.yml`, `docs/certificates.md`. Verb: `coily cert-manager`.
 - **Namespace layout** - `kube-system`, `cert-manager`, `external-secrets`, `tailscale`, `observability`, `llama`, `coilysiren-backend`, plus sibling-repo namespaces (`eco-mcp-app`, `eco-jobs-tracker`, `galaxy-gen`). Reference: `docs/architecture.md`.
 
@@ -40,7 +40,7 @@ Last refreshed: 2026-05-13.
 
 ## Network and access
 
-- **DNS and routing** - `coilysiren.me` Route 53 hosted zone. Service A records (`api`, `eco-mcp`, `eco-jobs-tracker`, `eco`, `galaxy-gen`) point to public `99.110.50.213`, NAT'd to `192.168.0.194`. Tailnet kubeconfig uses `100.69.164.66`.
+- **DNS and routing** - `coilysiren.me` Route 53 hosted zone. Service A records (`api`, `eco-mcp`, `eco-jobs-tracker`, `eco`, `galaxy-gen`) point to the WAN address, NAT'd to the LAN side of the homelab. Tailnet kubeconfig uses the `kai-server` MagicDNS name. Concrete addresses live in the vault, not here.
 - **Caddy reverse proxy (legacy)** - `caddy/Caddyfile` routes `api.coilysiren.me` to `localhost:4000`. Marked pre-traefik. Traefik Ingress is the canonical path now.
 
 ## Tooling and policy
