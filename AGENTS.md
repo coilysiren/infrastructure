@@ -2,7 +2,7 @@
 
 See `../AGENTS.md` for workspace-level conventions (git workflow, test/lint autonomy, readonly ops, writing voice, deploy knowledge). This file covers only what's specific to this repo.
 
-**Exception:** confirm before `git push`, before any AWS SSM / kubectl / cloud write, and never print decrypted SSM values. These ops are migrating to the `coily` CLI.
+**Exception:** confirm before `git push`, before kubectl writes, and before any cloud write that can clobber state (SSM `put-parameter --overwrite`, `delete-parameter`, S3 writes, IAM mutations, etc.). `coily ops aws ssm put-parameter` without `--overwrite` is pre-authorized - the call fails with `ParameterAlreadyExists` if the param exists, so it cannot silently clobber. Never print decrypted SSM values. These ops are migrating to the `coily` CLI.
 
 ---
 
