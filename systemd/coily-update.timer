@@ -3,8 +3,8 @@ Description=Daily tick for coily-update.service
 Requires=coily-update.service
 
 [Timer]
-# 03:00 local time daily. Staggered ahead of repo-recall-update.timer
-# (03:15) so the two don't fight over brew's update lock.
+# 03:00 local time daily. Staggered ahead of personal-dashboard-update
+# (03:30) so the two don't fight over brew's update lock.
 OnCalendar=*-*-* 03:00:00
 RandomizedDelaySec=600
 Persistent=true

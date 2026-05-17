@@ -1,120 +1,119 @@
-# repo-recall on kai-server (tailnet-only)
+# repo-recall on kai-server (k3s, tailnet-only)
 
-Sibling to [`k3s-deploy-notes.md`](k3s-deploy-notes.md). repo-recall does not
-go through k3s. It runs as a host systemd unit alongside the game-server
-units (eco/factorio/icarus/core-keeper) and is reachable only over the
-tailnet via `tailscale serve`. No public DNS, no traefik, no cert-manager.
+Sibling to [`k3s-deploy-notes.md`](k3s-deploy-notes.md) and
+[`forgejo-deploy-plan.md`](forgejo-deploy-plan.md). repo-recall runs in
+k3s as a two-container Pod fronted by the tailscale operator. No public
+DNS, no Ingress, no Route 53. MagicDNS hostname:
+`repo-recall.<tailnet>.ts.net`.
 
-## Why not k3s
+## Shape
 
-The tool walks `/home/kai/projects/coilysiren` and parses
-`/home/kai/.claude/projects/*.jsonl`. Putting it in k3s would mean a wide
-`hostPath` mount of `/home/kai`, plus piping `gh` auth into the pod. The
-cost/benefit's wrong for a single-user dev tool. Host systemd is the right
-shape.
+- **Manifest**: [`deploy/repo-recall.yml`](../deploy/repo-recall.yml).
+  One Deployment, one Pod, two containers (`api` + `web`), one Service
+  with `tailscale.com/expose: "true"` + `tailscale.com/hostname:
+  repo-recall`. Same pattern as forgejo.
+- **Images**: `ghcr.io/coilysiren/repo-recall-{api,web}:latest`.
+  Pushed by [`.github/workflows/docker.yml`](https://github.com/coilysiren/repo-recall/blob/main/.github/workflows/docker.yml)
+  in coilysiren/repo-recall on every push to `main` (and on tags).
+  Images are public, no `imagePullSecret`.
+- **Traffic**:
+  `tailnet peer → ts-proxy (repo-recall.<tailnet>.ts.net:443)
+   → Service:80 → web container :8080 → (path-matched) → api container :7777`.
+  Caddy in the `web` container reverse-proxies `/api/*`,
+  `/openapi.json`, `/mcp(/*)` to the API sidecar at `localhost:7777`.
+- **No PVC**: redb cache is wipe-on-restart by design (no migrations),
+  tantivy index is the same shape. `emptyDir` is sufficient.
+- **No secrets**: repo-recall has no DB, no app password, no DSN.
 
-## Pieces
+## Pre-reqs
 
-- **Binary**: `/home/linuxbrew/.linuxbrew/bin/repo-recall`. Installed
-  from the [`coilysiren/tap`](https://github.com/coilysiren/homebrew-tap)
-  Homebrew formula via Linuxbrew. No on-host cargo build.
-- **Unit**: [`systemd/repo-recall.service`](../systemd/repo-recall.service).
-  Runs as `kai`, sets `REPO_RECALL_HOST=0.0.0.0` (the env var added in
-  coilysiren/repo-recall#14), `REPO_RECALL_PORT=7777`,
-  `REPO_RECALL_CWD=/home/kai/projects/coilysiren`.
-- **Install script**:
-  [`scripts/install-repo-recall.sh`](../scripts/install-repo-recall.sh).
-  Idempotent. brew-installs the formula, installs the unit, reloads,
-  (re)starts.
-- **Auto-update**:
-  [`scripts/repo-recall-update-install.sh`](../scripts/repo-recall-update-install.sh)
-  wires a weekly `repo-recall-update.timer` that runs `brew upgrade` and
-  try-restarts the daemon. The same unit can be triggered on-demand
-  after a tap push via `sudo systemctl start repo-recall-update.service`.
-- **Tailnet exposure**: one-shot `tailscale serve` invocation, see below.
-- **Repo bootstrap**:
-  [`scripts/clone-coilysiren-repos.sh`](../scripts/clone-coilysiren-repos.sh)
-  populates `/home/kai/projects/coilysiren/`. Without this the dashboard
-  has nothing to show.
+1. **Tailscale operator** already running in the cluster (forgejo
+   proves it).
+2. **GHCR images published** by coilysiren/repo-recall's `docker.yml`
+   workflow. First push to `main` after the workflow lands creates
+   them; verify with
+   `coily ops gh api /users/coilysiren/packages/container/repo-recall-api/versions`.
+3. **Old systemd path retired** on kai-server before applying (see
+   below) so the `tailscale serve --https=443` registration is freed
+   and the brew-installed daemon stops fighting the new path for
+   port 7777 (only matters if a hostNetwork-style path is later
+   added; today the k3s Pod is on the CNI so no collision).
 
 ## First-time setup on kai-server
 
 ```sh
-# 1. Clone the active coilysiren repo set (run as kai)
-bash /home/kai/projects/coilysiren/infrastructure/scripts/clone-coilysiren-repos.sh
+# 1. Retire the host systemd path. Doing this first releases the
+#    tailscale serve registration on kai-server.<tailnet>.ts.net:443.
+sudo systemctl disable --now repo-recall.service \
+                              repo-recall-update.service \
+                              repo-recall-update.timer
+sudo rm -f /etc/systemd/system/repo-recall.service \
+           /etc/systemd/system/repo-recall-update.service \
+           /etc/systemd/system/repo-recall-update.timer
+sudo systemctl daemon-reload
+tailscale serve --https=443 off
+brew uninstall repo-recall   # optional - frees the binary
 
-# 2. brew-install the binary, drop the unit, start the service
-bash /home/kai/projects/coilysiren/infrastructure/scripts/install-repo-recall.sh
+# 2. Apply the k3s manifest.
+sudo k3s kubectl apply -f deploy/repo-recall.yml
 
-# 2b. Wire the weekly auto-update timer
-bash /home/kai/projects/coilysiren/infrastructure/scripts/repo-recall-update-install.sh
+# 3. Watch the ts-proxy come up.
+sudo k3s kubectl -n repo-recall get pods,svc -w
+sudo k3s kubectl -n tailscale get pods | grep repo-recall
 
-# 3. Expose over tailscale (run once, as kai). `serve` config persists in
-#    tailscaled state across reboots; no need to put this in a unit.
-tailscale serve --bg --https=443 http://127.0.0.1:7777
-
-# 4. Verify
-tailscale serve status
-curl -sf https://kai-server.<tailnet>.ts.net/api/scan-version
+# 4. Verify from a tailnet peer (laptop / phone).
+curl -sf https://repo-recall.<tailnet>.ts.net/healthz
+curl -sf https://repo-recall.<tailnet>.ts.net/api/scan-version
 ```
 
-The `kai-server.<tailnet>.ts.net` hostname comes from MagicDNS - check
-`tailscale status` for the exact name.
+The exact `<tailnet>` suffix comes from `tailscale status` on any node.
 
 ## Auth model
 
-Tailnet membership IS the auth. `tailscale serve` (not `funnel`) is
-tailnet-only by definition - the public internet cannot reach it. No
-app-level login. If the tailnet ever gains a device that shouldn't see
-session metadata, switch to header-based gating using the
-`Tailscale-User-Login` request header that the proxy injects.
+Tailnet membership IS the auth. The Service is `ClusterIP` and the
+`tailscale.com/expose` annotation tells the operator to stand up a
+ts-proxy reachable only from tailnet peers. No app-level login. If
+the tailnet ever gains a device that shouldn't see session metadata,
+gate on the `Tailscale-User-Login` header the proxy injects.
 
 ## Upgrades
 
-The weekly `repo-recall-update.timer` runs `brew upgrade` and
-try-restarts the daemon on Sundays at 04:30 local. To pick up a new tap
-version immediately after a release push without waiting for the timer:
+Images are tagged `latest` on every push to `main`. Roll a deploy with:
 
 ```sh
-sudo systemctl start repo-recall-update.service
-systemctl status repo-recall-update.service repo-recall.service
+sudo k3s kubectl -n repo-recall rollout restart deployment/repo-recall
+sudo k3s kubectl -n repo-recall rollout status  deployment/repo-recall
 ```
 
-The on-demand path is what the agent's `coilysiren/repo-recall` post-push
-auto-schedule reaches for.
+`imagePullPolicy: Always` ensures the rollout pulls the fresh
+`:latest` digest. There is no longer a brew-upgrade + try-restart loop.
 
-The `clone-coilysiren-repos.sh` bootstrap script can be re-run any time to
-fetch new commits across the whole repo set; it's independent of the
-binary upgrade path now that the binary is brew-installed.
+## Known gaps
 
-## Why `REPO_RECALL_HOST=0.0.0.0` is safe here
-
-The binary defaults to `127.0.0.1` because session metadata can leak
-sensitive content (see `repo-recall/AGENTS.md` privacy section). Binding
-`0.0.0.0` is only safe on a host where some other layer gates access. On
-kai-server that layer is `tailscale serve`, which terminates TLS at
-`:443` on the tailnet IP and forwards to `127.0.0.1:7777`. The home
-router doesn't NAT 7777, so nothing on the public internet ever reaches
-it; LAN peers could reach `192.168.0.194:7777` but the LAN itself is
-trusted. If that assumption ever changes, drop `REPO_RECALL_HOST` (or
-set it to `127.0.0.1`) and rely on the loopback-only default.
+- **Filesystem access is not wired.** The host project tree
+  (`/home/kai/projects/coilysiren`) and the Claude session JSONL
+  (`/home/kai/.claude/projects/*.jsonl`) are not mounted into the API
+  container. Without them the dashboard renders empty. The host
+  systemd unit had unrestricted host access; the k3s replacement
+  needs an explicit `hostPath` mount or a local-path PVC populated by
+  a sidecar - decision pending in a follow-up to
+  coilysiren/infrastructure#176.
+- **`gh` is not authenticated** inside the API container. The runtime
+  layer carries `gh` so the ingest can shell out, but
+  `GH_TOKEN`/`gh auth login` plumbing also lands in the
+  filesystem-access follow-up.
 
 ## Troubleshooting
 
-- **`systemctl status repo-recall` shows the binary exiting immediately** →
-  most likely `REPO_RECALL_CWD` doesn't exist yet. Run the clone script.
-- **Dashboard reachable from kai-server (`curl 127.0.0.1:7777`) but not
-  from tailnet peers** → `tailscale serve status` empty? Run the `serve`
-  command from step 3 again. The config is per-node, persists in
-  tailscaled state, but doesn't survive a fresh tailscaled install.
-- **404s on every page** → check `REPO_RECALL_CWD` points at a tree that
-  actually contains repos. Empty index = empty dashboard (not an error).
-- **`gh` health warning banner** → run `gh auth login` as `kai` on
-  kai-server; the `gh run list` outbound call needs it.
-- **Cert diagnostics from kai-server itself show traefik's self-signed
-  default cert, not the Let's Encrypt one** → expected, not a bug.
-  k3s's svclb binds traefik to `0.0.0.0:443`, so a connection from the
-  host loops back through traefik before tailscaled sees it. Always
-  curl/openssl from a tailnet peer (laptop, phone) when checking the
-  serve cert. The peer's traffic enters via the tailnet IP and
-  tailscaled intercepts it before traefik.
+- **`repo-recall.<tailnet>.ts.net` doesn't resolve** → the ts-proxy
+  StatefulSet hasn't come up. Check
+  `sudo k3s kubectl -n tailscale get pods,statefulsets`. If it's stuck
+  pulling, the operator's OAuth credentials may have expired.
+- **Pod is `CrashLoopBackOff` on `api`** → `kubectl logs` it. Most
+  common cause: `REPO_RECALL_CWD` resolves to an empty path (expected
+  until the filesystem mount lands; the container should still come up
+  with an empty index). If the binary panics at start, that's a real
+  bug.
+- **Caddy 502s on `/api`** → the API container isn't listening yet, or
+  is bound to `0.0.0.0` instead of `127.0.0.1`. The deploy pins
+  `REPO_RECALL_HOST=127.0.0.1` since same-Pod loopback is sufficient.

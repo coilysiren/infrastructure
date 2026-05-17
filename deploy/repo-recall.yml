@@ -1,0 +1,143 @@
+# repo-recall on kai-server k3s. Tailnet-only, no Ingress, no Route 53.
+#
+# Two containers in one Pod: `api` (Rust axum + MCP on :7777) and `web`
+# (Caddy serving the static SPA on :8080, reverse-proxying /api, /openapi.json,
+# /mcp to localhost:7777). Mirrors forgejo's tailscale-operator pattern - the
+# Service carries `tailscale.com/expose: "true"` + `tailscale.com/hostname:
+# repo-recall` so the operator stands up a ts-proxy at the MagicDNS name
+# `repo-recall.<tailnet>.ts.net`.
+#
+# Filesystem access is NOT wired here. Without `/home/kai/projects/coilysiren`
+# and `/home/kai/.claude` mounted in, the API container starts cleanly but the
+# dashboard renders empty. That mount path lands in a follow-up (the host
+# systemd unit had unrestricted host access; the k3s replacement needs an
+# explicit hostPath or local-path PVC decision first).
+#
+# Images come from coilysiren/repo-recall's `docker.yml` workflow:
+#   ghcr.io/coilysiren/repo-recall-api:latest
+#   ghcr.io/coilysiren/repo-recall-web:latest
+# Pinned to `latest` for the tailnet-only phase; switch to sha- or tag-pinned
+# once cutover is stable.
+#
+# Apply: sudo k3s kubectl apply -f deploy/repo-recall.yml
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: repo-recall
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: repo-recall
+  namespace: repo-recall
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: repo-recall
+  template:
+    metadata:
+      labels:
+        app: repo-recall
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+      containers:
+        - name: api
+          image: ghcr.io/coilysiren/repo-recall-api:latest
+          imagePullPolicy: Always
+          ports:
+            - name: api
+              containerPort: 7777
+          env:
+            - name: REPO_RECALL_HOST
+              value: "127.0.0.1"
+            - name: REPO_RECALL_PORT
+              value: "7777"
+            # MCP CORS allowlist. The Caddy sidecar terminates the tailnet
+            # request on the SPA origin; same-Pod localhost upstream means
+            # MCP only ever sees a same-origin call. Listing the public
+            # MagicDNS name here lets a direct curl from a tailnet peer
+            # against /mcp succeed too.
+            - name: REPO_RECALL_MCP_ORIGINS
+              value: "http://repo-recall,http://repo-recall.tail09a41b.ts.net,https://repo-recall.tail09a41b.ts.net"
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 1000m
+              memory: 1Gi
+          readinessProbe:
+            httpGet:
+              path: /api/scan-version
+              port: 7777
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /api/scan-version
+              port: 7777
+            initialDelaySeconds: 30
+            periodSeconds: 30
+        - name: web
+          image: ghcr.io/coilysiren/repo-recall-web:latest
+          imagePullPolicy: Always
+          ports:
+            - name: http
+              containerPort: 8080
+          env:
+            - name: PORT
+              value: "8080"
+            # Same-Pod sibling. localhost is the Caddyfile default but
+            # passing it explicitly keeps the deploy self-documenting.
+            - name: API_UPSTREAM
+              value: "localhost:7777"
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 250m
+              memory: 256Mi
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 8080
+            initialDelaySeconds: 15
+            periodSeconds: 30
+---
+# tailnet-exposed front door. The tailscale operator picks up the
+# annotations and stands up a ts-proxy StatefulSet with the pinned MagicDNS
+# hostname `repo-recall.<tailnet>.ts.net`. Only the web container is
+# exposed; /api, /openapi.json, /mcp reach the API container via the
+# in-Pod localhost reverse_proxy in deploy/Caddyfile.
+apiVersion: v1
+kind: Service
+metadata:
+  name: repo-recall
+  namespace: repo-recall
+  annotations:
+    tailscale.com/expose: "true"
+    tailscale.com/hostname: repo-recall
+spec:
+  type: ClusterIP
+  selector:
+    app: repo-recall
+  ports:
+    - name: http
+      port: 80
+      targetPort: 8080
+      protocol: TCP
