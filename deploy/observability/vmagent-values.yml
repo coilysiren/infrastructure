@@ -5,7 +5,7 @@
 # namespace via the kubernetes_sd_configs role=endpoints, scrapes :9100,
 # remote-writes to vmsingle in the same namespace.
 #
-# The instance-relabel rule rewrites `instance: 100.69.164.66:9100`
+# The instance-relabel rule rewrites `instance: <KAI_SERVER_TAILNET_IP>:9100`
 # (which would leak the tailnet IP onto Grafana graphs) to the k8s node
 # name like `kai-server`.
 

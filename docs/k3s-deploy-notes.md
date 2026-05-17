@@ -1,5 +1,7 @@
 # Homelab k3s + Tailscale deploy — the whole story
 
+> **Placeholders.** `<HOME_PUBLIC_IP>` resolves from SSM `/coilysiren/home/public-ip` (or `dig +short eco.coilysiren.me`). `<KAI_SERVER_TAILNET_IP>` resolves from SSM `/coilysiren/kai-server/tailnet-ip` (or `tailscale ip -4 kai-server`). Literals are kept out of this public repo to avoid geo-locating the home cluster.
+
 Single source of truth for how services get from a GitHub push to
 `*.coilysiren.me` on the k3s cluster running on `kai-server`. Every
 non-obvious decision has a scar behind it — this doc exists because
@@ -29,16 +31,16 @@ material that §8 and §9 cite.
   18-core, 32 GiB RAM, 480 GB NVMe. Also a GNOME desktop with xrdp
   (:3389) and game servers (Eco, Factorio, Icarus, Core Keeper) via
   systemd.
-- **Tailscale node `kai-server`** at `100.69.164.66` (this is the
+- **Tailscale node `kai-server`** at `<KAI_SERVER_TAILNET_IP>` (this is the
   tailnet IPv4).
 - **LAN IP**: `192.168.0.194`.
-- **Public IP**: `99.110.50.213` (home residential, NAT'd to the LAN
+- **Public IP**: `<HOME_PUBLIC_IP>` (home residential, NAT'd to the LAN
   IP).
 - **Traefik LoadBalancer** listens on `192.168.0.194:80/443` in
   namespace `kube-system`.
 - **Public ingress path**: public DNS → public IP → home router NAT →
   `192.168.0.194` → traefik → Ingress → Service → pod.
-- **Tailnet ingress path**: peer → tailnet IP `100.69.164.66` → k3s
+- **Tailnet ingress path**: peer → tailnet IP `<KAI_SERVER_TAILNET_IP>` → k3s
   API `:6443` (how CI deploys), OR tailscale-operator ts-proxy
   StatefulSet per-Service (for `tailscale.com/expose: "true"`
   services).
@@ -56,7 +58,7 @@ material that §8 and §9 cite.
   Pods in k3s reach it via `hostAliases` pinning it to the LAN IP.
 - **DNS**: `coilysiren.me` is an **AWS Route 53** hosted zone, id
   `Z06714552N3MO04UBWF33`.
-- **Service A records** (all point at `99.110.50.213`):
+- **Service A records** (all point at `<HOME_PUBLIC_IP>`):
   `api`, `eco-mcp`, `eco-jobs-tracker`, `eco`, `galaxy-gen`.
 - **Host-side Caddy** runs natively on kai-server. Two roles, both
   tailnet-internal, neither affecting the public Traefik path:
@@ -97,7 +99,7 @@ from shell steps.
   exist.
 - **`/tailscale/k3s/oauth-client-id`** — **ORPHANED. Do not use.**
   This OAuth client has a tighter ACL that doesn't grant the `tag:ci`
-  machine the access it needs to reach `100.69.164.66:6443`. Named
+  machine the access it needs to reach `<KAI_SERVER_TAILNET_IP>:6443`. Named
   like it's k3s-specific; in reality it's the opposite — the
   `/k3s/` scoping restricts it.
 - **`/tailscale/k3s/oath-secret`** — ORPHANED. Same reason.
@@ -105,6 +107,8 @@ from shell steps.
   secrets are populated directly from `/home/kai/.kube/config` on
   kai-server via `yq` piped into `gh secret set`. This is why the
   `/k3s/*` SSM namespace is mostly empty.
+- **`/coilysiren/home/public-ip`** — home residential public IP. Used in docs as `<HOME_PUBLIC_IP>` so the literal stays out of this public repo. Refresh if the ISP rotates.
+- **`/coilysiren/kai-server/tailnet-ip`** — tailnet IPv4 for `kai-server`. Used in docs as `<KAI_SERVER_TAILNET_IP>`. Resolve at runtime via `tailscale ip -4 kai-server` when on the tailnet.
 - **`/discord/channel/bots`** and friends — orthogonal; used by the
   Discord bot, not by web deploys.
 
@@ -115,15 +119,15 @@ Every deployable repo needs the same six secrets. Set them with
 
 ### `K8S_SERVER` — must be the tailnet IP literal
 
-**Value**: `https://100.69.164.66:6443`.
+**Value**: `https://<KAI_SERVER_TAILNET_IP>:6443`.
 
 Not `https://kai-server:6443` (MagicDNS doesn't resolve inside GitHub
 Actions runners even with `--accept-dns`). Not `https://192.168.0.194:6443`
 (LAN IP unreachable from the internet, which is where the runner
-lives). Not `https://99.110.50.213:6443` (public IP isn't in the
+lives). Not `https://<HOME_PUBLIC_IP>:6443` (public IP isn't in the
 cert's SAN list).
 
-The k3s-issued server cert has SANs for: `100.69.164.66` (tailnet),
+The k3s-issued server cert has SANs for: `<KAI_SERVER_TAILNET_IP>` (tailnet),
 `kai-server` (hostname), `127.0.0.1` (localhost), `192.168.0.194`
 (LAN). Pick the one you can actually reach — from CI, that's the
 tailnet IP.
@@ -546,7 +550,7 @@ One line per trap. Every fix here has a commit in some repo's history.
   (galaxy-gen `8a4bd98`)
 - **`K8S_SERVER` set to `https://kai-server:6443`** → kubectl hangs.
   MagicDNS doesn't resolve in GH runners. Use
-  `https://100.69.164.66:6443`. (galaxy-gen `1189234`)
+  `https://<KAI_SERVER_TAILNET_IP>:6443`. (galaxy-gen `1189234`)
 - **Deploy times out at `kubectl apply`** → you synced
   `TS_OAUTH_*` from `/tailscale/k3s/*` instead of `/tailscale/*`.
   The k3s-named ones have the wrong ACL. Re-sync from the
@@ -627,7 +631,7 @@ One line per trap. Every fix here has a commit in some repo's history.
 
 ## 8. First-time setup checklist for a new repo
 
-1. **Route 53 A record**: `<service>.coilysiren.me` → `99.110.50.213`
+1. **Route 53 A record**: `<service>.coilysiren.me` → `<HOME_PUBLIC_IP>`
    in zone `Z06714552N3MO04UBWF33`. One-time.
 2. **Tailscale OAuth secrets**:
    ```bash
@@ -645,7 +649,7 @@ One line per trap. Every fix here has a commit in some repo's history.
 4. **`K8S_SERVER`**:
    ```bash
    gh secret set K8S_SERVER --repo coilysiren/<repo> \
-     --body 'https://100.69.164.66:6443'
+     --body 'https://<KAI_SERVER_TAILNET_IP>:6443'
    ```
 5. **`config.yml`** at repo root:
    ```yaml
@@ -670,7 +674,7 @@ One line per trap. Every fix here has a commit in some repo's history.
 ## 9. Failure triage tree
 
 - **Deploy times out at `kubectl apply` (60s TCP timeout)**
-  → is `K8S_SERVER` set to `https://100.69.164.66:6443`?
+  → is `K8S_SERVER` set to `https://<KAI_SERVER_TAILNET_IP>:6443`?
   → is tailnet ACL granting `tag:ci` access to the node's `:6443`?
   → are `TS_OAUTH_*` synced from `/tailscale/*`, not `/tailscale/k3s/*`?
 - **Deploy hangs 6h on `sudo tailscale up`**
@@ -739,7 +743,7 @@ One line per trap. Every fix here has a commit in some repo's history.
   the ACL on it is tighter, and the CI-facing OAuth client lives
   at the non-`/k3s/` path. This has bitten at least twice.
 - **Why k3s used to bind localhost only**: older k3s default.
-  Since fixed — SANs now cover `100.69.164.66` + `kai-server` +
+  Since fixed — SANs now cover `<KAI_SERVER_TAILNET_IP>` + `kai-server` +
   `127.0.0.1` + `192.168.0.194`. The `.deploy-ssh` Makefile target
   exists because of that older reality; kept as emergency
   fallback.

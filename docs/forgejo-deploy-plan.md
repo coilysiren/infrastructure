@@ -2,6 +2,8 @@
 
 Drafted 2026-05-04. Revised 2026-05-05. Phase 1 executed 2026-05-05 (commits [`37c90b1`](https://github.com/coilysiren/infrastructure/commit/37c90b1), [`b8fdd47`](https://github.com/coilysiren/infrastructure/commit/b8fdd47), [`7b2512b`](https://github.com/coilysiren/infrastructure/commit/7b2512b)). Phase 2 not yet executed.
 
+`<HOME_PUBLIC_IP>` resolves from SSM `/coilysiren/home/public-ip`. See `k3s-deploy-notes.md`.
+
 Background: [`coilyco-vault/Obsidian Vault/Notes/forgejo-evaluation.md`](../../coilyco-vault/Obsidian%20Vault/Notes/forgejo-evaluation.md). General homelab pattern: [`k3s-deploy-notes.md`](k3s-deploy-notes.md).
 
 ## Decisions locked in
@@ -115,7 +117,7 @@ Tailscale on this Mac is up (verified 2026-05-05).
 
 ## Phase-2 prerequisites (deferred until phase-1 smoke passes)
 
-1. **Route 53 IP.** Plan asserted `99.110.50.213`. `dig +short eco.coilysiren.me` returns `99.110.50.213`. Confirmed.
+1. **Route 53 IP.** Plan asserted `<HOME_PUBLIC_IP>`. `dig +short eco.coilysiren.me` returns `<HOME_PUBLIC_IP>`. Confirmed.
 2. **Route 53 write tooling.** No terraform manages the zone today (`infrastructure/terraform/` only has `grafana/`). Existing pattern is direct `aws` calls: `coily aws route53 change-resource-record-sets ...`.
 
 ## Apply order - phase 1 (tailnet-only)
@@ -183,7 +185,7 @@ The rotated admin password landed in SSM as `/forgejo/admin-password` (added 202
 
 Only after phase-1 smoke passes (it has).
 
-1. **Route 53 A record.** Add `forgejo.coilysiren.me → 99.110.50.213` in zone `Z06714552N3MO04UBWF33`:
+1. **Route 53 A record.** Add `forgejo.coilysiren.me → <HOME_PUBLIC_IP>` in zone `Z06714552N3MO04UBWF33`:
 
     ```sh
     coily --commit-scope=infrastructure aws route53 change-resource-record-sets \
@@ -195,13 +197,13 @@ Only after phase-1 smoke passes (it has).
             "Name": "forgejo.coilysiren.me.",
             "Type": "A",
             "TTL": 300,
-            "ResourceRecords": [{"Value": "99.110.50.213"}]
+            "ResourceRecords": [{"Value": "<HOME_PUBLIC_IP>"}]
           }
         }]
       }'
     ```
 
-    Verify with `dig +short forgejo.coilysiren.me`. Should return `99.110.50.213` within ~5 minutes.
+    Verify with `dig +short forgejo.coilysiren.me`. Should return `<HOME_PUBLIC_IP>` within ~5 minutes.
 
 2. **Add the Ingress to the manifest** (item 9 in §"Manifest shape"). Append at the bottom of `infrastructure/deploy/forgejo.yml`:
 

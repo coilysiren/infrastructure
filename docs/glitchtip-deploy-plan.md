@@ -2,6 +2,8 @@
 
 Drafted 2026-05-13. Tracking issue: [coilysiren/infrastructure#137](https://github.com/coilysiren/infrastructure/issues/137).
 
+`<HOME_PUBLIC_IP>` resolves from SSM `/coilysiren/home/public-ip`. See `k3s-deploy-notes.md`.
+
 Background: [`coilyco-vault/Obsidian Vault/Notes/kai-server-o11y.md`](../../coilyco-vault/Obsidian%20Vault/Notes/kai-server-o11y.md) (2026-04-26 revision, "Update: GlitchTip for errors") and [`coilyco-vault/Obsidian Vault/Notes/seeds/2026-04-28-eco-telemetry-beast-mode.md`](../../coilyco-vault/Obsidian%20Vault/Notes/seeds/2026-04-28-eco-telemetry-beast-mode.md). Pattern reference: [`forgejo-deploy-plan.md`](forgejo-deploy-plan.md). General homelab pattern: [`k3s-deploy-notes.md`](k3s-deploy-notes.md).
 
 ## Decisions locked in
@@ -192,7 +194,7 @@ Document the helm install + upgrade commands for GlitchTip, alongside the existi
 
 ## Phase-2 prerequisites (deferred until phase-1 smoke passes)
 
-1. **Route 53 IP.** `dig +short eco.coilysiren.me` returns `99.110.50.213` (confirmed during the forgejo deploy). Same IP serves all `*.coilysiren.me` k3s apps.
+1. **Route 53 IP.** `dig +short eco.coilysiren.me` returns `<HOME_PUBLIC_IP>` (confirmed during the forgejo deploy). Same IP serves all `*.coilysiren.me` k3s apps.
 
 2. **Cert-manager + letsencrypt-production ClusterIssuer.** Already wired and battle-tested through forgejo phase 2 and the original eco / grafana deploys.
 
@@ -200,7 +202,7 @@ Document the helm install + upgrade commands for GlitchTip, alongside the existi
 
 Only after phase-1 smoke passes.
 
-1. **Route 53 A record.** Add `glitchtip.coilysiren.me → 99.110.50.213` in zone `Z06714552N3MO04UBWF33`:
+1. **Route 53 A record.** Add `glitchtip.coilysiren.me → <HOME_PUBLIC_IP>` in zone `Z06714552N3MO04UBWF33`:
 
     ```sh
     coily --commit-scope=infrastructure aws route53 change-resource-record-sets \
@@ -212,13 +214,13 @@ Only after phase-1 smoke passes.
             "Name": "glitchtip.coilysiren.me.",
             "Type": "A",
             "TTL": 300,
-            "ResourceRecords": [{"Value": "99.110.50.213"}]
+            "ResourceRecords": [{"Value": "<HOME_PUBLIC_IP>"}]
           }
         }]
       }'
     ```
 
-    Verify with `dig +short glitchtip.coilysiren.me`. Should return `99.110.50.213` within ~5 minutes.
+    Verify with `dig +short glitchtip.coilysiren.me`. Should return `<HOME_PUBLIC_IP>` within ~5 minutes.
 
 2. **Edit `glitchtip-values.yml`**:
     - Flip `ingress.enabled: true`.

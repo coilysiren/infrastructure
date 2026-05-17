@@ -2,11 +2,13 @@
 
 Single-node k3s on a home desktop, fronting a small set of personal services over both the public internet (via traefik + home public IP) and tailnet (via the Tailscale k8s operator).
 
+`<HOME_PUBLIC_IP>` resolves from SSM `/coilysiren/home/public-ip`. `<KAI_SERVER_TAILNET_IP>` resolves from SSM `/coilysiren/kai-server/tailnet-ip`. See `docs/k3s-deploy-notes.md`.
+
 ```
 Internet ─┐
           │
           ▼
-   99.110.50.213:443  (home public IP, NAT -> 192.168.0.194)
+   <HOME_PUBLIC_IP>:443  (home public IP, NAT -> 192.168.0.194)
           │
           ▼
    traefik LoadBalancer  (svclb-traefik daemonset routes host traffic in)

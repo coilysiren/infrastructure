@@ -2,6 +2,8 @@
 
 Source-of-truth design doc: [`Notes/kai-server-o11y.md`](../../../coilyco-vault/Obsidian%20Vault/Notes/kai-server-o11y.md) in the vault.
 
+`<HOME_PUBLIC_IP>` and `<KAI_SERVER_TAILNET_IP>` resolve from SSM (`/coilysiren/home/public-ip`, `/coilysiren/kai-server/tailnet-ip`). See `docs/k3s-deploy-notes.md`.
+
 Two panes:
 
 - **Sentry** (existing, hosted) for app errors, app traces, app logs.
@@ -17,7 +19,7 @@ Two panes:
 
 ## First-time install
 
-DNS prereq: add `grafana.coilysiren.me` A record to `99.110.50.213` in Route 53 zone `Z06714552N3MO04UBWF33`. One-time.
+DNS prereq: add `grafana.coilysiren.me` A record to `<HOME_PUBLIC_IP>` in Route 53 zone `Z06714552N3MO04UBWF33`. One-time.
 
 Run from `infrastructure/` with kubectl context pointing at kai-server:
 
