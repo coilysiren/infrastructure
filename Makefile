@@ -7,6 +7,8 @@ DEFAULT_GOAL := help
 	observability \
 	observability-admin-password \
 	terraform-grafana \
+	terraform-admin-kms \
+	terraform-tailscale-oidc \
 	llama-deploy \
 	llama-deploy-secrets
 
@@ -32,6 +34,12 @@ observability-admin-password: ## Print the auto-generated Grafana admin password
 
 terraform-grafana: ## Run terraform against terraform/grafana/ (GRAFANA_AUTH wired from SSM). Args - action=plan|apply|init|destroy.
 	@uv run python scripts/k8s.py terraform-grafana --action=$(or $(action),plan)
+
+terraform-admin-kms: ## Run terraform against terraform/admin-kms/ (admin-only KMS key for SSM-wrapping). Args - action=plan|apply|init|destroy.
+	@uv run python scripts/k8s.py terraform-admin-kms --action=$(or $(action),plan)
+
+terraform-tailscale-oidc: ## Run terraform against terraform/tailscale-oidc/ (TS admin OAuth + GITHUB_TOKEN wired from SSM). Args - action=plan|apply|init|destroy.
+	@uv run python scripts/k8s.py terraform-tailscale-oidc --action=$(or $(action),plan)
 
 llama-deploy: ## Apply llama/deploy.yml into the llama namespace.
 	@uv run python scripts/llama.py deploy

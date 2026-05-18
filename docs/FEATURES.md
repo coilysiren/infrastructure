@@ -45,6 +45,7 @@ Baseline of `coilysiren/infrastructure`. Update when scope changes.
 - **Sudoers for game-server ops** - `sudoers/kai-game-servers`. Not auto-deployed.
 - **Pre-commit hooks** - Lint + secret scan.
 - **Single source of truth** - `docs/k3s-deploy-notes.md` is authoritative for homelab topology, SSM inventory, GitHub secrets, deploy shapes, triage.
+- **Tailscale OIDC for CI** - `terraform/tailscale-oidc/` mints a per-repo federated identity. Replaces the long-lived shared OAuth pair. See `docs/tailscale-oidc.md`.
 
 ## Out of scope
 

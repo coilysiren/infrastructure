@@ -149,6 +149,55 @@ def terraform_grafana(action: str = "plan"):
     run(f"terraform -chdir=terraform/grafana {action}", env=env)
 
 
+def terraform_admin_kms(action: str = "plan"):
+    """Run terraform against `terraform/admin-kms/`.
+
+    No secret inputs - admin principal ARNs live in terraform.tfvars and
+    are not sensitive. AWS creds come from the caller's shell.
+    """
+    if action == "init":
+        run("terraform -chdir=terraform/admin-kms init")
+        return
+    run(f"terraform -chdir=terraform/admin-kms {action}")
+
+
+def terraform_tailscale_oidc(action: str = "plan"):
+    """Run terraform against `terraform/tailscale-oidc/`.
+
+    Wires a Tailscale admin API key and a GitHub PAT into the provider env
+    from SSM. Plaintext values are passed via env, never echoed or
+    persisted. See docs/tailscale-oidc.md.
+    """
+    ssm = _ssm()
+    # Admin OAuth client (all:write scope). The client itself is
+    # long-lived; the provider auto-rotates the short-lived access tokens
+    # it mints. Generated at:
+    #   https://login.tailscale.com/admin/settings/trust-credentials
+    # Separate from the runtime CI OAuth client at /tailscale/oauth-*
+    # (devices/auth_keys only), which cannot manage ACLs or federated
+    # identities.
+    client_id = ssm.get_parameter(
+        Name="/tailscale/admin/oauth-client-id",
+        WithDecryption=True,
+    )["Parameter"]["Value"]
+    client_secret = ssm.get_parameter(
+        Name="/tailscale/admin/oauth-client-secret",
+        WithDecryption=True,
+    )["Parameter"]["Value"]
+    gh_token = ssm.get_parameter(
+        Name="/github/pat",
+        WithDecryption=True,
+    )["Parameter"]["Value"]
+    env = os.environ.copy()
+    env["TAILSCALE_OAUTH_CLIENT_ID"] = client_id
+    env["TAILSCALE_OAUTH_CLIENT_SECRET"] = client_secret
+    env["GITHUB_TOKEN"] = gh_token
+    if action == "init":
+        run("terraform -chdir=terraform/tailscale-oidc init", env=env)
+        return
+    run(f"terraform -chdir=terraform/tailscale-oidc {action}", env=env)
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     sub = parser.add_subparsers(dest="cmd", required=True)
@@ -174,6 +223,18 @@ def main():
     )
     p.add_argument("--action", default="plan", help="init / plan / apply / destroy.")
 
+    p = sub.add_parser(
+        "terraform-admin-kms",
+        help="Run terraform against terraform/admin-kms/ (admin-only KMS key for SSM-wrapping).",
+    )
+    p.add_argument("--action", default="plan", help="init / plan / apply / destroy.")
+
+    p = sub.add_parser(
+        "terraform-tailscale-oidc",
+        help="Run terraform against terraform/tailscale-oidc/ with TS admin OAuth + GH PAT wired from SSM.",
+    )
+    p.add_argument("--action", default="plan", help="init / plan / apply / destroy.")
+
     args = parser.parse_args()
 
     if args.cmd == "cert-manager":
@@ -186,6 +247,10 @@ def main():
         observability_admin_password()
     elif args.cmd == "terraform-grafana":
         terraform_grafana(args.action)
+    elif args.cmd == "terraform-admin-kms":
+        terraform_admin_kms(args.action)
+    elif args.cmd == "terraform-tailscale-oidc":
+        terraform_tailscale_oidc(args.action)
 
 
 if __name__ == "__main__":
