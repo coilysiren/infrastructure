@@ -6,10 +6,6 @@ terraform {
       source  = "tailscale/tailscale"
       version = "~> 0.24"
     }
-    github = {
-      source  = "integrations/github"
-      version = "~> 6.0"
-    }
   }
 
   backend "s3" {
@@ -23,7 +19,6 @@ terraform {
 
 # Credentials via provider-native env vars:
 #   TAILSCALE_OAUTH_CLIENT_ID / TAILSCALE_OAUTH_CLIENT_SECRET (or TAILSCALE_API_KEY)
-#   GITHUB_TOKEN
 # Export before running `terraform apply` directly. The OAuth client must
 # have `all:write` scope - the runtime CI client at /tailscale/oauth-* is
 # not sufficient.
@@ -32,14 +27,10 @@ provider "tailscale" {
   tailnet = "-"
 }
 
-provider "github" {
-  owner = "coilysiren"
-}
-
 locals {
   # Flat list of "coilysiren/<name>" strings from repos.yaml. Strip the owner
-  # prefix for the GitHub provider (which already has owner="coilysiren") and
-  # for the OIDC subject (which adds its own "repo:coilysiren/" prefix).
+  # prefix; the OIDC subject adds its own "repo:coilysiren/" prefix and the
+  # outputs below carry the bare name as the map key for downstream sync.
   repos = [
     for slug in yamldecode(file("${path.module}/repos.yaml")).repos :
     trimprefix(slug, "coilysiren/")
@@ -119,21 +110,18 @@ resource "tailscale_acl" "main" {
   })
 }
 
-resource "github_actions_secret" "ts_client_id" {
-  for_each = tailscale_federated_identity.ci
-
-  repository      = each.key
-  secret_name     = "TS_CLIENT_ID"
-  # Tailscale's federated_identity exposes the client id as the resource
-  # `id` attribute (it's also called the "key id" in their schema). There
-  # is no separate `client_id` field.
-  plaintext_value = each.value.id
+# Outputs are consumed by scripts/k8s/sync_tailscale_oidc_secrets.py, which
+# pushes TS_CLIENT_ID + TS_AUDIENCE to each repo via the gh CLI's live auth
+# (no PAT in the module - the /github/pat path is retired). Run after every
+# `terraform apply` that touches federated identities.
+output "client_ids" {
+  description = "map of repo name -> TS_CLIENT_ID (the federated identity id, marked sensitive)"
+  value       = { for k, v in tailscale_federated_identity.ci : k => v.id }
+  sensitive   = true
 }
 
-resource "github_actions_secret" "ts_audience" {
-  for_each = tailscale_federated_identity.ci
-
-  repository      = each.key
-  secret_name     = "TS_AUDIENCE"
-  plaintext_value = each.value.audience
+output "audiences" {
+  description = "map of repo name -> TS_AUDIENCE (the OIDC aud claim, marked sensitive)"
+  value       = { for k, v in tailscale_federated_identity.ci : k => v.audience }
+  sensitive   = true
 }

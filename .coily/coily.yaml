@@ -34,7 +34,10 @@ commands:
     description: Run terraform against terraform/admin-kms/ (admin-only KMS key for SSM-wrapping). Args - action=plan|apply|init|destroy.
   terraform-tailscale-oidc:
     run: make terraform-tailscale-oidc
-    description: Run terraform against terraform/tailscale-oidc/ (TS admin OAuth + GITHUB_TOKEN wired from SSM). Args - action=plan|apply|init|destroy.
+    description: Run terraform against terraform/tailscale-oidc/ (TS admin OAuth wired from SSM). Args - action=plan|apply|init|destroy.
+  sync-tailscale-oidc-secrets:
+    run: make sync-tailscale-oidc-secrets
+    description: Push TS_CLIENT_ID + TS_AUDIENCE to each repo via gh CLI live auth, reading from tf outputs.
   llama-deploy:
     run: make llama-deploy
     description: Apply llama/deploy.yml into the llama namespace.
