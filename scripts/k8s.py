@@ -2,16 +2,15 @@
 # pylint: disable=duplicate-code
 """K3s cluster operator verbs.
 
-Subcommands replace the old tasks.py + src/k8s.py invoke layer. Driven
-from Makefile targets, which are themselves driven from coily verbs.
-See .coily/coily.yaml.
+Library of verb functions invoked directly from Makefile targets via
+`uv run python -c 'from scripts.k8s import VERB; VERB(...)'`. See
+.coily/coily.yaml for the coily-facing surface.
 
 Systemd-unit ops for the k3s service itself, and for game-server units,
 live in coily core (`coily ssh systemctl`, `coily gaming <game> ...`)
 and are intentionally not exposed as verbs here.
 """
 
-import argparse
 import os
 import shlex
 import subprocess
@@ -198,60 +197,3 @@ def terraform_tailscale_oidc(action: str = "plan"):
     run(f"terraform -chdir=terraform/tailscale-oidc {action}", env=env)
 
 
-def main():
-    parser = argparse.ArgumentParser(description=__doc__)
-    sub = parser.add_subparsers(dest="cmd", required=True)
-
-    sub.add_parser("cert-manager", help="Install or refresh cert-manager + ClusterIssuers.")
-
-    p = sub.add_parser("aws-secrets", help="Bootstrap external-secrets + aws-credentials.")
-    p.add_argument("--aws-access-key-id", required=True)
-    p.add_argument("--aws-secret-access-key", required=True)
-
-    sub.add_parser(
-        "observability",
-        help="Install or upgrade the VictoriaMetrics + Grafana stack.",
-    )
-    sub.add_parser(
-        "observability-admin-password",
-        help="Print the Grafana admin password.",
-    )
-
-    p = sub.add_parser(
-        "terraform-grafana",
-        help="Run terraform against terraform/grafana/ with GRAFANA_AUTH wired from SSM.",
-    )
-    p.add_argument("--action", default="plan", help="init / plan / apply / destroy.")
-
-    p = sub.add_parser(
-        "terraform-admin-kms",
-        help="Run terraform against terraform/admin-kms/ (admin-only KMS key for SSM-wrapping).",
-    )
-    p.add_argument("--action", default="plan", help="init / plan / apply / destroy.")
-
-    p = sub.add_parser(
-        "terraform-tailscale-oidc",
-        help="Run terraform against terraform/tailscale-oidc/ with TS admin OAuth + GH PAT wired from SSM.",
-    )
-    p.add_argument("--action", default="plan", help="init / plan / apply / destroy.")
-
-    args = parser.parse_args()
-
-    if args.cmd == "cert-manager":
-        cert_manager()
-    elif args.cmd == "aws-secrets":
-        aws_secrets(args.aws_access_key_id, args.aws_secret_access_key)
-    elif args.cmd == "observability":
-        observability()
-    elif args.cmd == "observability-admin-password":
-        observability_admin_password()
-    elif args.cmd == "terraform-grafana":
-        terraform_grafana(args.action)
-    elif args.cmd == "terraform-admin-kms":
-        terraform_admin_kms(args.action)
-    elif args.cmd == "terraform-tailscale-oidc":
-        terraform_tailscale_oidc(args.action)
-
-
-if __name__ == "__main__":
-    main()

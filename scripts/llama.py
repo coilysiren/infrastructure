@@ -2,11 +2,11 @@
 # pylint: disable=duplicate-code
 """Llama deploy verbs.
 
-Replaces the old src/llama.py invoke layer. Driven from Makefile targets,
-which are themselves driven from coily verbs. See .coily/coily.yaml.
+Library of verb functions invoked directly from Makefile targets via
+`uv run python -c 'from scripts.llama import VERB; VERB(...)'`. See
+.coily/coily.yaml for the coily-facing surface.
 """
 
-import argparse
 import shlex
 import subprocess
 import sys
@@ -58,23 +58,3 @@ def deploy():
     run("kubectl apply -f llama/deploy.yml")
 
 
-def main():
-    parser = argparse.ArgumentParser(description=__doc__)
-    sub = parser.add_subparsers(dest="cmd", required=True)
-
-    sub.add_parser(
-        "deploy-secrets-docker-repo",
-        help="Bootstrap the llama ghcr.io docker-registry secret from SSM.",
-    )
-    sub.add_parser("deploy", help="Apply llama/deploy.yml into the llama namespace.")
-
-    args = parser.parse_args()
-
-    if args.cmd == "deploy-secrets-docker-repo":
-        deploy_secrets_docker_repo()
-    elif args.cmd == "deploy":
-        deploy()
-
-
-if __name__ == "__main__":
-    main()
