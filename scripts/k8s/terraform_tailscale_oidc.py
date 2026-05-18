@@ -44,7 +44,11 @@ def main():
     if action == "init":
         run("terraform -chdir=terraform/tailscale-oidc init", env=env)
         return
-    run(f"terraform -chdir=terraform/tailscale-oidc {action}", env=env)
+    # Run via coily passes no TTY, so terraform's interactive approval
+    # prompt EOFs. Append -auto-approve for write actions; review must
+    # happen via a separate `action=plan` first.
+    flags = " -auto-approve" if action in ("apply", "destroy") else ""
+    run(f"terraform -chdir=terraform/tailscale-oidc {action}{flags}", env=env)
 
 
 if __name__ == "__main__":

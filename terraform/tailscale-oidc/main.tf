@@ -53,7 +53,10 @@ locals {
 resource "tailscale_federated_identity" "ci" {
   for_each = toset(local.repos)
 
-  description = "GitHub Actions - coilysiren/${each.key} deploy"
+  # Tailscale caps description at 50 chars and rejects punctuation like
+  # ":" (400 keys: description had invalid characters). Stick to letters,
+  # digits, hyphens, spaces.
+  description = "CI deploy ${each.key}"
   issuer      = "https://token.actions.githubusercontent.com"
   subject     = "repo:coilysiren/${each.key}:ref:refs/heads/main"
   scopes      = ["auth_keys"]
@@ -121,7 +124,10 @@ resource "github_actions_secret" "ts_client_id" {
 
   repository      = each.key
   secret_name     = "TS_CLIENT_ID"
-  plaintext_value = each.value.client_id
+  # Tailscale's federated_identity exposes the client id as the resource
+  # `id` attribute (it's also called the "key id" in their schema). There
+  # is no separate `client_id` field.
+  plaintext_value = each.value.id
 }
 
 resource "github_actions_secret" "ts_audience" {
