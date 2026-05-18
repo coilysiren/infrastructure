@@ -32,7 +32,7 @@ def tf_output_json(name: str) -> dict[str, str]:
     return json.loads(out)
 
 
-def set_secret(repo: str, name: str, value: str) -> None:
+def set_secret(repo: str, name: str, value: str) -> bool:
     # This vintage of gh has no --body-file, and stdin doesn't propagate
     # through the coily passthrough. Pass --body <value> directly: it
     # lands on argv (subprocess uses execvp, not shell), so there is no
@@ -40,10 +40,11 @@ def set_secret(repo: str, name: str, value: str) -> None:
     # alphanumeric plus `-`, `_`, `.`, `/` - all argv-safe and accepted
     # by coily's metacharacter gate.
     print(f"$ gh secret set {name} --repo coilysiren/{repo}  # body redacted")
-    subprocess.run(
+    result = subprocess.run(
         ["coily", "ops", "gh", "secret", "set", name, "--repo", f"coilysiren/{repo}", "--body", value],
-        check=True,
+        check=False,
     )
+    return result.returncode == 0
 
 
 def main() -> None:
@@ -52,10 +53,17 @@ def main() -> None:
     if client_ids.keys() != audiences.keys():
         print(f"mismatched keys: client_ids={list(client_ids)} audiences={list(audiences)}", file=sys.stderr)
         sys.exit(1)
+    failed: list[str] = []
     for repo in sorted(client_ids):
-        set_secret(repo, "TS_CLIENT_ID", client_ids[repo])
-        set_secret(repo, "TS_AUDIENCE", audiences[repo])
-    print(f"synced {len(client_ids)} repos")
+        ok_id = set_secret(repo, "TS_CLIENT_ID", client_ids[repo])
+        ok_aud = set_secret(repo, "TS_AUDIENCE", audiences[repo])
+        if not (ok_id and ok_aud):
+            failed.append(repo)
+    synced = len(client_ids) - len(failed)
+    print(f"synced {synced}/{len(client_ids)} repos")
+    if failed:
+        print(f"failed: {failed} (repo missing on github or no actions:write access)", file=sys.stderr)
+        sys.exit(1)
 
 
 if __name__ == "__main__":
