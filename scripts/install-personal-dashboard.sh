@@ -25,8 +25,8 @@ else
 fi
 
 echo ">>> brew tap + install/upgrade personal-dashboard"
-brew tap coilysiren/tap
-brew install coilysiren/tap/personal-dashboard || brew upgrade coilysiren/tap/personal-dashboard
+brew tap coilysiren/personal-dashboard https://github.com/coilysiren/personal-dashboard
+brew install coilysiren/personal-dashboard/personal-dashboard || brew upgrade coilysiren/personal-dashboard/personal-dashboard
 
 echo ">>> installing unit -> $UNIT_DST"
 sudo install -m 0644 "$INFRA_SRC/systemd/personal-dashboard.service" "$UNIT_DST"
