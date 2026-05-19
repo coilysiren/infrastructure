@@ -15,5 +15,15 @@ ExecStartPre=bash -c /home/kai/projects/infrastructure/scripts/eco-server-pre.sh
 ExecStart=bash -c /home/kai/projects/infrastructure/scripts/eco-server-start.sh
 ExecStop=kill -TERM $MAINPID
 
+# Memory cage: a runaway mod allocation (see eco-replay, May 2026) can
+# allocate enough to freeze the whole host before any OOM kill fires,
+# because vm.overcommit_memory=1 and swap is only 2G. The cgroup caps
+# below force an immediate OOM-kill of the unit instead. Sized for a
+# 31G box; review if RAM or workload mix changes.
+MemoryAccounting=yes
+MemoryHigh=10G
+MemoryMax=20G
+MemorySwapMax=0
+
 [Install]
 WantedBy=multi-user.target
