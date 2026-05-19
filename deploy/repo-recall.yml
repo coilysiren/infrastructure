@@ -7,11 +7,15 @@
 # repo-recall` so the operator stands up a ts-proxy at the MagicDNS name
 # `repo-recall.<tailnet>.ts.net`.
 #
-# Filesystem access is NOT wired here. Without `/home/kai/projects/coilysiren`
-# and `/home/kai/.claude` mounted in, the API container starts cleanly but the
-# dashboard renders empty. That mount path lands in a follow-up (the host
-# systemd unit had unrestricted host access; the k3s replacement needs an
-# explicit hostPath or local-path PVC decision first).
+# Filesystem access is via hostPath, read-only. The API container reads the
+# host project tree and Claude session JSONL during ingest; it does not
+# write either path. Cache (redb + tantivy) goes to $TMPDIR per AGENTS.
+# hostPath rather than a local-path PVC because the data we want is already
+# at a stable on-host location (the operator-managed worktree); a PVC would
+# add a sidecar to populate it from the same path, which is just indirection.
+# securityContext UID 1000 must match the host owner of /home/kai/* (kai on
+# kai-server is UID 1000). Read-only mounts mean a misbehaving container
+# can't corrupt the worktree.
 #
 # Images come from coilysiren/repo-recall's `docker.yml` workflow:
 #   ghcr.io/coilysiren/repo-recall-api:latest
@@ -67,6 +71,20 @@ spec:
             # against /mcp succeed too.
             - name: REPO_RECALL_MCP_ORIGINS
               value: "http://repo-recall,http://repo-recall.tail09a41b.ts.net,https://repo-recall.tail09a41b.ts.net"
+            # Mounted worktree + Claude session JSONL. HOME is repointed at
+            # the mount root so the standard `~/.claude/projects/*.jsonl`
+            # glob in the ingest layer finds the sessions without code changes.
+            - name: REPO_RECALL_CWD
+              value: "/workspace/projects/coilysiren"
+            - name: HOME
+              value: "/workspace/home"
+          volumeMounts:
+            - name: projects
+              mountPath: /workspace/projects/coilysiren
+              readOnly: true
+            - name: claude
+              mountPath: /workspace/home/.claude
+              readOnly: true
           resources:
             requests:
               cpu: 100m
@@ -118,6 +136,15 @@ spec:
               port: 8080
             initialDelaySeconds: 15
             periodSeconds: 30
+      volumes:
+        - name: projects
+          hostPath:
+            path: /home/kai/projects/coilysiren
+            type: Directory
+        - name: claude
+          hostPath:
+            path: /home/kai/.claude
+            type: Directory
 ---
 # tailnet-exposed front door. The tailscale operator picks up the
 # annotations and stands up a ts-proxy StatefulSet with the pinned MagicDNS
