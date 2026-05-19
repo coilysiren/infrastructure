@@ -106,6 +106,6 @@ echo
 echo "Verify with:"
 echo "  systemctl list-timers claude-remote-control-restart.timer"
 echo "  journalctl -u claude-remote-control.service -n 50 --no-pager"
-echo "  sudo systemctl start claude-remote-control-restart.service  # force one restart"
+echo "  coily systemctl start claude-remote-control-restart.service  # force one restart"
 echo
 echo "In claude.ai/code, the Remote Control dropdown should now list 'kai-desktop-tower-wsl'."

@@ -4,8 +4,8 @@
 #
 # Prereqs:
 #   - coily already installed via scripts/coily-install.sh.
-#   - sudoers/kai-coilysiren-updates already in place (for `coily ssh
-#     kai-server -- sudo systemctl start coily-update.service`).
+#   - Broad NOPASSWD coily sudoers rule in place so `coily systemctl start
+#     coily-update.service` self-elevates non-TTY (coily#203).
 #
 # Run as the `kai` user from the repo checkout. Sudo is invoked per-step.
 
@@ -27,5 +27,5 @@ sudo systemctl --no-pager status coily-update.timer | head -10 || true
 echo
 echo "Verify with:"
 echo "  systemctl list-timers coily-update.timer"
-echo "  sudo systemctl start coily-update.service  # force one run"
+echo "  coily systemctl start coily-update.service  # force one run"
 echo "  journalctl -u coily-update.service -n 30 --no-pager"

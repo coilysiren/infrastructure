@@ -14,12 +14,6 @@ echo ">>> installing unit + timer"
 sudo install -m 0644 "$INFRA_SRC/systemd/coilysiren-pull-all.service" "$UNIT_DST"
 sudo install -m 0644 "$INFRA_SRC/systemd/coilysiren-pull-all.timer"   "$TIMER_DST"
 
-echo ">>> installing sudoers update (NOPASSWD for the start verb)"
-sudo install -m 0440 -o root -g root \
-  "$INFRA_SRC/sudoers/kai-coilysiren-updates" \
-  /etc/sudoers.d/kai-coilysiren-updates
-sudo visudo -cf /etc/sudoers.d/kai-coilysiren-updates
-
 echo ">>> reloading systemd"
 sudo systemctl daemon-reload
 
@@ -30,5 +24,5 @@ echo
 echo "manual trigger:"
 echo "  bash $INFRA_SRC/scripts/coilysiren-pull-all.sh"
 echo "or fire the unit:"
-echo "  sudo systemctl start coilysiren-pull-all.service"
+echo "  coily systemctl start coilysiren-pull-all.service"
 echo "  journalctl -u coilysiren-pull-all.service -n 50 --no-pager"

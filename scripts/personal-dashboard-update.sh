@@ -3,7 +3,7 @@
 # try-restart the long-lived daemon unit.
 #
 # Invoked by personal-dashboard-update.timer daily, and on-demand via
-# `sudo systemctl start personal-dashboard-update.service` after a tap
+# `coily systemctl start personal-dashboard-update.service` after a tap
 # push.
 #
 # Failure mode: brew-upgrade failure exits non-zero before the restart,
@@ -24,9 +24,15 @@ echo "==> brew upgrade coilysiren/tap/personal-dashboard"
 brew upgrade coilysiren/tap/personal-dashboard
 
 echo "==> try-restart personal-dashboard.service"
-# try-restart is a no-op if the unit isn't already active, which matches
-# the intent: don't start a stopped daemon as a side effect of upgrading.
-sudo /bin/systemctl try-restart personal-dashboard.service
+# is-active gate matches the try-restart semantics: don't start a stopped
+# daemon as a side effect of upgrading. coily systemctl doesn't expose
+# try-restart, so the guard sits outside the wrapper. is-active reads
+# cached systemd state unprivileged.
+if systemctl is-active --quiet personal-dashboard.service; then
+  coily systemctl restart personal-dashboard.service
+else
+  echo "personal-dashboard.service inactive; skipping restart"
+fi
 
 echo "==> personal-dashboard --help (smoke)"
 personal-dashboard --help 2>&1 | head -3 || true

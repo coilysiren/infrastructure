@@ -3,7 +3,7 @@
 # ~/projects/coilysiren on kai-server.
 #
 # Invoked by coilysiren-pull-all.timer daily, and on-demand via
-# `sudo systemctl start coilysiren-pull-all.service` or by running this
+# `coily systemctl start coilysiren-pull-all.service` or by running this
 # script directly.
 #
 # Why: several long-lived services on kai-server read local checkouts

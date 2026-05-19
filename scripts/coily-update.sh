@@ -2,7 +2,7 @@
 # coily-update.sh - brew-upgrade coily and re-baseline its setup.
 #
 # Invoked by coily-update.timer weekly, and on-demand via
-# `sudo systemctl start coily-update.service` after a tap push so the new
+# `coily systemctl start coily-update.service` after a tap push so the new
 # version lands without waiting for the next timer fire.
 #
 # Failure mode: any non-zero exit lights up `systemctl status` with the
