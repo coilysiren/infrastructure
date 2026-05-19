@@ -20,8 +20,14 @@
 # Images come from coilysiren/repo-recall's `docker.yml` workflow:
 #   ghcr.io/coilysiren/repo-recall-api:latest
 #   ghcr.io/coilysiren/repo-recall-web:latest
-# Pinned to `latest` for the tailnet-only phase; switch to sha- or tag-pinned
-# once cutover is stable.
+# The manifest references `:latest` so a fresh `kubectl apply` (including
+# from a third-party operator deploying repo-recall on their own cluster)
+# pulls a working image from GHCR. Subsequent rolls on kai-server happen
+# via `kubectl set image deploy/repo-recall <container>=coilysiren/repo-
+# recall-<api|web>:<sha>` from the docker.yml `ship` job, which sideloads
+# SHA-pinned images directly into kai-server's containerd via tailscale
+# ssh + `k3s ctr import`. imagePullPolicy: IfNotPresent so the kubelet
+# uses the sideloaded image rather than trying to pull a local-only ref.
 #
 # Apply: sudo k3s kubectl apply -f deploy/repo-recall.yml
 ---
@@ -55,7 +61,7 @@ spec:
       containers:
         - name: api
           image: ghcr.io/coilysiren/repo-recall-api:latest
-          imagePullPolicy: Always
+          imagePullPolicy: IfNotPresent
           ports:
             - name: api
               containerPort: 7777
@@ -117,7 +123,7 @@ spec:
             periodSeconds: 30
         - name: web
           image: ghcr.io/coilysiren/repo-recall-web:latest
-          imagePullPolicy: Always
+          imagePullPolicy: IfNotPresent
           ports:
             - name: http
               containerPort: 8080
