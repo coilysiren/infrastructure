@@ -9,4 +9,4 @@ cleanup() {
 
 trap cleanup SIGTERM SIGINT
 
-/usr/local/bin/k3s server
+/usr/local/bin/k3s server --write-kubeconfig-mode=0644
