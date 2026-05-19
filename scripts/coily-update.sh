@@ -18,8 +18,23 @@ if [ -x /home/linuxbrew/.linuxbrew/bin/brew ]; then
   eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
 fi
 
+# brew update can race the global brew lock on boot when multiple
+# *-update.service units fire near-simultaneously after reboot
+# (coilysiren/coily#240). Retry with linear backoff; six attempts at
+# 10s spacing covers the 1-min window the racing units typically
+# share without unbounded waiting.
 echo "==> brew update"
-brew update
+for attempt in 1 2 3 4 5 6; do
+  if brew update; then
+    break
+  fi
+  if [ "$attempt" -ge 6 ]; then
+    echo "brew update: gave up after $attempt attempts" >&2
+    exit 1
+  fi
+  echo "brew update: attempt $attempt failed; another brew process may hold the lock; retrying in 10s" >&2
+  sleep 10
+done
 
 echo "==> brew upgrade coilysiren/tap/coily"
 brew upgrade coilysiren/tap/coily
