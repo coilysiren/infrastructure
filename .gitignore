@@ -11,3 +11,4 @@ deploy/coredns_filled.yml
 .claude/worktrees/
 __pycache__/
 *.pyc
+.terraform/
