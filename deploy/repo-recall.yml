@@ -186,14 +186,25 @@ spec:
           imagePullPolicy: IfNotPresent
           ports:
             - name: http
-              containerPort: 8080
+              containerPort: 80
           env:
+            # Port 80 so tailnet peers can hit `http://repo-recall`
+            # without an explicit :PORT suffix - same shape as forgejo
+            # (Service.port 80 -> targetPort 3000, but here we drop the
+            # port-translating Service since the sidecar puts the Pod
+            # directly on the tailnet, so web binds 80 itself).
             - name: PORT
-              value: "8080"
+              value: "80"
             # Same-Pod sibling. localhost is the Caddyfile default but
             # passing it explicitly keeps the deploy self-documenting.
             - name: API_UPSTREAM
               value: "localhost:7777"
+          securityContext:
+            # Caddy runs as UID 1000 per the pod-level securityContext;
+            # binding port 80 from non-root needs CAP_NET_BIND_SERVICE.
+            # Strictly scoped to the bind capability, no other privilege.
+            capabilities:
+              add: ["NET_BIND_SERVICE"]
           resources:
             requests:
               cpu: 50m
@@ -204,13 +215,13 @@ spec:
           readinessProbe:
             httpGet:
               path: /healthz
-              port: 8080
+              port: 80
             initialDelaySeconds: 5
             periodSeconds: 10
           livenessProbe:
             httpGet:
               path: /healthz
-              port: 8080
+              port: 80
             initialDelaySeconds: 15
             periodSeconds: 30
         # tailscale sidecar in kernel mode. Pod gains a tailnet IP via
@@ -335,5 +346,5 @@ spec:
   ports:
     - name: http
       port: 80
-      targetPort: 8080
+      targetPort: 80
       protocol: TCP
