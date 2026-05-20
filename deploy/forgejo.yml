@@ -281,18 +281,24 @@ spec:
           persistentVolumeClaim:
             claimName: forgejo-data
 ---
-# tailnet-exposed front door. The tailscale operator picks up the
-# annotations and stands up a ts-proxy StatefulSet with the
-# pinned MagicDNS hostname `forgejo.<tailnet>.ts.net`.
+# tailnet-exposed front door. Standalone ts-proxy Deployment pattern
+# (same shape as vmsingle in deploy/observability/vmsingle-tailscale-
+# service.yml). The forgejo container is rootless and opinionated
+# about :3000, so the in-pod sidecar pattern that repo-recall and the
+# eco-* services use doesn't fit cleanly here. The Service does the
+# port 80 -> 3000 translation; the ts proxy forwards inbound tailnet
+# traffic to TS_DEST_IP which is this Service's ClusterIP.
 apiVersion: v1
 kind: Service
 metadata:
   name: forgejo
   namespace: forgejo
-  annotations:
-    tailscale.com/expose: "true"
-    tailscale.com/hostname: forgejo
 spec:
+  # Pinned to the existing allocation so TS_DEST_IP below stays stable
+  # across recreates. ClusterIP is immutable post-create; future
+  # changes need delete+recreate of the Service plus the TS_DEST_IP
+  # below in lockstep.
+  clusterIP: 10.43.221.226
   type: ClusterIP
   selector:
     app: forgejo
@@ -301,3 +307,117 @@ spec:
       port: 80
       targetPort: 3000
       protocol: TCP
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: ts-forgejo
+  namespace: forgejo
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: ts-forgejo-state
+  namespace: forgejo
+rules:
+  - apiGroups: [""]
+    resources: ["secrets"]
+    verbs: ["create"]
+  - apiGroups: [""]
+    resources: ["secrets"]
+    resourceNames: ["ts-forgejo-state"]
+    verbs: ["get", "update", "patch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: ts-forgejo-state
+  namespace: forgejo
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: ts-forgejo-state
+subjects:
+  - kind: ServiceAccount
+    name: ts-forgejo
+    namespace: forgejo
+---
+apiVersion: external-secrets.io/v1
+kind: ExternalSecret
+metadata:
+  name: ts-forgejo-authkey
+  namespace: forgejo
+spec:
+  refreshInterval: 1h
+  secretStoreRef:
+    name: aws-parameter-store
+    kind: ClusterSecretStore
+  target:
+    name: ts-forgejo-authkey
+    creationPolicy: Owner
+    template:
+      type: Opaque
+      data:
+        authkey: "{{ .authkey }}"
+  data:
+    - secretKey: authkey
+      remoteRef:
+        key: /coilysiren/forgejo/ts-authkey
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ts-forgejo
+  namespace: forgejo
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: ts-forgejo
+  template:
+    metadata:
+      labels:
+        app: ts-forgejo
+    spec:
+      serviceAccountName: ts-forgejo
+      nodeSelector:
+        kubernetes.io/hostname: kai-server
+      containers:
+        - name: ts
+          image: tailscale/tailscale:v1.78.1
+          env:
+            - name: TS_HOSTNAME
+              value: forgejo
+            - name: TS_KUBE_SECRET
+              value: ts-forgejo-state
+            - name: TS_USERSPACE
+              value: "false"
+            - name: TS_AUTH_ONCE
+              value: "true"
+            - name: TS_EXTRA_ARGS
+              value: "--accept-dns=false"
+            # Standalone-proxy mode. containerboot forwards inbound
+            # tailnet traffic to this IP at the same destination port,
+            # so tailnet :80 lands at forgejo Service :80 which the
+            # Service translates to targetPort 3000 on the workload pod.
+            - name: TS_DEST_IP
+              value: "10.43.221.226"
+            - name: TS_AUTHKEY
+              valueFrom:
+                secretKeyRef:
+                  name: ts-forgejo-authkey
+                  key: authkey
+          securityContext:
+            privileged: true
+            runAsUser: 0
+            runAsGroup: 0
+            runAsNonRoot: false
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 200m
+              memory: 128Mi
