@@ -66,8 +66,13 @@ spec:
             - name: api
               containerPort: 7777
           env:
+            # 0.0.0.0 so the kubelet readiness/liveness probes reach
+            # :7777 via the pod IP. The api stays private: only the web
+            # container's :8080 is fronted by the Service, and the
+            # pod network namespace is not shared. Caddy reverse-proxies
+            # to localhost:7777 in-pod, which works either way.
             - name: REPO_RECALL_HOST
-              value: "127.0.0.1"
+              value: "0.0.0.0"
             - name: REPO_RECALL_PORT
               value: "7777"
             # MCP CORS allowlist. The Caddy sidecar terminates the tailnet
