@@ -31,6 +31,7 @@ fi
 pulled=0
 skipped=0
 failed=0
+agentic_os_kai_ok=0
 
 for git_dir in "$ROOT"/*/.git; do
   repo_dir="$(dirname "$git_dir")"
@@ -72,11 +73,34 @@ for git_dir in "$ROOT"/*/.git; do
   if git -C "$repo_dir" pull --ff-only --quiet 2>/dev/null; then
     echo "[$name] ok"
     pulled=$((pulled+1))
+    if [[ "$name" == "agentic-os-kai" ]]; then
+      agentic_os_kai_ok=1
+    fi
   else
     echo "[$name] FAIL: non-ff (manual rebase/merge needed)"
     failed=$((failed+1))
   fi
 done
+
+# Refresh agentic-os-kai's host setup (skill symlinks, ~/.claude/CLAUDE.md,
+# merged Claude settings) whenever its pull succeeded. setup.sh is
+# idempotent and cheap. Picked up by the daily restart at 03:00, gated
+# by claude-remote-control-restart-precheck.sh. See coilysiren/infrastructure#211.
+if (( agentic_os_kai_ok == 1 )); then
+  setup="$ROOT/agentic-os-kai/setup.sh"
+  if [[ -x "$setup" ]]; then
+    echo
+    echo "[agentic-os-kai] running setup.sh..."
+    if "$setup" >/dev/null; then
+      echo "[agentic-os-kai] setup.sh ok"
+    else
+      echo "[agentic-os-kai] FAIL: setup.sh non-zero exit"
+      failed=$((failed+1))
+    fi
+  else
+    echo "[agentic-os-kai] SKIP: setup.sh not executable at $setup"
+  fi
+fi
 
 echo
 echo "pulled=$pulled skipped=$skipped failed=$failed"
