@@ -23,9 +23,11 @@ server:
   # observability stack lives with the rest of the cluster substrate.
   nodeSelector:
     kubernetes.io/hostname: kai-server
+  # Tailnet exposure happens via the standalone ts-vmsingle Deployment
+  # in deploy/observability/vmsingle-tailscale-service.yml; no operator
+  # annotation needed (and wouldn't work here anyway - the chart's
+  # primary Service is headless).
   service:
-    annotations:
-      tailscale.com/expose: "true"
     type: ClusterIP
 
 # vmagent ships as a separate chart (victoria-metrics-agent), not as a

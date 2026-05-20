@@ -10,3 +10,4 @@
 # and needs a separate revoke step.
 services:
   - repo-recall
+  - vmsingle
