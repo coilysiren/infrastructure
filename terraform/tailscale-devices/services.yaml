@@ -11,3 +11,4 @@
 services:
   - repo-recall
   - vmsingle
+  - eco-mcp
