@@ -35,6 +35,9 @@ commands:
   terraform-tailscale-oidc:
     run: make terraform-tailscale-oidc
     description: Run terraform against terraform/tailscale-oidc/ (TS admin OAuth wired from SSM). Args - action=plan|apply|init|destroy.
+  terraform-tailscale-devices:
+    run: make terraform-tailscale-devices
+    description: Run terraform against terraform/tailscale-devices/ (one tailscale_tailnet_key per k8s sidecar service; replaces tailscale-operator). Args - action=plan|apply|init|destroy.
   sync-tailscale-oidc-secrets:
     run: make sync-tailscale-oidc-secrets
     description: Push TS_CLIENT_ID + TS_AUDIENCE to each repo via gh CLI live auth, reading from tf outputs.

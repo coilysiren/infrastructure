@@ -9,6 +9,7 @@ DEFAULT_GOAL := help
 	terraform-grafana \
 	terraform-admin-kms \
 	terraform-tailscale-oidc \
+	terraform-tailscale-devices \
 	sync-tailscale-oidc-secrets \
 	llama-deploy \
 	llama-deploy-secrets
@@ -41,6 +42,9 @@ terraform-admin-kms: ## Run terraform against terraform/admin-kms/ (admin-only K
 
 terraform-tailscale-oidc: ## Run terraform against terraform/tailscale-oidc/ (TS admin OAuth wired from SSM). Args - action=plan|apply|init|destroy.
 	@uv run python scripts/k8s/terraform_tailscale_oidc.py $(or $(action),plan)
+
+terraform-tailscale-devices: ## Run terraform against terraform/tailscale-devices/ (one tailscale_tailnet_key per k8s sidecar service; replaces tailscale-operator). Args - action=plan|apply|init|destroy.
+	@uv run python scripts/k8s/terraform_tailscale_devices.py $(or $(action),plan)
 
 sync-tailscale-oidc-secrets: ## Push TS_CLIENT_ID + TS_AUDIENCE to each repo in tailscale-oidc/repos.yaml via gh CLI live auth.
 	@uv run python scripts/k8s/sync_tailscale_oidc_secrets.py
