@@ -70,10 +70,12 @@ resource "tailscale_acl" "main" {
     }
 
     tagOwners = {
-      "tag:server"       = []
-      "tag:ci"           = ["group:ci"]
-      "tag:k8s-operator" = []
-      "tag:k8s"          = ["tag:k8s-operator"]
+      "tag:server" = []
+      "tag:ci"     = ["group:ci"]
+      # tag:k8s devices are minted by terraform/tailscale-devices/ via the
+      # admin OAuth client. The dynamic tag:k8s-operator path was retired
+      # alongside the tailscale-operator helm release.
+      "tag:k8s" = []
     }
 
     acls = [
