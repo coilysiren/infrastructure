@@ -1,11 +1,16 @@
 # repo-recall on kai-server k3s. Tailnet-only, no Ingress, no Route 53.
 #
-# Two containers in one Pod: `api` (Rust axum + MCP on :7777) and `web`
-# (Caddy serving the static SPA on :8080, reverse-proxying /api, /openapi.json,
-# /mcp to localhost:7777). Mirrors forgejo's tailscale-operator pattern - the
-# Service carries `tailscale.com/expose: "true"` + `tailscale.com/hostname:
-# repo-recall` so the operator stands up a ts-proxy at the MagicDNS name
-# `repo-recall.<tailnet>.ts.net`.
+# Three containers in one Pod: `api` (Rust axum + MCP on :7777), `web`
+# (Caddy serving the static SPA on :8080, reverse-proxying /api,
+# /openapi.json, /mcp to localhost:7777), and `ts` (tailscale sidecar
+# in kernel mode that gives the Pod a tailnet IP, so tailnet peers
+# reach `repo-recall.<tailnet>.ts.net:8080` directly).
+#
+# The ts sidecar replaces the tailscale-operator's per-Service ts-proxy
+# StatefulSet. Auth key is minted by terraform/tailscale-devices/ and
+# materialized into the namespace via the ExternalSecret below. State
+# persists in a k8s Secret (TS_KUBE_SECRET) so pod restarts re-use the
+# device identity without re-consuming the single-use auth key.
 #
 # Filesystem access is via hostPath, read-only. The API container reads the
 # host project tree and Claude session JSONL during ingest; it does not
@@ -23,11 +28,11 @@
 # The manifest references `:latest` so a fresh `kubectl apply` (including
 # from a third-party operator deploying repo-recall on their own cluster)
 # pulls a working image from GHCR. Subsequent rolls on kai-server happen
-# via `kubectl set image deploy/repo-recall <container>=coilysiren/repo-
-# recall-<api|web>:<sha>` from the docker.yml `ship` job, which sideloads
-# SHA-pinned images directly into kai-server's containerd via tailscale
-# ssh + `k3s ctr import`. imagePullPolicy: IfNotPresent so the kubelet
-# uses the sideloaded image rather than trying to pull a local-only ref.
+# via `kubectl set image deploy/repo-recall <container>=ghcr.io/coilysiren
+# /repo-recall-<api|web>:sha-<short>` from the docker.yml `ship` job,
+# which sideloads SHA-pinned images directly into kai-server's containerd
+# via tailscale ssh + `k3s ctr import`. imagePullPolicy: IfNotPresent so
+# the kubelet prefers the sideloaded image.
 #
 # Apply: sudo k3s kubectl apply -f deploy/repo-recall.yml
 ---
@@ -35,6 +40,46 @@ apiVersion: v1
 kind: Namespace
 metadata:
   name: repo-recall
+---
+# Dedicated ServiceAccount + Role + RoleBinding so the ts sidecar can
+# read/write its TS_KUBE_SECRET state Secret (repo-recall-ts-state).
+# Scoped tight: only this Secret name, only get/update/patch (+ create
+# for initial seed). Mirrors the operator's `proxies` ServiceAccount
+# pattern, but namespaced to repo-recall rather than living in the
+# global tailscale namespace.
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: repo-recall
+  namespace: repo-recall
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: repo-recall-ts-state
+  namespace: repo-recall
+rules:
+  - apiGroups: [""]
+    resources: ["secrets"]
+    verbs: ["create"]
+  - apiGroups: [""]
+    resources: ["secrets"]
+    resourceNames: ["repo-recall-ts-state"]
+    verbs: ["get", "update", "patch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: repo-recall-ts-state
+  namespace: repo-recall
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: repo-recall-ts-state
+subjects:
+  - kind: ServiceAccount
+    name: repo-recall
+    namespace: repo-recall
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -53,6 +98,7 @@ spec:
       labels:
         app: repo-recall
     spec:
+      serviceAccountName: repo-recall
       securityContext:
         runAsNonRoot: true
         runAsUser: 1000
@@ -68,9 +114,9 @@ spec:
           env:
             # 0.0.0.0 so the kubelet readiness/liveness probes reach
             # :7777 via the pod IP. The api stays private: only the web
-            # container's :8080 is fronted by the Service, and the
-            # pod network namespace is not shared. Caddy reverse-proxies
-            # to localhost:7777 in-pod, which works either way.
+            # container's :8080 is fronted externally, and the tailnet
+            # ACL doesn't open :7777. Caddy reverse-proxies to
+            # localhost:7777 in-pod, which works either way.
             - name: REPO_RECALL_HOST
               value: "0.0.0.0"
             - name: REPO_RECALL_PORT
@@ -158,6 +204,51 @@ spec:
               port: 8080
             initialDelaySeconds: 15
             periodSeconds: 30
+        # tailscale sidecar in kernel mode. Pod gains a tailnet IP via
+        # WireGuard userspace + a real TUN device (privileged: true is
+        # what the previous operator-managed ts-proxy StatefulSets use
+        # on this same WSL2 kernel, so it's the known-working shape).
+        # Once `tailscale up` runs, web's 0.0.0.0:8080 listener is
+        # reachable from tailnet peers at `repo-recall:8080`. No
+        # explicit forwarding rule needed - same pod netns means the
+        # tailnet IP and the pod IP both terminate at the web container.
+        - name: ts
+          image: tailscale/tailscale:v1.78.1
+          env:
+            - name: TS_HOSTNAME
+              value: repo-recall
+            - name: TS_KUBE_SECRET
+              value: repo-recall-ts-state
+            - name: TS_USERSPACE
+              value: "false"
+            - name: TS_AUTH_ONCE
+              value: "true"
+            # Don't override the pod's resolv.conf; the cluster has its
+            # own DNS path and accepting tailnet DNS would break in-pod
+            # service discovery for the api/web siblings.
+            - name: TS_EXTRA_ARGS
+              value: "--accept-dns=false"
+            - name: TS_AUTHKEY
+              valueFrom:
+                secretKeyRef:
+                  name: repo-recall-ts-authkey
+                  key: authkey
+          securityContext:
+            # privileged needed for /dev/net/tun on the WSL2 kernel.
+            # The pod-level runAsNonRoot is overridden here because
+            # tailscaled needs root for the netlink + tun ioctls; the
+            # api/web siblings still run as UID 1000.
+            privileged: true
+            runAsUser: 0
+            runAsGroup: 0
+            runAsNonRoot: false
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 200m
+              memory: 128Mi
       volumes:
         - name: projects
           hostPath:
@@ -168,11 +259,8 @@ spec:
             path: /home/kai/.claude
             type: Directory
 ---
-# tailnet-exposed front door. The tailscale operator picks up the
-# annotations and stands up a ts-proxy StatefulSet with the pinned MagicDNS
-# hostname `repo-recall.<tailnet>.ts.net`. Only the web container is
-# exposed; /api, /openapi.json, /mcp reach the API container via the
-# in-Pod localhost reverse_proxy in deploy/Caddyfile.
+# GH_TOKEN for the api container's octocrab ingest. Sourced from
+# SSM /coilysiren/repo-recall/gh-token.
 apiVersion: external-secrets.io/v1
 kind: ExternalSecret
 metadata:
@@ -195,14 +283,42 @@ spec:
       remoteRef:
         key: /coilysiren/repo-recall/gh-token
 ---
+# TS_AUTHKEY for the ts sidecar. Sourced from
+# SSM /coilysiren/repo-recall/ts-authkey, which terraform/tailscale-
+# devices/ provisions. Single-use, 90-day expiry; the ts sidecar's
+# TS_KUBE_SECRET state Secret holds the persisted device identity
+# after first boot so subsequent pod restarts don't need a fresh key.
+apiVersion: external-secrets.io/v1
+kind: ExternalSecret
+metadata:
+  name: repo-recall-ts-authkey
+  namespace: repo-recall
+spec:
+  refreshInterval: 1h
+  secretStoreRef:
+    name: aws-parameter-store
+    kind: ClusterSecretStore
+  target:
+    name: repo-recall-ts-authkey
+    creationPolicy: Owner
+    template:
+      type: Opaque
+      data:
+        authkey: "{{ .authkey }}"
+  data:
+    - secretKey: authkey
+      remoteRef:
+        key: /coilysiren/repo-recall/ts-authkey
+---
+# ClusterIP Service for in-cluster routing only. Tailnet exposure
+# comes from the ts sidecar's WireGuard interface, not from any
+# Service annotation. The previous tailscale.com/expose annotations
+# are gone with the operator deprovision.
 apiVersion: v1
 kind: Service
 metadata:
   name: repo-recall
   namespace: repo-recall
-  annotations:
-    tailscale.com/expose: "true"
-    tailscale.com/hostname: repo-recall
 spec:
   type: ClusterIP
   selector:
