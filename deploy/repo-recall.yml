@@ -99,6 +99,15 @@ spec:
         app: repo-recall
     spec:
       serviceAccountName: repo-recall
+      # Pin to kai-server (native Linux 6.8) instead of the WSL2 nodes
+      # (kai-desktop-tower / kai-desktop-tower-wsl). The ts sidecar
+      # needs /dev/net/tun, which the WSL2 kernel doesn't expose to
+      # containerd by default. Every working operator-managed ts-proxy
+      # in this cluster is on kai-server; same constraint applies here.
+      # Also keeps the hostPath worktree consistent (single source of
+      # truth on one node).
+      nodeSelector:
+        kubernetes.io/hostname: kai-server
       securityContext:
         runAsNonRoot: true
         runAsUser: 1000
