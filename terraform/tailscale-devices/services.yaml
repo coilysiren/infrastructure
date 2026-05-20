@@ -13,3 +13,4 @@ services:
   - vmsingle
   - eco-mcp
   - eco-spec
+  - galaxy-gen
