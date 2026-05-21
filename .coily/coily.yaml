@@ -47,9 +47,9 @@ commands:
   llama-deploy-secrets:
     run: make llama-deploy-secrets
     description: Bootstrap the llama ghcr.io docker-registry secret from SSM /github/pat.
-  aws-inventory:
-    run: make aws-inventory
-    description: Regenerate aws-inventory.yaml from live SSM, S3, and Route53 state.
+  terraform-aws-inventory:
+    run: make terraform-aws-inventory
+    description: Run terraform against terraform/aws-inventory/ (managed S3 + Route53, SSM data-source). Args - action=plan|apply|init|destroy|output|import.
 
 # Catalog metadata for the cross-repo knowledge graph.
 # Schema: coilysiren/agentic-os-kai#420 (tracker).
