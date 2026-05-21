@@ -9,6 +9,15 @@ repos:
         pass_filenames: false
         stages: [pre-commit, pre-push]
 
+      - id: pylint
+        name: pylint (matches the CI lint job)
+        description: Run pylint over every tracked Python file, identical to the CI lint job, so a lint regression is caught at commit time instead of in a CI nobody watches.
+        entry: bash -c 'uv run pylint --disable=fixme $(git ls-files "*.py")'
+        language: system
+        pass_filenames: false
+        always_run: true
+        require_serial: true
+
   - repo: local
     hooks:
       - id: coily-trailer
