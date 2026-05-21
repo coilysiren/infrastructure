@@ -83,6 +83,10 @@ resource "aws_s3_bucket" "bucket" {
 
 resource "aws_route53_zone" "coilysiren_me" {
   name = "coilysiren.me"
+  # The zone was created by the Route53 registrar. Keep its original
+  # comment so the import plan stays clean (the resource default is
+  # "Managed by Terraform").
+  comment = "HostedZone created by Route53 Registrar"
 }
 
 locals {
@@ -130,7 +134,7 @@ resource "aws_route53_record" "www" {
   name    = "www.coilysiren.me"
   type    = "CNAME"
   ttl     = 60
-  records = ["coilysiren-dot-me.netlify.app"]
+  records = ["coilysiren-dot-me.netlify.app."]
 }
 
 # TXT verification records. All three are world-readable DNS by design
@@ -149,25 +153,29 @@ resource "aws_route53_record" "txt" {
   records = [each.value]
 }
 
-# Apex NS and SOA. AWS pre-creates both with the zone. allow_overwrite
-# lets a destroy/recreate cycle reclaim them instead of erroring. NS
-# values track the zone's assigned name servers.
+# Apex NS and SOA. AWS pre-creates both with the zone. The NS values are
+# the zone's assigned name servers - hardcoded with trailing dots to
+# match what Route53 stores (the zone's name_servers attribute drops
+# them, which would show as a spurious diff).
 resource "aws_route53_record" "ns" {
-  zone_id         = local.zone_id
-  name            = "coilysiren.me"
-  type            = "NS"
-  ttl             = 172800
-  allow_overwrite = true
-  records         = aws_route53_zone.coilysiren_me.name_servers
+  zone_id = local.zone_id
+  name    = "coilysiren.me"
+  type    = "NS"
+  ttl     = 172800
+  records = [
+    "ns-1394.awsdns-46.org.",
+    "ns-617.awsdns-13.net.",
+    "ns-323.awsdns-40.com.",
+    "ns-1779.awsdns-30.co.uk.",
+  ]
 }
 
 resource "aws_route53_record" "soa" {
-  zone_id         = local.zone_id
-  name            = "coilysiren.me"
-  type            = "SOA"
-  ttl             = 900
-  allow_overwrite = true
-  records         = ["ns-1394.awsdns-46.org. awsdns-hostmaster.amazon.com. 1 7200 900 1209600 86400"]
+  zone_id = local.zone_id
+  name    = "coilysiren.me"
+  type    = "SOA"
+  ttl     = 900
+  records = ["ns-1394.awsdns-46.org. awsdns-hostmaster.amazon.com. 1 7200 900 1209600 86400"]
 }
 
 # ---------------------------------------------------------------------------

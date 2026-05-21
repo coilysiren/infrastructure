@@ -41,8 +41,8 @@ records source it from `data.aws_ssm_parameter("/coilysiren/home/public-ip")`.
 The provider marks that value sensitive, so it stays out of plan output
 too.
 
-The apex `NS` and `SOA` records are managed with `allow_overwrite = true`
-because AWS pre-creates both with the zone.
+The apex `NS` and `SOA` records are managed too. AWS pre-creates both
+with the zone, so the bootstrap imports them rather than creating them.
 
 ## Run
 
