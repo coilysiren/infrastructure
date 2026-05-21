@@ -1,0 +1,27 @@
+[Unit]
+Description=Claude session watcher (ships ~/.claude/projects session files to the session-sink)
+After=syslog.target network.target nss-lookup.target network-online.target
+Wants=network-online.target
+StartLimitBurst=5
+StartLimitIntervalSec=60
+
+[Service]
+Type=simple
+Restart=on-failure
+RestartSec=10
+User=kai
+# The watcher runs from a self-contained install dir, not the repo
+# checkout: scripts/claude-session-watcher-install.sh copies the script
+# and provisions a dedicated venv (watchdog + requests) there. This
+# keeps the unit working even if the infrastructure repo is moved.
+Environment=HOME=/home/kai
+WorkingDirectory=/home/kai/.local/share/claude-session-watcher
+# SESSION_SINK_URL and SESSION_WATCHER_MACHINE live in an env file the
+# installer writes. SESSION_SINK_URL embeds a tailnet FQDN (an opaque
+# id), so it is resolved from SSM at install time and never committed.
+EnvironmentFile=/etc/claude-session-watcher.env
+ExecStart=/home/kai/.local/share/claude-session-watcher/venv/bin/python /home/kai/.local/share/claude-session-watcher/claude-session-watcher.py
+ExecStop=/bin/kill -TERM $MAINPID
+
+[Install]
+WantedBy=multi-user.target

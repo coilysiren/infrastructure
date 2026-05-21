@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  Mac launchd agent for the Claude session watcher.
+
+  Watches ~/.claude/projects for session-file changes and HTTP POSTs
+  each one to the tailnet-only session-sink on kai-server. Component 1
+  of the cross-machine session-aggregation pipeline
+  (coilysiren/infrastructure#224).
+
+  This file is a TEMPLATE. scripts/claude-session-watcher-install-mac.sh
+  substitutes the {{...}} placeholders and writes the result to
+  ~/Library/LaunchAgents/. SESSION_SINK_URL embeds a tailnet FQDN (an
+  opaque id), so it is resolved from SSM at install time - never commit
+  a filled-in copy.
+
+  Install / uninstall via:
+    scripts/claude-session-watcher-install-mac.sh
+    scripts/claude-session-watcher-install-mac.sh --uninstall
+-->
+<plist version="1.0">
+  <dict>
+    <key>Label</key>
+    <string>me.coilysiren.claude-session-watcher</string>
+
+    <key>ProgramArguments</key>
+    <array>
+      <string>{{HOME}}/.local/share/claude-session-watcher/venv/bin/python</string>
+      <string>{{HOME}}/.local/share/claude-session-watcher/claude-session-watcher.py</string>
+    </array>
+
+    <key>EnvironmentVariables</key>
+    <dict>
+      <key>SESSION_SINK_URL</key>
+      <string>{{SESSION_SINK_URL}}</string>
+      <key>SESSION_WATCHER_MACHINE</key>
+      <string>{{SESSION_WATCHER_MACHINE}}</string>
+    </dict>
+
+    <key>KeepAlive</key>
+    <true/>
+
+    <key>RunAtLoad</key>
+    <true/>
+
+    <key>StandardOutPath</key>
+    <string>{{HOME}}/Library/Logs/claude-session-watcher.log</string>
+
+    <key>StandardErrorPath</key>
+    <string>{{HOME}}/Library/Logs/claude-session-watcher.log</string>
+
+    <key>ProcessType</key>
+    <string>Background</string>
+  </dict>
+</plist>

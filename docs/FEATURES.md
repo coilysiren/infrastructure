@@ -35,6 +35,10 @@ Baseline of `coilysiren/infrastructure`. Update when scope changes.
 - **GitHub Actions CI** - Config validation here. Per-repo CI in sibling repos builds to GHCR and `kubectl apply` against the tailnet. Canonical shape: test, build-publish, deploy.
 - **llama.cpp inference** - k8s Deployment in `llama` namespace, initContainer pulls TinyLLama-1.1B, serves :8080. Verbs: `coily llama-deploy`, `coily llama-deploy-secrets`.
 
+## Cross-machine session aggregation
+
+- **Claude session watcher** - Per-machine `watchdog`-driven process that ships `~/.claude/projects` session files to a tailnet-only sink so every machine's Claude sessions are queryable from one place. Runs on the 4 non-kai-server environments (Mac desktop/laptop, Windows native, WSL) via launchd / Scheduled Task / systemd. Component 1 of the pipeline in `coilysiren/infrastructure#224`. See `docs/claude-session-watcher.md`.
+
 ## Network and access
 
 - **DNS and routing** - `coilysiren.me` Route 53 zone. Service A records point to the WAN, NAT'd to the LAN side of the homelab. Tailnet kubeconfig uses the `kai-server` MagicDNS name. Concrete addresses live in the vault.
