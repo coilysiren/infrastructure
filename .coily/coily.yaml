@@ -49,7 +49,7 @@ commands:
     description: Bootstrap the llama ghcr.io docker-registry secret from SSM /github/pat.
   terraform-aws-inventory:
     run: make terraform-aws-inventory
-    description: Run terraform against terraform/aws-inventory/ (read-only SSM/S3/Route53 inventory). Args - action=plan|apply|init|destroy|output.
+    description: Run terraform against terraform/aws-inventory/ (managed S3 + Route53, SSM data-source). Args - action=plan|apply|init|destroy|output.
 
 # Catalog metadata for the cross-repo knowledge graph.
 # Schema: coilysiren/agentic-os-kai#420 (tracker).

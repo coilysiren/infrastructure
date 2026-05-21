@@ -1,8 +1,11 @@
 #!/usr/bin/env python3
 """Run terraform against `terraform/aws-inventory/`.
 
-No secret inputs. The module is read-only (data sources only) and AWS
-creds come from the caller's shell.
+No secret inputs. AWS creds come from the caller's shell. The module
+manages real resources (the coilysiren.me Route53 zone + records, two
+S3 buckets), so `apply` is not auto-approved - a bad apply breaks DNS
+for every coilysiren.me service. Review the `plan` first, then run
+`apply` interactively so terraform's approval prompt has a TTY.
 
 Usage: terraform_aws_inventory.py [action]   # default: plan
 
@@ -76,9 +79,9 @@ def main():
     if len(sys.argv) > 1 and sys.argv[1] == "output":
         show_output()
         return
-    # auto_approve is safe here - the module is data-source-only, so apply
-    # creates no infrastructure. `plan` is the review step.
-    terraform_run("aws-inventory", auto_approve=True)
+    # No auto_approve - the module owns live DNS. `apply` must be run
+    # interactively so terraform's approval prompt gets a real TTY.
+    terraform_run("aws-inventory")
 
 
 if __name__ == "__main__":
