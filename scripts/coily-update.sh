@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# coily-update.sh - brew-upgrade coily and re-baseline its setup.
+# coily-update.sh - brew-upgrade coily plus every other formula, then
+# re-baseline coily's setup.
 #
 # Invoked by coily-update.timer weekly, and on-demand via
 # `coily systemctl start coily-update.service` after a tap push so the new
@@ -38,6 +39,12 @@ done
 
 echo "==> brew upgrade coilysiren/tap/coily"
 brew upgrade coilysiren/tap/coily
+
+# Keep every other Linuxbrew formula on kai-server current too, not just
+# coily. Runs after the targeted coily upgrade so coily still lands even
+# if a later formula's upgrade fails and trips set -e.
+echo "==> brew upgrade (all formulae)"
+brew upgrade
 
 echo "==> coily setup (lockdown root: ${COILY_LOCKDOWN_ROOT:-unset})"
 coily setup
