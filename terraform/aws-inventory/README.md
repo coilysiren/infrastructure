@@ -61,23 +61,15 @@ breaks every `coilysiren.me` service - so review the `plan`, then run
 ## Importing (one-time bootstrap)
 
 The resources were brought under management with `terraform import`, no
-new infrastructure created. To re-bootstrap on a fresh state:
+new infrastructure created. The `import` action imports every bucket,
+the zone, and all 13 records in one pass:
 
 ```
-terraform -chdir=terraform/aws-inventory import 'aws_s3_bucket.bucket["coilysiren-assets"]' coilysiren-assets
-terraform -chdir=terraform/aws-inventory import 'aws_s3_bucket.bucket["kai-game-backups"]'  kai-game-backups
-terraform -chdir=terraform/aws-inventory import aws_route53_zone.coilysiren_me <ZONE_ID>
-terraform -chdir=terraform/aws-inventory import 'aws_route53_record.apex_a'              <ZONE_ID>_coilysiren.me_A
-terraform -chdir=terraform/aws-inventory import 'aws_route53_record.www'                 <ZONE_ID>_www.coilysiren.me_CNAME
-terraform -chdir=terraform/aws-inventory import 'aws_route53_record.ns'                  <ZONE_ID>_coilysiren.me_NS
-terraform -chdir=terraform/aws-inventory import 'aws_route53_record.soa'                 <ZONE_ID>_coilysiren.me_SOA
-terraform -chdir=terraform/aws-inventory import 'aws_route53_record.home_a["eco"]'              <ZONE_ID>_eco.coilysiren.me_A
-terraform -chdir=terraform/aws-inventory import 'aws_route53_record.home_a["eco-jobs-tracker"]' <ZONE_ID>_eco-jobs-tracker.coilysiren.me_A
-terraform -chdir=terraform/aws-inventory import 'aws_route53_record.home_a["eco-mcp"]'          <ZONE_ID>_eco-mcp.coilysiren.me_A
-terraform -chdir=terraform/aws-inventory import 'aws_route53_record.home_a["factorio"]'         <ZONE_ID>_factorio.coilysiren.me_A
-terraform -chdir=terraform/aws-inventory import 'aws_route53_record.home_a["galaxy-gen"]'       <ZONE_ID>_galaxy-gen.coilysiren.me_A
-terraform -chdir=terraform/aws-inventory import 'aws_route53_record.home_a["grafana"]'          <ZONE_ID>_grafana.coilysiren.me_A
-terraform -chdir=terraform/aws-inventory import 'aws_route53_record.txt["@"]'        <ZONE_ID>_coilysiren.me_TXT
-terraform -chdir=terraform/aws-inventory import 'aws_route53_record.txt["_atproto"]' <ZONE_ID>__atproto.coilysiren.me_TXT
-terraform -chdir=terraform/aws-inventory import 'aws_route53_record.txt["_discord"]' <ZONE_ID>__discord.coilysiren.me_TXT
+coily exec terraform-aws-inventory action=init
+coily exec terraform-aws-inventory action=import
+coily exec terraform-aws-inventory action=plan
 ```
+
+It resolves the Route53 zone id from AWS at run time (no opaque id in
+code) and skips anything already in state, so it is safe to re-run.
+After `import`, `plan` should show no changes.

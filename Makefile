@@ -56,5 +56,5 @@ llama-deploy: ## Apply llama/deploy.yml into the llama namespace.
 llama-deploy-secrets: ## Bootstrap the llama ghcr.io docker-registry secret from SSM /github/pat.
 	@uv run python scripts/llama/deploy_secrets_docker_repo.py
 
-terraform-aws-inventory: ## Run terraform against terraform/aws-inventory/ (managed S3 + Route53, SSM data-source). Args - action=plan|apply|init|destroy|output.
+terraform-aws-inventory: ## Run terraform against terraform/aws-inventory/ (managed S3 + Route53, SSM data-source). Args - action=plan|apply|init|destroy|output|import.
 	@uv run python scripts/k8s/terraform_aws_inventory.py $(or $(action),plan)

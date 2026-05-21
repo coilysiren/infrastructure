@@ -9,9 +9,17 @@ for every coilysiren.me service. Review the `plan` first, then run
 
 Usage: terraform_aws_inventory.py [action]   # default: plan
 
-`action=output` is special: it runs `terraform output -json inventory`
-and prints the inventory as YAML. Every other action passes straight
-through to terraform via terraform_run (init, plan, apply, destroy).
+Two actions are special:
+
+- `output` runs `terraform output -json inventory` and prints the
+  inventory as YAML.
+- `import` brings every S3 bucket, the Route53 zone, and all 13 record
+  sets under management. The Route53 zone id is resolved from AWS at
+  run time so no opaque id lands in code. Already-imported resources
+  are skipped, so it is safe to re-run.
+
+Every other action passes straight through to terraform via
+terraform_run (init, plan, apply, destroy).
 """
 # pylint: disable=wrong-import-position
 import json
@@ -22,7 +30,29 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from _lib import terraform_run  # noqa: E402
 
+import boto3  # noqa: E402
+
 CHDIR = "terraform/aws-inventory"
+
+S3_BUCKETS = ["coilysiren-assets", "kai-game-backups"]
+
+# Route53 record name (relative to the zone, "" = apex) -> resource address.
+# IDs are built as ZONEID_<fqdn>_<type> once the zone id is known.
+ROUTE53_RECORDS = [
+    ("", "A", "aws_route53_record.apex_a"),
+    ("www", "CNAME", "aws_route53_record.www"),
+    ("", "NS", "aws_route53_record.ns"),
+    ("", "SOA", "aws_route53_record.soa"),
+    ("eco", "A", 'aws_route53_record.home_a["eco"]'),
+    ("eco-jobs-tracker", "A", 'aws_route53_record.home_a["eco-jobs-tracker"]'),
+    ("eco-mcp", "A", 'aws_route53_record.home_a["eco-mcp"]'),
+    ("factorio", "A", 'aws_route53_record.home_a["factorio"]'),
+    ("galaxy-gen", "A", 'aws_route53_record.home_a["galaxy-gen"]'),
+    ("grafana", "A", 'aws_route53_record.home_a["grafana"]'),
+    ("", "TXT", 'aws_route53_record.txt["@"]'),
+    ("_atproto", "TXT", 'aws_route53_record.txt["_atproto"]'),
+    ("_discord", "TXT", 'aws_route53_record.txt["_discord"]'),
+]
 
 
 def _scalar(value) -> str:
@@ -75,9 +105,57 @@ def show_output():
     print(_emit_yaml(inventory).lstrip("\n"), end="")
 
 
+def _zone_id() -> str:
+    """The coilysiren.me hosted zone id, resolved from AWS at run time so
+    the opaque id never has to be checked in."""
+    client = boto3.client("route53")
+    for zone in client.list_hosted_zones()["HostedZones"]:
+        if zone["Name"] == "coilysiren.me.":
+            return zone["Id"].rsplit("/", 1)[-1]
+    sys.exit("could not find the coilysiren.me hosted zone")
+
+
+def _tf_import(address: str, resource_id: str):
+    """Import one resource. Treat an already-managed resource as a no-op
+    so the whole `import` action stays re-runnable."""
+    print(f"import {address} <- {resource_id}")
+    result = subprocess.run(
+        ["terraform", f"-chdir={CHDIR}", "import", address, resource_id],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    if result.returncode == 0:
+        return
+    if "Resource already managed by Terraform" in result.stderr:
+        print(f"  already imported, skipping {address}")
+        return
+    sys.stderr.write(result.stdout)
+    sys.stderr.write(result.stderr)
+    sys.exit(result.returncode)
+
+
+def import_resources():
+    for bucket in S3_BUCKETS:
+        _tf_import(f'aws_s3_bucket.bucket["{bucket}"]', bucket)
+
+    zone_id = _zone_id()
+    _tf_import("aws_route53_zone.coilysiren_me", zone_id)
+
+    for name, rtype, address in ROUTE53_RECORDS:
+        fqdn = "coilysiren.me" if name == "" else f"{name}.coilysiren.me"
+        _tf_import(address, f"{zone_id}_{fqdn}_{rtype}")
+
+    print("import complete - run `action=plan` to confirm a clean diff")
+
+
 def main():
-    if len(sys.argv) > 1 and sys.argv[1] == "output":
+    action = sys.argv[1] if len(sys.argv) > 1 else "plan"
+    if action == "output":
         show_output()
+        return
+    if action == "import":
+        import_resources()
         return
     # No auto_approve - the module owns live DNS. `apply` must be run
     # interactively so terraform's approval prompt gets a real TTY.
