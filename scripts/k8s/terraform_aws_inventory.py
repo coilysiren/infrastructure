@@ -76,7 +76,9 @@ def main():
     if len(sys.argv) > 1 and sys.argv[1] == "output":
         show_output()
         return
-    terraform_run("aws-inventory")
+    # auto_approve is safe here - the module is data-source-only, so apply
+    # creates no infrastructure. `plan` is the review step.
+    terraform_run("aws-inventory", auto_approve=True)
 
 
 if __name__ == "__main__":
