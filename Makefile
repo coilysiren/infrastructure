@@ -13,7 +13,7 @@ DEFAULT_GOAL := help
 	sync-tailscale-oidc-secrets \
 	llama-deploy \
 	llama-deploy-secrets \
-	aws-inventory
+	terraform-aws-inventory
 
 help: ## Print this help.
 	@awk 'BEGIN {FS = ":.*?## "} /^[a-zA-Z_-]+:.*?## / {printf "%-32s %s\n", $$1, $$2}' $(MAKEFILE_LIST)
@@ -56,5 +56,5 @@ llama-deploy: ## Apply llama/deploy.yml into the llama namespace.
 llama-deploy-secrets: ## Bootstrap the llama ghcr.io docker-registry secret from SSM /github/pat.
 	@uv run python scripts/llama/deploy_secrets_docker_repo.py
 
-aws-inventory: ## Regenerate aws-inventory.yaml from live SSM, S3, and Route53 state.
-	@uv run python scripts/generate-aws-inventory.py
+terraform-aws-inventory: ## Run terraform against terraform/aws-inventory/ (read-only SSM/S3/Route53 inventory). Args - action=plan|apply|init|destroy|output.
+	@uv run python scripts/k8s/terraform_aws_inventory.py $(or $(action),plan)
