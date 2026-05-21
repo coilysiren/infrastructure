@@ -18,33 +18,16 @@ as terraform/tailscale-oidc/). all:write needed to mint tagged keys.
 Usage: terraform_tailscale_devices.py [action]   # default: plan
 """
 # pylint: disable=wrong-import-position
-import os
 import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from _lib import run, ssm  # noqa: E402
+from _lib import tailscale_admin_oauth_env, terraform_run  # noqa: E402
 
 
 def main():
-    action = sys.argv[1] if len(sys.argv) > 1 else "plan"
-    ssm_client = ssm()
-    client_id = ssm_client.get_parameter(
-        Name="/tailscale/admin/oauth-client-id",
-        WithDecryption=True,
-    )["Parameter"]["Value"]
-    client_secret = ssm_client.get_parameter(
-        Name="/tailscale/admin/oauth-client-secret",
-        WithDecryption=True,
-    )["Parameter"]["Value"]
-    env = os.environ.copy()
-    env["TAILSCALE_OAUTH_CLIENT_ID"] = client_id
-    env["TAILSCALE_OAUTH_CLIENT_SECRET"] = client_secret
-    if action == "init":
-        run("terraform -chdir=terraform/tailscale-devices init", env=env)
-        return
-    flags = " -auto-approve" if action in ("apply", "destroy") else ""
-    run(f"terraform -chdir=terraform/tailscale-devices {action}{flags}", env=env)
+    terraform_run(
+        "tailscale-devices", env=tailscale_admin_oauth_env(), auto_approve=True)
 
 
 if __name__ == "__main__":
