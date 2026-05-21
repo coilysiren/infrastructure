@@ -43,6 +43,7 @@
 # Python or another project's environment.
 
 import argparse
+import dataclasses
 import logging
 import os
 import pathlib
@@ -60,6 +61,17 @@ LOG = logging.getLogger("claude-session-watcher")
 # also drops sidecar files (lock files, bare-UUID temp files) into the
 # same directories; ignore everything that is not a .jsonl.
 SESSION_SUFFIX = ".jsonl"
+
+
+@dataclasses.dataclass(frozen=True)
+class WatcherConfig:
+    """Resolved runtime config. Bundled so the worker functions take one
+    argument instead of threading five through every call."""
+    session_url: str
+    machine: str
+    projects_dir: pathlib.Path
+    debounce: float
+    timeout: float
 
 
 class SessionHandler(FileSystemEventHandler):
@@ -93,24 +105,23 @@ class SessionHandler(FileSystemEventHandler):
             self._mark(event.dest_path)
 
 
-def post_file(session_url: str, machine: str, projects_dir: pathlib.Path,
-              path: pathlib.Path, timeout: float) -> bool:
+def post_file(cfg: WatcherConfig, path: pathlib.Path) -> bool:
     """POST one session file to the sink. Returns True on a 2xx."""
     try:
-        relpath = path.relative_to(projects_dir).as_posix()
+        relpath = path.relative_to(cfg.projects_dir).as_posix()
     except ValueError:
         # Watcher only ever sees paths under projects_dir, but be safe.
         relpath = path.name
     try:
         with path.open("rb") as fh:
             resp = requests.post(
-                session_url,
+                cfg.session_url,
                 # The sink keys storage on machine + relpath, so two
                 # machines with a colliding session UUID stay distinct.
-                data={"machine": machine, "relpath": relpath},
+                data={"machine": cfg.machine, "relpath": relpath},
                 files={"file": (path.name, fh, "application/x-ndjson")},
-                headers={"X-Session-Machine": machine},
-                timeout=timeout,
+                headers={"X-Session-Machine": cfg.machine},
+                timeout=cfg.timeout,
             )
     except (OSError, requests.RequestException) as exc:
         LOG.warning("POST failed for %s: %s", relpath, exc)
@@ -124,10 +135,9 @@ def post_file(session_url: str, machine: str, projects_dir: pathlib.Path,
     return True
 
 
-def flush_loop(session_url: str, machine: str, projects_dir: pathlib.Path,
-               dirty: dict, lock: threading.Lock, debounce: float,
-               timeout: float, stop: threading.Event):
-    """Ship files that have been quiet for `debounce` seconds.
+def flush_loop(cfg: WatcherConfig, dirty: dict, lock: threading.Lock,
+               stop: threading.Event):
+    """Ship files that have been quiet for `cfg.debounce` seconds.
 
     A file that fails to POST is left in the dirty set and retried on the
     next tick - its timestamp is not refreshed, so it stays eligible.
@@ -137,7 +147,7 @@ def flush_loop(session_url: str, machine: str, projects_dir: pathlib.Path,
         ready = []
         with lock:
             for path, last_seen in list(dirty.items()):
-                if now - last_seen >= debounce:
+                if now - last_seen >= cfg.debounce:
                     ready.append(path)
         for path_str in ready:
             path = pathlib.Path(path_str)
@@ -146,7 +156,7 @@ def flush_loop(session_url: str, machine: str, projects_dir: pathlib.Path,
                 with lock:
                     dirty.pop(path_str, None)
                 continue
-            if post_file(session_url, machine, projects_dir, path, timeout):
+            if post_file(cfg, path):
                 with lock:
                     dirty.pop(path_str, None)
         stop.wait(1.0)
@@ -169,6 +179,79 @@ def initial_sweep(dirty: dict, lock: threading.Lock,
     LOG.info("initial sweep queued %d existing session file(s)", count)
 
 
+def load_config():
+    """Resolve config from the environment. Returns a WatcherConfig, or
+    None after logging what is missing."""
+    session_url = os.environ.get("SESSION_SINK_URL", "").strip()
+    machine = os.environ.get("SESSION_WATCHER_MACHINE", "").strip()
+    if not session_url:
+        LOG.error("SESSION_SINK_URL is unset. Point it at the session-sink "
+                  "ingest endpoint, e.g. http://<sink-host>:<port>/ingest")
+        return None
+    if not machine:
+        LOG.error("SESSION_WATCHER_MACHINE is unset. Set a stable machine "
+                  "id, e.g. kai-mac-desktop")
+        return None
+
+    default_projects = pathlib.Path.home() / ".claude" / "projects"
+    projects_dir = pathlib.Path(
+        os.environ.get("CLAUDE_PROJECTS_DIR", str(default_projects))
+    ).expanduser()
+    if not projects_dir.is_dir():
+        LOG.error("Claude projects dir %s does not exist", projects_dir)
+        return None
+
+    return WatcherConfig(
+        session_url=session_url,
+        machine=machine,
+        projects_dir=projects_dir,
+        debounce=float(os.environ.get("SESSION_WATCHER_DEBOUNCE", "3.0")),
+        timeout=float(os.environ.get("SESSION_WATCHER_TIMEOUT", "30")),
+    )
+
+
+def run_once(cfg: WatcherConfig, dirty: dict) -> int:
+    """Smoke-test path: ship whatever the sweep queued, then exit. No
+    observer, no debounce, no flusher thread."""
+    shipped = failed = 0
+    for path_str in list(dirty):
+        path = pathlib.Path(path_str)
+        if not path.exists():
+            continue
+        if post_file(cfg, path):
+            shipped += 1
+        else:
+            failed += 1
+    LOG.info("--once done: %d shipped, %d failed", shipped, failed)
+    return 1 if failed else 0
+
+
+def run_watch(cfg: WatcherConfig, dirty: dict, lock: threading.Lock) -> int:
+    """Long-lived path: an observer marks files dirty, a flusher thread
+    ships them. Runs until interrupted."""
+    stop = threading.Event()
+    observer = Observer()
+    observer.schedule(SessionHandler(dirty, lock), str(cfg.projects_dir),
+                      recursive=True)
+    observer.start()
+
+    flusher = threading.Thread(
+        target=flush_loop, args=(cfg, dirty, lock, stop), daemon=True)
+    flusher.start()
+
+    try:
+        while True:
+            time.sleep(1.0)
+    except KeyboardInterrupt:
+        LOG.info("shutting down")
+    finally:
+        stop.set()
+        observer.stop()
+        observer.join(timeout=5)
+        flusher.join(timeout=5)
+    return 0
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
@@ -185,77 +268,22 @@ def main() -> int:
         stream=sys.stdout,
     )
 
-    session_url = os.environ.get("SESSION_SINK_URL", "").strip()
-    machine = os.environ.get("SESSION_WATCHER_MACHINE", "").strip()
-    if not session_url:
-        LOG.error("SESSION_SINK_URL is unset. Point it at the session-sink "
-                  "ingest endpoint, e.g. http://<sink-host>:<port>/ingest")
+    cfg = load_config()
+    if cfg is None:
         return 2
-    if not machine:
-        LOG.error("SESSION_WATCHER_MACHINE is unset. Set a stable machine "
-                  "id, e.g. kai-mac-desktop")
-        return 2
-
-    default_projects = pathlib.Path.home() / ".claude" / "projects"
-    projects_dir = pathlib.Path(
-        os.environ.get("CLAUDE_PROJECTS_DIR", str(default_projects))
-    ).expanduser()
-    if not projects_dir.is_dir():
-        LOG.error("Claude projects dir %s does not exist", projects_dir)
-        return 2
-
-    debounce = float(os.environ.get("SESSION_WATCHER_DEBOUNCE", "3.0"))
-    timeout = float(os.environ.get("SESSION_WATCHER_TIMEOUT", "30"))
 
     LOG.info("watching %s -> %s as machine=%s (debounce=%.1fs)",
-             projects_dir, session_url, machine, debounce)
+             cfg.projects_dir, cfg.session_url, cfg.machine, cfg.debounce)
 
     dirty: dict = {}
     lock = threading.Lock()
-    stop = threading.Event()
 
     if not args.no_initial_sweep:
-        initial_sweep(dirty, lock, projects_dir)
+        initial_sweep(dirty, lock, cfg.projects_dir)
 
     if args.once:
-        # Smoke-test path: ship whatever the sweep queued, then exit.
-        # No observer, no debounce, no flusher thread.
-        shipped = failed = 0
-        for path_str in list(dirty):
-            path = pathlib.Path(path_str)
-            if not path.exists():
-                continue
-            if post_file(session_url, machine, projects_dir, path, timeout):
-                shipped += 1
-            else:
-                failed += 1
-        LOG.info("--once done: %d shipped, %d failed", shipped, failed)
-        return 1 if failed else 0
-
-    handler = SessionHandler(dirty, lock)
-    observer = Observer()
-    observer.schedule(handler, str(projects_dir), recursive=True)
-    observer.start()
-
-    flusher = threading.Thread(
-        target=flush_loop,
-        args=(session_url, machine, projects_dir, dirty, lock,
-              debounce, timeout, stop),
-        daemon=True,
-    )
-    flusher.start()
-
-    try:
-        while True:
-            time.sleep(1.0)
-    except KeyboardInterrupt:
-        LOG.info("shutting down")
-    finally:
-        stop.set()
-        observer.stop()
-        observer.join(timeout=5)
-        flusher.join(timeout=5)
-    return 0
+        return run_once(cfg, dirty)
+    return run_watch(cfg, dirty, lock)
 
 
 if __name__ == "__main__":
