@@ -9,13 +9,15 @@ from _lib import run  # noqa: E402
 
 # Chart lives in the sibling coilysiren/lunch-money-k8s checkout.
 CHART = "../lunch-money-k8s/chart"
+# Pin the kai-server context so the deploy does not ride on current-context.
+CONTEXT = "kai-server"
 
 
 def main():
-    run("kubectl apply -f deploy/lunch-money/secret.yml")
+    run(f"kubectl --context {CONTEXT} apply -f deploy/lunch-money/secret.yml")
     run(
-        f"helm upgrade --install lunch-money {CHART} "
-        "--namespace lunch-money -f deploy/lunch-money/values.yaml"
+        f"helm --kube-context {CONTEXT} upgrade --install lunch-money {CHART} "
+        "--namespace lunch-money --create-namespace -f deploy/lunch-money/values.yaml"
     )
 
 
