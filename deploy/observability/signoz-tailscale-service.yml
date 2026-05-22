@@ -1,19 +1,31 @@
-# Static tailnet exposure of the SigNoz UI. Mirrors the vmsingle pattern
-# in deploy/observability/vmsingle-tailscale-service.yml: a standalone
-# ts-signoz Deployment runs only the tailscale container with TS_DEST_IP
-# pointed at a stable side-car Service ClusterIP.
+# Tailnet exposure of the SigNoz UI over HTTPS.
 #
-# Private only. There is no public ingress and no Caddy route for SigNoz.
-# Tailnet peers hit `http://signoz` and the ts proxy forwards to the
-# side-car Service :80, which translates to targetPort 8080 on the
-# helm-managed signoz app pod.
+# Same TS_SERVE_CONFIG HTTPS-termination pattern as deploy/ntfy.yml, with
+# one adaptation: ntfy runs the ts container as an in-pod sidecar and
+# proxies to 127.0.0.1, but SigNoz's pod is helm-managed and not ours to
+# add a sidecar to. So ts-signoz stays a standalone proxy Deployment and
+# its serve config proxies to the in-cluster signoz-tailscale Service
+# instead of localhost.
 #
-# Pattern: standalone ts-proxy Deployment, distinct from the in-pod
-# sidecar repo-recall uses. Used for any workload whose Pod template
-# isn't ours to modify (helm-managed Deployments, third-party operators).
+# The ts sidecar terminates HTTPS on :443 - TS_SERVE_CONFIG (the
+# signoz-ts-serve ConfigMap) makes it provision a Let's Encrypt cert for
+# signoz.<tailnet>.ts.net and reverse-proxy to the SigNoz app. Reach the
+# UI at https://signoz.<tailnet>.ts.net.
 #
-# Apply alongside the helm chart:
-#   sudo k3s kubectl apply -f deploy/observability/signoz-tailscale-service.yml
+# HTTPS is not cosmetic: on plain HTTP browsers degrade password-manager
+# autofill, so HTTPS is what makes the SigNoz login a silent one-click
+# autofill instead of a typed password. No public Ingress, no cert-
+# manager, no Route 53 - the cert is tailnet-internal, issued via the
+# tailnet's HTTPS feature.
+#
+# The .ts.net suffix is unavoidable: a TLS cert can only be issued for
+# the device's full MagicDNS name, not the bare `signoz` short name.
+#
+# The ts authkey is minted by terraform/tailscale-devices/ (service
+# `signoz` in services.yaml) and landed in SSM at
+# /coilysiren/signoz/ts-authkey.
+#
+# Apply: sudo k3s kubectl apply -f deploy/observability/signoz-tailscale-service.yml
 ---
 apiVersion: v1
 kind: Service
@@ -23,28 +35,16 @@ metadata:
   labels:
     app: signoz-tailscale
 spec:
-  # Pinned to a stable allocation so TS_DEST_IP below stays put across
-  # recreates. Service ClusterIP is immutable post-creation; if this ever
-  # needs to change, delete + recreate the Service and update both the IP
-  # here and TS_DEST_IP in the Deployment in lockstep.
-  clusterIP: 10.43.140.170
+  # In-cluster routing target for the ts-signoz serve proxy. Selects the
+  # helm-managed signoz app pod.
   type: ClusterIP
-  # Selects the helm-managed signoz app pod. These labels follow the
-  # signoz chart's defaults for the query-service/frontend Deployment.
   selector:
     app.kubernetes.io/instance: signoz
     app.kubernetes.io/name: signoz
     app.kubernetes.io/component: signoz
   ports:
-    # Short-URL port. Tailnet peers hit `http://signoz` -> ts proxy
-    # forwards to Service :80 -> targetPort 8080 on the helm pod.
     - name: http
       port: 80
-      targetPort: 8080
-      protocol: TCP
-    # Native SigNoz UI port, for tools that still address it explicitly.
-    - name: signoz
-      port: 8080
       targetPort: 8080
       protocol: TCP
 ---
@@ -81,6 +81,27 @@ subjects:
   - kind: ServiceAccount
     name: ts-signoz
     namespace: observability
+---
+# Serve config for the tailscale sidecar's HTTPS termination. The
+# ${TS_CERT_DOMAIN} placeholder is expanded by containerboot to the
+# device's MagicDNS FQDN at container start, so the opaque tailnet
+# suffix is never written into this repo. Proxies to the signoz-tailscale
+# Service, which fronts the helm-managed signoz app pod on :8080.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: signoz-ts-serve
+  namespace: observability
+data:
+  serve-config.json: |
+    {
+      "TCP": { "443": { "HTTPS": true } },
+      "Web": {
+        "${TS_CERT_DOMAIN}:443": {
+          "Handlers": { "/": { "Proxy": "http://signoz-tailscale.observability.svc.cluster.local:80" } }
+        }
+      }
+    }
 ---
 apiVersion: external-secrets.io/v1
 kind: ExternalSecret
@@ -122,7 +143,7 @@ spec:
         app: ts-signoz
     spec:
       serviceAccountName: ts-signoz
-      # Pin to kai-server for /dev/net/tun, same as vmsingle and repo-recall.
+      # Pin to kai-server for /dev/net/tun, same as ntfy and vmsingle.
       nodeSelector:
         kubernetes.io/hostname: kai-server
       containers:
@@ -139,17 +160,20 @@ spec:
               value: "true"
             - name: TS_EXTRA_ARGS
               value: "--accept-dns=false"
-            # Standalone-proxy mode. containerboot forwards inbound tailnet
-            # traffic to this IP at the same destination port, so tailnet
-            # :80 lands at signoz-tailscale :80 which the Service
-            # translates to targetPort 8080 on the helm pod.
-            - name: TS_DEST_IP
-              value: "10.43.140.170"
+            # Terminate HTTPS on :443 and reverse-proxy to the signoz app.
+            # containerboot substitutes ${TS_CERT_DOMAIN} in the file at
+            # startup. Replaces the old TS_DEST_IP L3-forward mode.
+            - name: TS_SERVE_CONFIG
+              value: /etc/ts-serve/serve-config.json
             - name: TS_AUTHKEY
               valueFrom:
                 secretKeyRef:
                   name: ts-signoz-authkey
                   key: authkey
+          volumeMounts:
+            - name: ts-serve
+              mountPath: /etc/ts-serve
+              readOnly: true
           securityContext:
             privileged: true
             runAsUser: 0
@@ -162,3 +186,7 @@ spec:
             limits:
               cpu: 200m
               memory: 128Mi
+      volumes:
+        - name: ts-serve
+          configMap:
+            name: signoz-ts-serve
