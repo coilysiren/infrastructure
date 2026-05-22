@@ -1,12 +1,12 @@
 # Forgejo (self-hosted git) on kai-server k3s.
 #
-# Phase 1 of the rollout in docs/forgejo-deploy-plan.md: tailnet-only,
-# no Ingress, no Route 53. The Service carries `tailscale.com/expose:
-# "true"` + `tailscale.com/hostname: forgejo` so the tailscale operator
-# stands up a ts-proxy and assigns the deterministic MagicDNS name
-# `forgejo.<tailnet>.ts.net`. Phase 2 will add the Ingress block (and
-# the Route 53 A record for forgejo.coilysiren.me) once tailnet smoke
-# passes end-to-end.
+# Phase 2 of the rollout in docs/forgejo-deploy-plan.md: public at
+# https://forgejo.coilysiren.me/. The tailnet ts-proxy front door stays
+# in place; the Ingress block at the bottom adds the public path via
+# Traefik + cert-manager DNS-01. Hardening folded in for the public
+# surface: image on the 15.0.2 security release, /metrics gated by a
+# bearer token, Traefik rate-limit + HSTS middlewares, account emails
+# private by default. See the security review on the phase-2 issue.
 #
 # Apply: sudo k3s kubectl apply -f deploy/forgejo.yml
 ---
@@ -41,6 +41,9 @@ spec:
     - secretKey: db-password
       remoteRef:
         key: /forgejo/db-password
+    - secretKey: metrics-token
+      remoteRef:
+        key: /forgejo/metrics-token
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim
@@ -184,7 +187,7 @@ spec:
             - forgejo.coilysiren.me
       containers:
         - name: forgejo
-          image: codeberg.org/forgejo/forgejo:15.0.1-rootless
+          image: codeberg.org/forgejo/forgejo:15.0.2-rootless
           ports:
             - name: http
               containerPort: 3000
@@ -236,20 +239,26 @@ spec:
               value: "true"
             - name: FORGEJO__server__LFS_START_SERVER
               value: "true"
-            # Phase-1 only: tailnet front door is HTTP (the ts-proxy
-            # doesn't terminate TLS, encryption is at the WireGuard
-            # layer), but ROOT_URL above is https://forgejo.coilysiren.me/
-            # for phase 2. Default `[session] COOKIE_SECURE=auto` follows
-            # ROOT_URL's scheme, so the session cookie comes back Secure-
-            # only and gets dropped over HTTP, breaking login. Force it
-            # off until the public Ingress lands; remove this block when
-            # phase 2 ships.
-            - name: FORGEJO__session__COOKIE_SECURE
-              value: "false"
+            # COOKIE_SECURE left at the default `auto`. ROOT_URL is
+            # https, the public Ingress terminates TLS, so session
+            # cookies come back Secure-only as they should. The phase-1
+            # COOKIE_SECURE=false override was removed at phase 2.
             - name: FORGEJO__service__DISABLE_REGISTRATION
+              value: "true"
+            # Account emails hidden on public profiles by default.
+            - name: FORGEJO__service__DEFAULT_KEEP_EMAIL_PRIVATE
               value: "true"
             - name: FORGEJO__metrics__ENABLED
               value: "true"
+            # /metrics is reachable on the public Ingress; gate it with a
+            # bearer token so repo/user counts aren't world-readable.
+            # Nothing in-cluster scrapes it yet, so the token costs no
+            # scraper wiring. Callers send `Authorization: Bearer <token>`.
+            - name: FORGEJO__metrics__TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: forgejo-secrets
+                  key: metrics-token
             - name: FORGEJO__mailer__ENABLED
               value: "false"
           resources:
@@ -421,3 +430,64 @@ spec:
             limits:
               cpu: 200m
               memory: 128Mi
+---
+# Phase-2 public path. Traefik v3 CRDs (traefik.io/v1alpha1, the group
+# k3s ships). Middlewares are referenced from the Ingress below via the
+# traefik.io/router.middlewares annotation, name-formatted as
+# <namespace>-<middleware>@kubernetescrd.
+#
+# Rate limit: moderate per-source-IP cap. Generous enough for the web UI
+# (many asset requests) and git-over-HTTP, tight enough to blunt crude
+# floods and credential-stuffing bursts. Determined slow brute force is
+# bounded separately by admin-invite-only accounts.
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: forgejo-ratelimit
+  namespace: forgejo
+spec:
+  rateLimit:
+    average: 50
+    burst: 100
+    period: 1s
+---
+# HSTS. cert-manager gives TLS, not the Strict-Transport-Security header.
+# includeSubdomains stays false on purpose: *.coilysiren.me has sibling
+# subdomains (api, eco) that should not inherit this policy. No preload.
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: forgejo-hsts
+  namespace: forgejo
+spec:
+  headers:
+    stsSeconds: 31536000
+    stsIncludeSubdomains: false
+    stsPreload: false
+    forceSTSHeader: true
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: forgejo
+  namespace: forgejo
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-production
+    traefik.io/router.middlewares: forgejo-forgejo-ratelimit@kubernetescrd,forgejo-forgejo-hsts@kubernetescrd
+spec:
+  ingressClassName: traefik
+  tls:
+    - hosts:
+        - forgejo.coilysiren.me
+      secretName: forgejo-tls
+  rules:
+    - host: forgejo.coilysiren.me
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: forgejo
+                port:
+                  number: 80

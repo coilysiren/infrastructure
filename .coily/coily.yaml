@@ -51,6 +51,18 @@ commands:
     run: make terraform-aws-inventory
     description: Run terraform against terraform/aws-inventory/ (managed S3 + Route53, SSM data-source). Args - action=plan|apply|init|destroy|output|import.
 
+# Free-form ssh-passthrough target list. Schema: coilysiren/coily#187 phase 2.
+# `coily ssh <alias> -- <coily args>` resolves <alias> here, ssh's into the
+# target, and runs the supplied coily subcommand. Remote coily's lockdown is
+# the security boundary, not this client side. working_dir is a git toplevel
+# so the remote audit row binds to a real commit scope.
+ssh:
+  targets:
+    kai-server:
+      user: kai
+      host: kai-server
+      working_dir: /home/kai/projects/coilysiren/infrastructure
+
 # Catalog metadata for the cross-repo knowledge graph.
 # Schema: coilysiren/agentic-os-kai#420 (tracker).
 catalog:
