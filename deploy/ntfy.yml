@@ -22,8 +22,10 @@
 # (`ntfy user add`, then flip AUTH_DEFAULT_ACCESS to deny-all) without
 # a manifest change beyond that one env var.
 #
-# Web Push stays off: on top of HTTPS it also needs VAPID keys. The
-# native ntfy apps stream fine over the HTTPS endpoint without it.
+# Web Push and attachments stay off: Web Push needs VAPID keys, and
+# attachments need an explicit base-url (which would hardcode the
+# opaque tailnet suffix). Core push - title, message, tags, priority -
+# needs neither. The native ntfy apps stream fine over the endpoint.
 #
 # The ts authkey is minted by terraform/tailscale-devices/ (service
 # `ntfy` in services.yaml) and landed in SSM at
@@ -93,10 +95,9 @@ data:
       }
     }
 ---
-# Message cache (SQLite), auth DB, and attachment cache. Tiny in
-# practice: ntfy messages are bytes. local-path is the k3s built-in
-# single-node provisioner. Attachment total is capped at 2G below, so
-# 5Gi leaves comfortable headroom for cache + auth + attachments.
+# Message cache (SQLite) + auth DB. Tiny in practice: ntfy messages
+# are bytes. local-path is the k3s built-in single-node provisioner.
+# 5Gi is generous headroom; attachments are off (see the Deployment).
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
@@ -165,10 +166,10 @@ spec:
             # deny-all once per-user ACLs are wanted.
             - name: NTFY_AUTH_DEFAULT_ACCESS
               value: read-write
-            - name: NTFY_ATTACHMENT_CACHE_DIR
-              value: /var/lib/ntfy/attachments
-            - name: NTFY_ATTACHMENT_TOTAL_SIZE_LIMIT
-              value: "2G"
+            # Attachments stay off: ntfy refuses to start with an
+            # attachment-cache-dir but no base-url, and a base-url would
+            # hardcode the opaque tailnet suffix. Re-enable by putting
+            # the URL in SSM and adding attachment-cache-dir back.
             - name: NTFY_LOG_LEVEL
               value: info
           volumeMounts:
