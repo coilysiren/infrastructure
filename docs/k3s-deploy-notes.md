@@ -628,6 +628,16 @@ One line per trap. Every fix here has a commit in some repo's history.
   `kubectl apply -f deploy/secretstore.yml`. Symptom also includes the
   pod stuck on `CreateContainerConfigError: secret "${NAME}-fred" not
   found` because the downstream Secret never renders.
+- **`coilysiren-pull-all` leaves Git LFS pointer files in a checkout**
+  → kai-server had no `git-lfs`, so `git pull --ff-only` skipped the
+  smudge filter and wrote pointer text where binary assets (`.glb`,
+  `.zip`, …) should be. The eco-mods rsync deploy then ships broken
+  assets. Fix: `coily ssh kai-server -- coily pkg brew install git-lfs
+  --allow-untapped`, then the `git lfs install --skip-repo` at the top
+  of `coilysiren-pull-all.sh` wires the global smudge/clean filters on
+  every run. Re-smudge an already-degraded file with
+  `git checkout -- <path>` once the filters are wired.
+  (coilysiren/infrastructure#286)
 
 ## 8. First-time setup checklist for a new repo
 
@@ -713,6 +723,13 @@ One line per trap. Every fix here has a commit in some repo's history.
   shows old version**
   → deployment config didn't change because image tag is the same
   (Makefile defaults `git-hash` to HEAD). Bump a commit and retry.
+- **A repo deployed via rsync ships tiny text files where binary
+  assets (`.glb`, `.zip`, …) should be**
+  → the checkout has Git LFS pointer files. Is `git-lfs` installed on
+  kai-server? Did `coilysiren-pull-all.sh` log the
+  `git-lfs not installed` warning? Install it (`coily pkg brew install
+  git-lfs --allow-untapped`), re-run pull-all to wire the filters, then
+  `git checkout -- <path>` to re-smudge the degraded files.
 
 ## 10. Lore / load-bearing notes
 
@@ -790,3 +807,6 @@ One line per trap. Every fix here has a commit in some repo's history.
   `backend`, `eco-mcp-app`, `eco-spec-tracker`, `galaxy-gen`,
   `kai-server`, `infrastructure`, plus the session transcripts
   stored locally under `~/.claude/projects/…/memory/`.
+- 2026-05-22 — wired Git LFS into `coilysiren-pull-all.sh` after
+  eco-mods adopted LFS, so the daily pull fetches real content.
+  (#286)

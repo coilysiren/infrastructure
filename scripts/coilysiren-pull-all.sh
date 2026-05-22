@@ -28,6 +28,16 @@ if [[ ! -d "$ROOT" ]]; then
   exit 1
 fi
 
+# Git LFS: eco-mods and infrastructure track binary assets via LFS.
+# Wire the global smudge/clean filters so every pull below fetches real
+# content, not pointer files. Idempotent; warns if git-lfs is absent.
+# See coilysiren/infrastructure#286.
+if command -v git-lfs >/dev/null 2>&1; then
+  git lfs install --skip-repo >/dev/null
+else
+  echo "WARN: git-lfs not installed; LFS repos will get pointer files" >&2
+fi
+
 pulled=0
 skipped=0
 failed=0
