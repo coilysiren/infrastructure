@@ -1,0 +1,23 @@
+# Tangled knot - self-hosted atproto git server on kai-server.
+# Translated from upstream's NixOS knot module (tangled.org/core
+# nix/modules/knot.nix). Config is env-driven via the EnvironmentFile.
+# ExecStart points at a stable symlink the auto-deploy timer manages,
+# so a version bump never edits this unit. See infrastructure#280.
+[Unit]
+Description=Tangled knot - self-hosted atproto git server
+After=network-online.target sshd.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=git
+Group=git
+StateDirectory=tangled-knot
+WorkingDirectory=/var/lib/tangled-knot
+EnvironmentFile=/etc/tangled-knot/knot.env
+ExecStart=/opt/tangled-knot/current/bin/knot server
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

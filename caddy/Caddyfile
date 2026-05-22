@@ -12,6 +12,13 @@ api.coilysiren.me {
     reverse_proxy localhost:4000
 }
 
+# Tangled knot - HTTP/XRPC front door. The knot binds 127.0.0.1:5555;
+# Caddy terminates TLS for tangled.coilysiren.me so the tangled.org
+# appview can reach the knot. Git push is SSH + tailnet-only, separate.
+tangled.coilysiren.me {
+    reverse_proxy localhost:5555
+}
+
 # Static file serve for the coily audit dashboard. Regenerated every
 # 5 minutes by coily-audit-dashboard.timer to /var/lib/coily/. Tailnet-
 # internal only - no TLS, no auth, since the file already contains
