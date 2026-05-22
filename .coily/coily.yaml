@@ -47,6 +47,9 @@ commands:
   llama-deploy-secrets:
     run: make llama-deploy-secrets
     description: Bootstrap the llama ghcr.io docker-registry secret from SSM /github/pat.
+  lunch-money:
+    run: make lunch-money
+    description: Deploy or upgrade the lunch-money-k8s MCP server (deploy/lunch-money/).
   terraform-aws-inventory:
     run: make terraform-aws-inventory
     description: Run terraform against terraform/aws-inventory/ (managed S3 + Route53, SSM data-source). Args - action=plan|apply|init|destroy|output|import.
