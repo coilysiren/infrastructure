@@ -37,8 +37,9 @@ for attempt in 1 2 3 4 5 6; do
   sleep 10
 done
 
-echo "==> brew upgrade coilysiren/tap/coily"
-brew upgrade coilysiren/tap/coily
+echo "==> brew tap + upgrade coilysiren/coily/coily"
+brew tap coilysiren/coily https://github.com/coilysiren/coily
+brew upgrade coilysiren/coily/coily
 
 # Keep every other Linuxbrew formula on kai-server current too, not just
 # coily. Runs after the targeted coily upgrade so coily still lands even

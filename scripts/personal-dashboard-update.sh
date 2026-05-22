@@ -20,8 +20,9 @@ fi
 echo "==> brew update"
 brew update
 
-echo "==> brew upgrade coilysiren/tap/personal-dashboard"
-brew upgrade coilysiren/tap/personal-dashboard
+echo "==> brew tap + upgrade coilysiren/personal-dashboard/personal-dashboard"
+brew tap coilysiren/personal-dashboard https://github.com/coilysiren/personal-dashboard
+brew upgrade coilysiren/personal-dashboard/personal-dashboard
 
 echo "==> try-restart personal-dashboard.service"
 # is-active gate matches the try-restart semantics: don't start a stopped
