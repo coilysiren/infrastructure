@@ -1,10 +1,18 @@
 # ntfy (self-hosted push notification server) on kai-server k3s. Tailnet-only.
 #
-# Tailnet-only following the 2fauth.yml / repo-recall.yml pattern: an
-# in-pod tailscale sidecar gives the Pod a tailnet IP, so peers reach
-# the server at `http://ntfy` - ntfy listens on :80 directly, so the
-# MagicDNS name needs no port. No public Ingress, no cert-manager,
-# no Route 53. The ntfy mobile app points at that same URL.
+# In-pod tailscale sidecar pattern (2fauth.yml / repo-recall.yml). The
+# sidecar gives the Pod a tailnet IP and terminates HTTPS: TS_SERVE_
+# CONFIG (the ntfy-ts-serve ConfigMap) makes it provision a Let's
+# Encrypt cert for ntfy.<tailnet>.ts.net and proxy :443 to the ntfy app
+# on 127.0.0.1:80. Reach the server at https://ntfy.<tailnet>.ts.net.
+#
+# HTTPS is required, not cosmetic: ntfy's web app gates browser
+# notifications behind a secure context, and the iOS app refuses
+# plain-HTTP servers. No public Ingress, no cert-manager, no Route 53 -
+# the cert is tailnet-internal, issued via the tailnet's HTTPS feature.
+#
+# The .ts.net suffix is unavoidable: a TLS cert can only be issued for
+# the device's full MagicDNS name, not the bare `ntfy` short name.
 #
 # Access model: the tailnet is the boundary. AUTH_DEFAULT_ACCESS is
 # read-write, so any tailnet peer (and any host script) can publish and
@@ -14,9 +22,8 @@
 # (`ntfy user add`, then flip AUTH_DEFAULT_ACCESS to deny-all) without
 # a manifest change beyond that one env var.
 #
-# Web Push is intentionally off: it needs a public HTTPS base URL plus
-# VAPID keys. The native ntfy apps poll/stream over plain tailnet HTTP
-# fine, so this is tailnet-internal only.
+# Web Push stays off: on top of HTTPS it also needs VAPID keys. The
+# native ntfy apps stream fine over the HTTPS endpoint without it.
 #
 # The ts authkey is minted by terraform/tailscale-devices/ (service
 # `ntfy` in services.yaml) and landed in SSM at
@@ -65,6 +72,26 @@ subjects:
   - kind: ServiceAccount
     name: ntfy
     namespace: ntfy
+---
+# Serve config for the tailscale sidecar's HTTPS termination. The
+# ${TS_CERT_DOMAIN} placeholder is expanded by containerboot to the
+# device's MagicDNS FQDN at container start, so the opaque tailnet
+# suffix is never written into this repo.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ntfy-ts-serve
+  namespace: ntfy
+data:
+  serve-config.json: |
+    {
+      "TCP": { "443": { "HTTPS": true } },
+      "Web": {
+        "${TS_CERT_DOMAIN}:443": {
+          "Handlers": { "/": { "Proxy": "http://127.0.0.1:80" } }
+        }
+      }
+    }
 ---
 # Message cache (SQLite), auth DB, and attachment cache. Tiny in
 # practice: ntfy messages are bytes. local-path is the k3s built-in
@@ -116,16 +143,15 @@ spec:
             - name: http
               containerPort: 80
           env:
-            # Must match how clients reach the server: the tailnet
-            # MagicDNS short name, no port, since ntfy listens on :80.
-            # If the mobile app can't resolve the short name, switch to
-            # the full <ntfy>.<tailnet>.ts.net FQDN (opaque suffix ->
-            # SSM, do not hardcode it here).
-            - name: NTFY_BASE_URL
-              value: http://ntfy
-            # :80 is a privileged bind; the ntfy image runs as root, so
-            # it works without added capabilities. :80 is also ntfy's
-            # own default listen-http.
+            # Behind the tailscale sidecar's HTTPS proxy. ntfy derives
+            # its external URL (https://ntfy.<tailnet>.ts.net) from the
+            # proxied request's Host + X-Forwarded-Proto headers, so no
+            # base-url carrying an opaque tailnet suffix is hardcoded.
+            - name: NTFY_BEHIND_PROXY
+              value: "true"
+            # ntfy listens plain HTTP on :80; the sidecar fronts it with
+            # TLS. The image runs as root, so the privileged :80 bind
+            # needs no capability. :80 is also ntfy's default.
             - name: NTFY_LISTEN_HTTP
               value: ":80"
             - name: NTFY_CACHE_FILE
@@ -167,8 +193,10 @@ spec:
               port: 80
             initialDelaySeconds: 30
             periodSeconds: 30
-        # tailscale sidecar in kernel mode. Pod gains a tailnet IP, so
-        # tailnet peers reach the app container's :8080 at `ntfy`.
+        # tailscale sidecar in kernel mode. Pod gains a tailnet IP, and
+        # TS_SERVE_CONFIG makes it terminate HTTPS on :443 (cert auto-
+        # provisioned for ntfy.<tailnet>.ts.net) and proxy to the ntfy
+        # app on 127.0.0.1:80, which it shares a network namespace with.
         - name: ts
           image: tailscale/tailscale:v1.78.1
           env:
@@ -187,6 +215,14 @@ spec:
                 secretKeyRef:
                   name: ntfy-ts-authkey
                   key: authkey
+            # Terminate HTTPS on :443, proxy to ntfy :80. containerboot
+            # substitutes ${TS_CERT_DOMAIN} in the file at startup.
+            - name: TS_SERVE_CONFIG
+              value: /etc/ts-serve/serve-config.json
+          volumeMounts:
+            - name: ts-serve
+              mountPath: /etc/ts-serve
+              readOnly: true
           securityContext:
             privileged: true
             runAsUser: 0
@@ -203,6 +239,9 @@ spec:
         - name: data
           persistentVolumeClaim:
             claimName: ntfy-data
+        - name: ts-serve
+          configMap:
+            name: ntfy-ts-serve
 ---
 # TS_AUTHKEY for the ts sidecar. Sourced from SSM
 # /coilysiren/ntfy/ts-authkey, minted by terraform/tailscale-devices/.
