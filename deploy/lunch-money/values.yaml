@@ -1,0 +1,27 @@
+# Helm values for the kai-server deployment of lunch-money-k8s.
+#
+# Chart source: https://github.com/coilysiren/lunch-money-k8s (chart/).
+# This is the real deployment - the chart repo's examples/ holds a generic one.
+#
+# Deploy (see README.md):
+#   helm install lunch-money <lunch-money-k8s-checkout>/chart \
+#     -n lunch-money -f deploy/lunch-money/values.yaml
+
+image:
+  repository: ghcr.io/coilysiren/lunch-money-k8s
+  tag: latest
+
+# Token comes from the ExternalSecret in secret.yml, not from the chart.
+lunchMoney:
+  existingSecret: lunch-money-token
+
+# kai-server is the only native-Linux node; pin to it like repo-recall does.
+nodeSelector:
+  kubernetes.io/hostname: kai-server
+
+resources:
+  requests:
+    cpu: 50m
+    memory: 128Mi
+  limits:
+    memory: 256Mi
