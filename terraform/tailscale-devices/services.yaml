@@ -15,4 +15,5 @@ services:
   - eco-spec
   - galaxy-gen
   - backend
+  - backend-db
   - forgejo
