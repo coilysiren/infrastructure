@@ -22,10 +22,9 @@
 # (`ntfy user add`, then flip AUTH_DEFAULT_ACCESS to deny-all) without
 # a manifest change beyond that one env var.
 #
-# Web Push and attachments stay off: Web Push needs VAPID keys, and
-# attachments need an explicit base-url (which would hardcode the
-# opaque tailnet suffix). Core push - title, message, tags, priority -
-# needs neither. The native ntfy apps stream fine over the endpoint.
+# Web Push stays off: it needs VAPID keys. Attachments are on - they
+# need an explicit base-url, sourced from SSM (the ntfy-base-url
+# ExternalSecret) so the opaque tailnet suffix never lands in the repo.
 #
 # The ts authkey is minted by terraform/tailscale-devices/ (service
 # `ntfy` in services.yaml) and landed in SSM at
@@ -95,9 +94,9 @@ data:
       }
     }
 ---
-# Message cache (SQLite) + auth DB. Tiny in practice: ntfy messages
-# are bytes. local-path is the k3s built-in single-node provisioner.
-# 5Gi is generous headroom; attachments are off (see the Deployment).
+# Message cache (SQLite), auth DB, and attachment cache. local-path is
+# the k3s built-in single-node provisioner. Attachment total is capped
+# at 2G below, so 5Gi leaves headroom for cache + auth + attachments.
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
@@ -144,12 +143,19 @@ spec:
             - name: http
               containerPort: 80
           env:
-            # Behind the tailscale sidecar's HTTPS proxy. ntfy derives
-            # its external URL (https://ntfy.<tailnet>.ts.net) from the
-            # proxied request's Host + X-Forwarded-Proto headers, so no
-            # base-url carrying an opaque tailnet suffix is hardcoded.
+            # Behind the tailscale sidecar's HTTPS proxy: trust the
+            # X-Forwarded-* headers for visitor IP and rate limiting.
             - name: NTFY_BEHIND_PROXY
               value: "true"
+            # External URL - needed for attachment links and shown in
+            # the web UI. Carries the opaque tailnet suffix, so it is
+            # sourced from SSM /coilysiren/ntfy/base-url via the
+            # ntfy-base-url ExternalSecret, never hardcoded here.
+            - name: NTFY_BASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: ntfy-base-url
+                  key: base-url
             # ntfy listens plain HTTP on :80; the sidecar fronts it with
             # TLS. The image runs as root, so the privileged :80 bind
             # needs no capability. :80 is also ntfy's default.
@@ -166,10 +172,12 @@ spec:
             # deny-all once per-user ACLs are wanted.
             - name: NTFY_AUTH_DEFAULT_ACCESS
               value: read-write
-            # Attachments stay off: ntfy refuses to start with an
-            # attachment-cache-dir but no base-url, and a base-url would
-            # hardcode the opaque tailnet suffix. Re-enable by putting
-            # the URL in SSM and adding attachment-cache-dir back.
+            # Attachments land on the PVC. Total capped at 2G; the PVC
+            # is 5Gi. NTFY_BASE_URL above is required for attachments.
+            - name: NTFY_ATTACHMENT_CACHE_DIR
+              value: /var/lib/ntfy/attachments
+            - name: NTFY_ATTACHMENT_TOTAL_SIZE_LIMIT
+              value: "2G"
             - name: NTFY_LOG_LEVEL
               value: info
           volumeMounts:
@@ -267,6 +275,31 @@ spec:
     - secretKey: authkey
       remoteRef:
         key: /coilysiren/ntfy/ts-authkey
+---
+# ntfy's external base URL. Carries the opaque tailnet suffix, so it
+# lives in SSM /coilysiren/ntfy/base-url (a String param) rather than
+# hardcoded here. Required for attachments.
+apiVersion: external-secrets.io/v1
+kind: ExternalSecret
+metadata:
+  name: ntfy-base-url
+  namespace: ntfy
+spec:
+  refreshInterval: 1h
+  secretStoreRef:
+    name: aws-parameter-store
+    kind: ClusterSecretStore
+  target:
+    name: ntfy-base-url
+    creationPolicy: Owner
+    template:
+      type: Opaque
+      data:
+        base-url: "{{ .baseUrl }}"
+  data:
+    - secretKey: baseUrl
+      remoteRef:
+        key: /coilysiren/ntfy/base-url
 ---
 # ClusterIP for in-cluster routing only. Tailnet exposure is the ts
 # sidecar's WireGuard interface, not a Service annotation.
