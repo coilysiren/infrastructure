@@ -2,7 +2,8 @@
 #
 # Tailnet-only following the 2fauth.yml / repo-recall.yml pattern: an
 # in-pod tailscale sidecar gives the Pod a tailnet IP, so peers reach
-# the server at `http://ntfy:8080`. No public Ingress, no cert-manager,
+# the server at `http://ntfy` - ntfy listens on :80 directly, so the
+# MagicDNS name needs no port. No public Ingress, no cert-manager,
 # no Route 53. The ntfy mobile app points at that same URL.
 #
 # Access model: the tailnet is the boundary. AUTH_DEFAULT_ACCESS is
@@ -113,17 +114,20 @@ spec:
           args: ["serve"]
           ports:
             - name: http
-              containerPort: 8080
+              containerPort: 80
           env:
-            # Must match how clients reach the server. Tailnet MagicDNS
-            # short name + the listen port below. If the mobile app
-            # can't resolve the short name, switch to the full
-            # <ntfy>.<tailnet>.ts.net FQDN (opaque suffix -> SSM, do
-            # not hardcode it here).
+            # Must match how clients reach the server: the tailnet
+            # MagicDNS short name, no port, since ntfy listens on :80.
+            # If the mobile app can't resolve the short name, switch to
+            # the full <ntfy>.<tailnet>.ts.net FQDN (opaque suffix ->
+            # SSM, do not hardcode it here).
             - name: NTFY_BASE_URL
-              value: http://ntfy:8080
+              value: http://ntfy
+            # :80 is a privileged bind; the ntfy image runs as root, so
+            # it works without added capabilities. :80 is also ntfy's
+            # own default listen-http.
             - name: NTFY_LISTEN_HTTP
-              value: ":8080"
+              value: ":80"
             - name: NTFY_CACHE_FILE
               value: /var/lib/ntfy/cache.db
             # Message retention in the cache. 12h is the ntfy default.
@@ -154,13 +158,13 @@ spec:
           readinessProbe:
             httpGet:
               path: /v1/health
-              port: 8080
+              port: 80
             initialDelaySeconds: 10
             periodSeconds: 10
           livenessProbe:
             httpGet:
               path: /v1/health
-              port: 8080
+              port: 80
             initialDelaySeconds: 30
             periodSeconds: 30
         # tailscale sidecar in kernel mode. Pod gains a tailnet IP, so
@@ -237,6 +241,6 @@ spec:
     app: ntfy
   ports:
     - name: http
-      port: 8080
-      targetPort: 8080
+      port: 80
+      targetPort: 80
       protocol: TCP
