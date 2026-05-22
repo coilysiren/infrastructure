@@ -1,0 +1,73 @@
+# Public HTTP front door for the Tangled knot.
+#
+# The knot runs as a host systemd service on kai-server (not in k3s),
+# listening on :5555 - see systemd/tangled-knot.service. Host Caddy
+# cannot serve public domains (it is tailnet-internal; public
+# *.coilysiren.me :80/:443 traffic reaches Traefik, not Caddy), so the
+# public path goes through Traefik with a cert-manager DNS-01 cert -
+# the same shape as forgejo phase 2. DNS-01 means the cert never needs
+# the :80/:443 ACME challenge that fails against the home ingress.
+#
+# A selector-less Service plus a hand-pinned Endpoints object routes
+# cluster traffic to the off-cluster knot at the host LAN IP. The knot
+# binds 0.0.0.0:5555 (tangled-knot.env) so Traefik pods can reach it.
+#
+# Apply: sudo k3s kubectl apply -f deploy/tangled-knot-ingress.yml
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: tangled
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: tangled-knot
+  namespace: tangled
+spec:
+  ports:
+    - name: http
+      port: 5555
+      targetPort: 5555
+      protocol: TCP
+---
+# Selector-less Service: Endpoints are pinned by hand to the host, so
+# the knot process (off-cluster, host systemd) is reachable as a normal
+# in-cluster Service. kai-server's LAN IP is a stable RFC1918 address.
+apiVersion: v1
+kind: Endpoints
+metadata:
+  name: tangled-knot
+  namespace: tangled
+subsets:
+  - addresses:
+      - ip: 192.168.0.194
+    ports:
+      - name: http
+        port: 5555
+        protocol: TCP
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: tangled-knot
+  namespace: tangled
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-production
+spec:
+  ingressClassName: traefik
+  tls:
+    - hosts:
+        - tangled.coilysiren.me
+      secretName: tangled-knot-tls
+  rules:
+    - host: tangled.coilysiren.me
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: tangled-knot
+                port:
+                  number: 5555

@@ -8,16 +8,10 @@
 # this machine's public IP, then replace ":80" below with your
 # domain name.
 
-api.coilysiren.me {
-    reverse_proxy localhost:4000
-}
-
-# Tangled knot - HTTP/XRPC front door. The knot binds 127.0.0.1:5555;
-# Caddy terminates TLS for tangled.coilysiren.me so the tangled.org
-# appview can reach the knot. Git push is SSH + tailnet-only, separate.
-tangled.coilysiren.me {
-    reverse_proxy localhost:5555
-}
+# Public-domain site blocks intentionally absent. Host Caddy is
+# tailnet-internal; public *.coilysiren.me traffic goes through Traefik
+# (k3s). api.coilysiren.me was deprovisioned. tangled.coilysiren.me is
+# served via a Traefik Ingress, see deploy/tangled-knot-ingress.yml.
 
 # Static file serve for the coily audit dashboard. Regenerated every
 # 5 minutes by coily-audit-dashboard.timer to /var/lib/coily/. Tailnet-
