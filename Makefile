@@ -2,6 +2,7 @@ DEFAULT_GOAL := help
 
 .PHONY: help \
 	k3s-list-dns \
+	setup-git-lfs \
 	cert-manager \
 	aws-secrets \
 	observability \
@@ -22,6 +23,9 @@ help: ## Print this help.
 
 k3s-list-dns: ## Spin up a diagnostic ubuntu pod and dump every Service DNS record.
 	bash scripts/k3s-list-dns.sh
+
+setup-git-lfs: ## Wire Git LFS for the current user and re-smudge degraded LFS checkouts.
+	bash scripts/setup-git-lfs.sh
 
 cert-manager: ## Install or refresh cert-manager + ClusterIssuers (deploy/cert_manager.yml).
 	@uv run python scripts/k8s/cert_manager.py

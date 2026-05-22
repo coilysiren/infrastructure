@@ -635,8 +635,9 @@ One line per trap. Every fix here has a commit in some repo's history.
   assets. Fix: `coily ssh kai-server -- coily pkg brew install git-lfs
   --allow-untapped`, then the `git lfs install --skip-repo` at the top
   of `coilysiren-pull-all.sh` wires the global smudge/clean filters on
-  every run. Re-smudge an already-degraded file with
-  `git checkout -- <path>` once the filters are wired.
+  every run. Repair an already-degraded checkout with
+  `coily exec setup-git-lfs` - it wires the filters and re-smudges
+  every LFS checkout under `~/projects/coilysiren`.
   (coilysiren/infrastructure#286)
 
 ## 8. First-time setup checklist for a new repo
@@ -728,8 +729,8 @@ One line per trap. Every fix here has a commit in some repo's history.
   → the checkout has Git LFS pointer files. Is `git-lfs` installed on
   kai-server? Did `coilysiren-pull-all.sh` log the
   `git-lfs not installed` warning? Install it (`coily pkg brew install
-  git-lfs --allow-untapped`), re-run pull-all to wire the filters, then
-  `git checkout -- <path>` to re-smudge the degraded files.
+  git-lfs --allow-untapped`), then `coily exec setup-git-lfs` wires the
+  filters and re-smudges the degraded checkouts.
 
 ## 10. Lore / load-bearing notes
 

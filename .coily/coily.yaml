@@ -14,6 +14,9 @@ commands:
   k3s-list-dns:
     run: make k3s-list-dns
     description: Spin up a diagnostic ubuntu pod and dump every Service DNS record.
+  setup-git-lfs:
+    run: make setup-git-lfs
+    description: Wire Git LFS for the current user and re-smudge degraded LFS checkouts.
   cert-manager:
     run: make cert-manager
     description: Install or refresh cert-manager + ClusterIssuers (deploy/cert_manager.yml).
@@ -43,7 +46,7 @@ commands:
     description: Run terraform against terraform/tailscale-devices/ (one tailscale_tailnet_key per k8s sidecar service; replaces tailscale-operator). Args - action=plan|apply|init|destroy.
   sync-tailscale-oidc-secrets:
     run: make sync-tailscale-oidc-secrets
-    description: Push TS_CLIENT_ID + TS_AUDIENCE to each repo via gh CLI live auth, reading from tf outputs.
+    description: Push TS_CLIENT_ID + TS_AUDIENCE to each repo in tailscale-oidc/repos.yaml via gh CLI live auth.
   llama-deploy:
     run: make llama-deploy
     description: Apply llama/deploy.yml into the llama namespace.
