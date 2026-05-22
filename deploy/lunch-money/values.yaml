@@ -10,6 +10,8 @@
 image:
   repository: ghcr.io/coilysiren/lunch-money-k8s
   tag: latest
+  # Always, because tag is the moving `latest`; the homelab rolls from main.
+  pullPolicy: Always
 
 # Token comes from the ExternalSecret in secret.yml, not from the chart.
 lunchMoney:
