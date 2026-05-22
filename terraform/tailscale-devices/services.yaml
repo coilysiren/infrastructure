@@ -9,6 +9,7 @@
 # gone from the cluster - the device persists in the tailnet device list
 # and needs a separate revoke step.
 services:
+  - 2fauth
   - repo-recall
   - vmsingle
   - eco-mcp
@@ -17,3 +18,4 @@ services:
   - backend
   - backend-db
   - forgejo
+  - signoz

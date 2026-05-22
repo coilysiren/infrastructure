@@ -159,10 +159,12 @@ SigNoz is the third pane: a self-hosted OpenTelemetry backend (traces, logs, met
 
 Chart `signoz/signoz` from `https://charts.signoz.io`, pinned to `0.125.0` in `scripts/k8s/signoz.py`.
 
+**Tailnet device prerequisite.** The `ts-signoz` proxy reads its auth key from SSM at `/coilysiren/signoz/ts-authkey`. That key is minted by the `terraform/tailscale-devices/` module, never created by hand. `signoz` is already listed in that module's `services.yaml`; run `coily terraform-tailscale-devices action=apply` once to mint the key and populate SSM before the ExternalSecret can sync.
+
 Install or upgrade (idempotent):
 
 ```bash
-coily observability signoz
+coily signoz
 ```
 
 That adds the `signoz` Helm repo, applies the namespace, runs `helm upgrade --install signoz signoz/signoz`, then applies `signoz-tailscale-service.yml`. The OTel collector listens on the standard OTLP ports (`4317` gRPC, `4318` HTTP) in-cluster; point trace producers there.
