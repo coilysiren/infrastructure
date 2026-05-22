@@ -1,0 +1,164 @@
+# Static tailnet exposure of the SigNoz UI. Mirrors the vmsingle pattern
+# in deploy/observability/vmsingle-tailscale-service.yml: a standalone
+# ts-signoz Deployment runs only the tailscale container with TS_DEST_IP
+# pointed at a stable side-car Service ClusterIP.
+#
+# Private only. There is no public ingress and no Caddy route for SigNoz.
+# Tailnet peers hit `http://signoz` and the ts proxy forwards to the
+# side-car Service :80, which translates to targetPort 8080 on the
+# helm-managed signoz app pod.
+#
+# Pattern: standalone ts-proxy Deployment, distinct from the in-pod
+# sidecar repo-recall uses. Used for any workload whose Pod template
+# isn't ours to modify (helm-managed Deployments, third-party operators).
+#
+# Apply alongside the helm chart:
+#   sudo k3s kubectl apply -f deploy/observability/signoz-tailscale-service.yml
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: signoz-tailscale
+  namespace: observability
+  labels:
+    app: signoz-tailscale
+spec:
+  # Pinned to a stable allocation so TS_DEST_IP below stays put across
+  # recreates. Service ClusterIP is immutable post-creation; if this ever
+  # needs to change, delete + recreate the Service and update both the IP
+  # here and TS_DEST_IP in the Deployment in lockstep.
+  clusterIP: 10.43.140.170
+  type: ClusterIP
+  # Selects the helm-managed signoz app pod. These labels follow the
+  # signoz chart's defaults for the query-service/frontend Deployment.
+  selector:
+    app.kubernetes.io/instance: signoz
+    app.kubernetes.io/name: signoz
+    app.kubernetes.io/component: signoz
+  ports:
+    # Short-URL port. Tailnet peers hit `http://signoz` -> ts proxy
+    # forwards to Service :80 -> targetPort 8080 on the helm pod.
+    - name: http
+      port: 80
+      targetPort: 8080
+      protocol: TCP
+    # Native SigNoz UI port, for tools that still address it explicitly.
+    - name: signoz
+      port: 8080
+      targetPort: 8080
+      protocol: TCP
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: ts-signoz
+  namespace: observability
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: ts-signoz-state
+  namespace: observability
+rules:
+  - apiGroups: [""]
+    resources: ["secrets"]
+    verbs: ["create"]
+  - apiGroups: [""]
+    resources: ["secrets"]
+    resourceNames: ["ts-signoz-state"]
+    verbs: ["get", "update", "patch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: ts-signoz-state
+  namespace: observability
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: ts-signoz-state
+subjects:
+  - kind: ServiceAccount
+    name: ts-signoz
+    namespace: observability
+---
+apiVersion: external-secrets.io/v1
+kind: ExternalSecret
+metadata:
+  name: ts-signoz-authkey
+  namespace: observability
+spec:
+  refreshInterval: 1h
+  secretStoreRef:
+    name: aws-parameter-store
+    kind: ClusterSecretStore
+  target:
+    name: ts-signoz-authkey
+    creationPolicy: Owner
+    template:
+      type: Opaque
+      data:
+        authkey: "{{ .authkey }}"
+  data:
+    - secretKey: authkey
+      remoteRef:
+        key: /coilysiren/signoz/ts-authkey
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ts-signoz
+  namespace: observability
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: ts-signoz
+  template:
+    metadata:
+      labels:
+        app: ts-signoz
+    spec:
+      serviceAccountName: ts-signoz
+      # Pin to kai-server for /dev/net/tun, same as vmsingle and repo-recall.
+      nodeSelector:
+        kubernetes.io/hostname: kai-server
+      containers:
+        - name: ts
+          image: tailscale/tailscale:v1.78.1
+          env:
+            - name: TS_HOSTNAME
+              value: signoz
+            - name: TS_KUBE_SECRET
+              value: ts-signoz-state
+            - name: TS_USERSPACE
+              value: "false"
+            - name: TS_AUTH_ONCE
+              value: "true"
+            - name: TS_EXTRA_ARGS
+              value: "--accept-dns=false"
+            # Standalone-proxy mode. containerboot forwards inbound tailnet
+            # traffic to this IP at the same destination port, so tailnet
+            # :80 lands at signoz-tailscale :80 which the Service
+            # translates to targetPort 8080 on the helm pod.
+            - name: TS_DEST_IP
+              value: "10.43.140.170"
+            - name: TS_AUTHKEY
+              valueFrom:
+                secretKeyRef:
+                  name: ts-signoz-authkey
+                  key: authkey
+          securityContext:
+            privileged: true
+            runAsUser: 0
+            runAsGroup: 0
+            runAsNonRoot: false
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 200m
+              memory: 128Mi

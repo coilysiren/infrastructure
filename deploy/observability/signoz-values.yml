@@ -1,0 +1,115 @@
+# Helm values for the signoz/signoz chart.
+# https://github.com/SigNoz/charts/tree/main/charts/signoz
+#
+# Chart pinned to signoz-0.125.0 in scripts/k8s/signoz.py (SigNoz app
+# v0.125.0, OTel Collector v0.144.4).
+#
+# SigNoz is the third pane next to Sentry and VictoriaMetrics+Grafana:
+# self-hosted OpenTelemetry traces, logs, and metrics backed by ClickHouse.
+#
+# Traces-focused but whole. The full stack ships - the logs and metrics
+# pipelines stay configured, they are not disabled. SigNoz has no per-signal
+# feature flags and the cost is ingestion-driven, not deploy-driven. The
+# intent: traces get sent first, logs and metrics get fed later by pointing
+# shippers at the OTel collector. Nothing here needs to change for that.
+#
+# Private only. No public ingress, no Caddy route, no public DNS. The UI is
+# reachable only over Tailscale via the standalone ts-signoz Deployment in
+# deploy/observability/signoz-tailscale-service.yml.
+#
+# Every component is pinned to kai-server. The other cluster nodes are flaky
+# WSL2 nodes and k3s default storage is local-path (node-pinned volumes), so
+# the stateful pods must land on kai-server.
+
+# ClickHouse - the telemetry store. Single shard, single replica.
+clickhouse:
+  enabled: true
+  nodeSelector:
+    kubernetes.io/hostname: kai-server
+  persistence:
+    enabled: true
+    storageClass: local-path  # k3s default; lands on the NVMe.
+    accessModes:
+      - ReadWriteOnce
+    size: 10Gi
+  resources:
+    requests:
+      cpu: "1"
+      memory: 4Gi
+    limits:
+      cpu: "4"
+      memory: 8Gi
+  # ZooKeeper coordinates the ClickHouse cluster. Bundled with the
+  # clickhouse subchart, so its config nests here.
+  zookeeper:
+    enabled: true
+    replicaCount: 1
+    nodeSelector:
+      kubernetes.io/hostname: kai-server
+    persistence:
+      enabled: true
+      storageClass: local-path
+      accessModes:
+        - ReadWriteOnce
+      size: 2Gi
+    resources:
+      requests:
+        cpu: 100m
+        memory: 256Mi
+      limits:
+        cpu: 500m
+        memory: 1Gi
+
+# SigNoz app - the query service and UI/frontend. Service port 8080 is
+# what the ts-signoz proxy forwards to.
+signoz:
+  nodeSelector:
+    kubernetes.io/hostname: kai-server
+  service:
+    type: ClusterIP
+    port: 8080
+  # SQLite-backed local state (saved views, dashboards, users).
+  persistence:
+    enabled: true
+    storageClass: local-path
+    accessModes:
+      - ReadWriteOnce
+    size: 1Gi
+  env:
+    # Disable the bundled usage-stats phone-home. Kai wants this private.
+    signoz_analytics_enabled: false
+  resources:
+    requests:
+      cpu: 250m
+      memory: 512Mi
+    limits:
+      cpu: "1"
+      memory: 1Gi
+
+# OTel collector - the ingest front door. Traces (and later logs/metrics)
+# shippers point at this. No public ingress; reachable in-cluster and over
+# the tailnet only.
+otelCollector:
+  nodeSelector:
+    kubernetes.io/hostname: kai-server
+  resources:
+    requests:
+      cpu: 250m
+      memory: 256Mi
+    limits:
+      cpu: "1"
+      memory: 1Gi
+
+# Schema migrator - the init Job that creates and migrates the ClickHouse
+# telemetry schema. Runs as a Helm hook on install/upgrade, then exits.
+telemetryStoreMigrator:
+  enabled: true
+  nodeSelector:
+    kubernetes.io/hostname: kai-server
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi

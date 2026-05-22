@@ -26,6 +26,9 @@ commands:
   observability-admin-password:
     run: make observability-admin-password
     description: Print the auto-generated Grafana admin password.
+  signoz:
+    run: make signoz
+    description: Install or upgrade the SigNoz traces stack (private, tailnet-only).
   terraform-grafana:
     run: make terraform-grafana
     description: Run terraform against terraform/grafana/ (GRAFANA_AUTH wired from SSM). Args - action=plan|apply|init|destroy.

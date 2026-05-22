@@ -6,6 +6,7 @@ DEFAULT_GOAL := help
 	aws-secrets \
 	observability \
 	observability-admin-password \
+	signoz \
 	terraform-grafana \
 	terraform-admin-kms \
 	terraform-tailscale-oidc \
@@ -35,6 +36,9 @@ observability: ## Install or upgrade the VictoriaMetrics + Grafana stack.
 
 observability-admin-password: ## Print the auto-generated Grafana admin password.
 	@uv run python scripts/k8s/observability_admin_password.py
+
+signoz: ## Install or upgrade the SigNoz traces stack (private, tailnet-only).
+	@uv run python scripts/k8s/signoz.py
 
 terraform-grafana: ## Run terraform against terraform/grafana/ (GRAFANA_AUTH wired from SSM). Args - action=plan|apply|init|destroy.
 	@uv run python scripts/k8s/terraform_grafana.py $(or $(action),plan)

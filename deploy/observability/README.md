@@ -4,10 +4,11 @@ Source-of-truth design doc: [`Notes/kai-server-o11y.md`](../../../coilyco-vault/
 
 `<HOME_PUBLIC_IP>` and `<KAI_SERVER_TAILNET_IP>` resolve from SSM (`/coilysiren/home/public-ip`, `/coilysiren/kai-server/tailnet-ip`). See `docs/k3s-deploy-notes.md`.
 
-Two panes:
+Three panes:
 
 - **Sentry** (existing, hosted) for app errors, app traces, app logs.
 - **VictoriaMetrics + Grafana** (this directory) for host and app metrics on k3s.
+- **SigNoz** (this directory) for self-hosted OpenTelemetry traces on k3s. Private, tailnet-only, traces-focused.
 
 ## What this deploys
 
@@ -146,9 +147,37 @@ http://victoria-metrics-victoria-metrics-single-server.observability.svc:8428/op
 
 (or via the tailscale-operator MagicDNS name once that proxy is up). No collector in the middle for v1.
 
+## SigNoz - self-hosted OpenTelemetry traces
+
+SigNoz is the third pane: a self-hosted OpenTelemetry backend (traces, logs, metrics on ClickHouse). It runs in the same `observability` namespace.
+
+- **Private only.** No public ingress, no Caddy route, no public DNS. The UI is reachable only over Tailscale via the `ts-signoz` proxy in `signoz-tailscale-service.yml`, the same standalone-ts-proxy pattern vmsingle uses. Tailnet peers hit `http://signoz`.
+- **Traces-focused but whole.** The full stack ships (ClickHouse, ZooKeeper, the signoz app, the OTel collector, the schema-migrator Job). The logs and metrics pipelines stay configured, not disabled - SigNoz has no per-signal feature flags and cost is ingestion-driven. Traces get sent first, logs and metrics get fed later by pointing shippers at the OTel collector.
+- **Node-pinned.** Every component pins to `kai-server` (`nodeSelector: kubernetes.io/hostname: kai-server`). The other cluster nodes are flaky WSL2 nodes and k3s `local-path` storage is node-pinned, so the stateful pods must land on kai-server.
+- **PVCs:** ClickHouse 10Gi, ZooKeeper 2Gi, signoz app sqlite 1Gi, all on `local-path`.
+- **Telemetry phone-home OFF** via `signoz_analytics_enabled: false`.
+
+Chart `signoz/signoz` from `https://charts.signoz.io`, pinned to `0.125.0` in `scripts/k8s/signoz.py`.
+
+Install or upgrade (idempotent):
+
+```bash
+coily observability signoz
+```
+
+That adds the `signoz` Helm repo, applies the namespace, runs `helm upgrade --install signoz signoz/signoz`, then applies `signoz-tailscale-service.yml`. The OTel collector listens on the standard OTLP ports (`4317` gRPC, `4318` HTTP) in-cluster; point trace producers there.
+
+Uninstall:
+
+```bash
+helm uninstall signoz --namespace observability
+kubectl delete -f deploy/observability/signoz-tailscale-service.yml
+kubectl delete pvc -n observability -l app.kubernetes.io/instance=signoz
+```
+
 ## Sentry stays put
 
-Errors, app traces, and app-emitted logs continue to flow into hosted Sentry via the SDK wiring landed across `backend`, `eco-mcp-app`, `eco-spec-tracker`, `eco-telemetry`, and `coily` on 2026-04-24. This stack is metrics-only.
+Errors, app traces, and app-emitted logs continue to flow into hosted Sentry via the SDK wiring landed across `backend`, `eco-mcp-app`, `eco-spec-tracker`, `eco-telemetry`, and `coily` on 2026-04-24. Sentry remains the app-error pane. SigNoz is the OpenTelemetry-native traces pane and VictoriaMetrics+Grafana is the host-metrics pane.
 
 ## Known unknowns to revisit
 
