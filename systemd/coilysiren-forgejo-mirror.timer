@@ -1,0 +1,14 @@
+[Unit]
+Description=Daily tick for coilysiren-forgejo-mirror.service
+Requires=coilysiren-forgejo-mirror.service
+
+[Timer]
+# 03:45 local time daily. Runs after the pull-all (02:45) and the *-update
+# timers (coily 03:00, repo-recall 03:15, personal-dashboard 03:30) so it
+# is not competing with them for network or CPU.
+OnCalendar=*-*-* 03:45:00
+RandomizedDelaySec=600
+Persistent=true
+
+[Install]
+WantedBy=timers.target
