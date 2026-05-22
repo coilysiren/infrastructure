@@ -1,0 +1,242 @@
+# ntfy (self-hosted push notification server) on kai-server k3s. Tailnet-only.
+#
+# Tailnet-only following the 2fauth.yml / repo-recall.yml pattern: an
+# in-pod tailscale sidecar gives the Pod a tailnet IP, so peers reach
+# the server at `http://ntfy:8080`. No public Ingress, no cert-manager,
+# no Route 53. The ntfy mobile app points at that same URL.
+#
+# Access model: the tailnet is the boundary. AUTH_DEFAULT_ACCESS is
+# read-write, so any tailnet peer (and any host script) can publish and
+# subscribe to any topic without a per-user login. That is the point -
+# "scripts ping my phone" should not need credential plumbing. An
+# auth.db still exists on the PVC, so users/ACLs can be layered later
+# (`ntfy user add`, then flip AUTH_DEFAULT_ACCESS to deny-all) without
+# a manifest change beyond that one env var.
+#
+# Web Push is intentionally off: it needs a public HTTPS base URL plus
+# VAPID keys. The native ntfy apps poll/stream over plain tailnet HTTP
+# fine, so this is tailnet-internal only.
+#
+# The ts authkey is minted by terraform/tailscale-devices/ (service
+# `ntfy` in services.yaml) and landed in SSM at
+# /coilysiren/ntfy/ts-authkey. ntfy itself needs no app secret - the
+# cache and auth DBs are created at runtime on the PVC.
+#
+# Apply: sudo k3s kubectl apply -f deploy/ntfy.yml
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: ntfy
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: ntfy
+  namespace: ntfy
+---
+# Lets the ts sidecar persist its device identity in the TS_KUBE_SECRET
+# state Secret. Scoped to that one Secret name, same shape as 2fauth.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: ntfy-ts-state
+  namespace: ntfy
+rules:
+  - apiGroups: [""]
+    resources: ["secrets"]
+    verbs: ["create"]
+  - apiGroups: [""]
+    resources: ["secrets"]
+    resourceNames: ["ntfy-ts-state"]
+    verbs: ["get", "update", "patch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: ntfy-ts-state
+  namespace: ntfy
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: ntfy-ts-state
+subjects:
+  - kind: ServiceAccount
+    name: ntfy
+    namespace: ntfy
+---
+# Message cache (SQLite), auth DB, and attachment cache. Tiny in
+# practice: ntfy messages are bytes. local-path is the k3s built-in
+# single-node provisioner. Attachment total is capped at 2G below, so
+# 5Gi leaves comfortable headroom for cache + auth + attachments.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: ntfy-data
+  namespace: ntfy
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: local-path
+  resources:
+    requests:
+      storage: 5Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ntfy
+  namespace: ntfy
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: ntfy
+  template:
+    metadata:
+      labels:
+        app: ntfy
+    spec:
+      serviceAccountName: ntfy
+      # Pin to kai-server: the ts sidecar needs /dev/net/tun, and
+      # local-path pins the volume to one node anyway.
+      nodeSelector:
+        kubernetes.io/hostname: kai-server
+      securityContext:
+        fsGroup: 1000
+      containers:
+        - name: app
+          image: binwiederhier/ntfy:v2.23.0
+          # Image entrypoint is `ntfy`; `serve` starts the server.
+          args: ["serve"]
+          ports:
+            - name: http
+              containerPort: 8080
+          env:
+            # Must match how clients reach the server. Tailnet MagicDNS
+            # short name + the listen port below. If the mobile app
+            # can't resolve the short name, switch to the full
+            # <ntfy>.<tailnet>.ts.net FQDN (opaque suffix -> SSM, do
+            # not hardcode it here).
+            - name: NTFY_BASE_URL
+              value: http://ntfy:8080
+            - name: NTFY_LISTEN_HTTP
+              value: ":8080"
+            - name: NTFY_CACHE_FILE
+              value: /var/lib/ntfy/cache.db
+            # Message retention in the cache. 12h is the ntfy default.
+            - name: NTFY_CACHE_DURATION
+              value: "12h"
+            - name: NTFY_AUTH_FILE
+              value: /var/lib/ntfy/auth.db
+            # Tailnet is the boundary - see the header note. Flip to
+            # deny-all once per-user ACLs are wanted.
+            - name: NTFY_AUTH_DEFAULT_ACCESS
+              value: read-write
+            - name: NTFY_ATTACHMENT_CACHE_DIR
+              value: /var/lib/ntfy/attachments
+            - name: NTFY_ATTACHMENT_TOTAL_SIZE_LIMIT
+              value: "2G"
+            - name: NTFY_LOG_LEVEL
+              value: info
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/ntfy
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 300m
+              memory: 256Mi
+          readinessProbe:
+            httpGet:
+              path: /v1/health
+              port: 8080
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /v1/health
+              port: 8080
+            initialDelaySeconds: 30
+            periodSeconds: 30
+        # tailscale sidecar in kernel mode. Pod gains a tailnet IP, so
+        # tailnet peers reach the app container's :8080 at `ntfy`.
+        - name: ts
+          image: tailscale/tailscale:v1.78.1
+          env:
+            - name: TS_HOSTNAME
+              value: ntfy
+            - name: TS_KUBE_SECRET
+              value: ntfy-ts-state
+            - name: TS_USERSPACE
+              value: "false"
+            - name: TS_AUTH_ONCE
+              value: "true"
+            - name: TS_EXTRA_ARGS
+              value: "--accept-dns=false"
+            - name: TS_AUTHKEY
+              valueFrom:
+                secretKeyRef:
+                  name: ntfy-ts-authkey
+                  key: authkey
+          securityContext:
+            privileged: true
+            runAsUser: 0
+            runAsGroup: 0
+            runAsNonRoot: false
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 200m
+              memory: 128Mi
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: ntfy-data
+---
+# TS_AUTHKEY for the ts sidecar. Sourced from SSM
+# /coilysiren/ntfy/ts-authkey, minted by terraform/tailscale-devices/.
+apiVersion: external-secrets.io/v1
+kind: ExternalSecret
+metadata:
+  name: ntfy-ts-authkey
+  namespace: ntfy
+spec:
+  refreshInterval: 1h
+  secretStoreRef:
+    name: aws-parameter-store
+    kind: ClusterSecretStore
+  target:
+    name: ntfy-ts-authkey
+    creationPolicy: Owner
+    template:
+      type: Opaque
+      data:
+        authkey: "{{ .authkey }}"
+  data:
+    - secretKey: authkey
+      remoteRef:
+        key: /coilysiren/ntfy/ts-authkey
+---
+# ClusterIP for in-cluster routing only. Tailnet exposure is the ts
+# sidecar's WireGuard interface, not a Service annotation.
+apiVersion: v1
+kind: Service
+metadata:
+  name: ntfy
+  namespace: ntfy
+spec:
+  type: ClusterIP
+  selector:
+    app: ntfy
+  ports:
+    - name: http
+      port: 8080
+      targetPort: 8080
+      protocol: TCP
