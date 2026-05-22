@@ -243,7 +243,16 @@ spec:
             # https, the public Ingress terminates TLS, so session
             # cookies come back Secure-only as they should. The phase-1
             # COOKIE_SECURE=false override was removed at phase 2.
+            # Registration is open, but only via GitHub SSO. The username
+            # + password signup form stays closed (ALLOW_ONLY_EXTERNAL_
+            # REGISTRATION), so there is no password-account spam surface.
+            # ENABLE_AUTO_REGISTRATION auto-provisions a Forgejo account on
+            # first GitHub sign-in. See infrastructure#263.
             - name: FORGEJO__service__DISABLE_REGISTRATION
+              value: "false"
+            - name: FORGEJO__service__ALLOW_ONLY_EXTERNAL_REGISTRATION
+              value: "true"
+            - name: FORGEJO__oauth2_client__ENABLE_AUTO_REGISTRATION
               value: "true"
             # Account emails hidden on public profiles by default.
             - name: FORGEJO__service__DEFAULT_KEEP_EMAIL_PRIVATE
