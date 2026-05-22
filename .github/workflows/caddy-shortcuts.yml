@@ -71,6 +71,9 @@ jobs:
               | jq -cs '.'
           )
 
+          # Send the whole {query, variables} body via --input. gh api's -F
+          # input=@file passes the file as a JSON *string*, which the GraphQL
+          # endpoint rejects ("expected ... to be a key-value object").
           jq -n \
             --arg repo "$REPO" \
             --arg branch "$BRANCH" \
@@ -78,12 +81,15 @@ jobs:
             --argjson additions "$additions_json" \
             --argjson deletions "$deletions_json" \
             '{
-              branch: {repositoryNameWithOwner: $repo, branchName: $branch},
-              message: {headline: "caddy: regenerate tailnet shortcut snippets, refs #129"},
-              expectedHeadOid: $head,
-              fileChanges: {additions: $additions, deletions: $deletions}
+              query: "mutation($input: CreateCommitOnBranchInput!) { createCommitOnBranch(input: $input) { commit { url oid } } }",
+              variables: {
+                input: {
+                  branch: {repositoryNameWithOwner: $repo, branchName: $branch},
+                  message: {headline: "caddy: regenerate tailnet shortcut snippets, refs #129"},
+                  expectedHeadOid: $head,
+                  fileChanges: {additions: $additions, deletions: $deletions}
+                }
+              }
             }' > "$RUNNER_TEMP/commit-input.json"
 
-          gh api graphql \
-            -f query='mutation($input: CreateCommitOnBranchInput!) { createCommitOnBranch(input: $input) { commit { url oid } } }' \
-            -F "input=@$RUNNER_TEMP/commit-input.json"
+          gh api graphql --input "$RUNNER_TEMP/commit-input.json"
