@@ -1,0 +1,14 @@
+[Unit]
+Description=Mirror recently-pushed coilysiren GitHub repos to the Tangled knot
+After=network-online.target tangled-knot.service
+Wants=network-online.target
+Requires=tangled-knot.service
+
+[Service]
+Type=oneshot
+User=kai
+WorkingDirectory=/home/kai
+ExecStart=/home/kai/projects/coilysiren/infrastructure/scripts/coilysiren-tangled-knot-mirror.sh
+
+[Install]
+WantedBy=multi-user.target

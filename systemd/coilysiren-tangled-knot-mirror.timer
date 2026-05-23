@@ -1,0 +1,15 @@
+[Unit]
+Description=Daily tick for coilysiren-tangled-knot-mirror.service
+Requires=coilysiren-tangled-knot-mirror.service
+
+[Timer]
+# 04:15 local time daily. Runs after the existing 02:45 / 03:00 / 03:15
+# / 03:30 / 03:45 / 04:00 cluster (pull-all, coily-update, repo-recall-
+# update, personal-dashboard-update, forgejo-mirror, tangled-knot-
+# autodeploy) so the freshly autodeployed knot is what we mirror to.
+OnCalendar=*-*-* 04:15:00
+RandomizedDelaySec=600
+Persistent=true
+
+[Install]
+WantedBy=timers.target
