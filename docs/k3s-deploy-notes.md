@@ -70,8 +70,18 @@ material that §8 and §9 cite.
     `tailnet.shortcut` field. Generator:
     `scripts/generate-caddy-shortcuts.py`. Workflow:
     `.github/workflows/caddy-shortcuts.yml` (daily cron + dispatch).
-    Reload on kai-server is manual today: `git pull` then
-    `sudo caddy reload --config /etc/caddy/Caddyfile`.
+  - `/etc/caddy/Caddyfile` is a **real file**, not a symlink into
+    `/home/kai/...` (the caddy service user cannot traverse mode-750
+    `/home/kai`, so any restart would die on `permission denied`). The
+    repo Caddyfile auto-deploys via a systemd path unit: changes to
+    `infrastructure/caddy/Caddyfile` fire
+    `caddy-config-deploy.path -> caddy-config-deploy.service ->
+    scripts/install-caddy-config.sh`, which installs the file
+    `root:root` mode 644 and reloads Caddy. Bootstrap once with
+    `sudo bash scripts/install-caddy-config-deploy.sh` on kai-server.
+  - ACME is pinned to LE **production** via the Caddyfile global
+    block. Staging certs are not browser-trusted, so any public site
+    block here would render broken in clients.
 
 ## 2. SSM parameter inventory
 
@@ -639,6 +649,34 @@ One line per trap. Every fix here has a commit in some repo's history.
   `coily exec setup-git-lfs` - it wires the filters and re-smudges
   every LFS checkout under `~/projects/coilysiren`.
   (coilysiren/infrastructure#286)
+- **Caddy fails to come back after a restart with `permission denied`
+  on `/etc/caddy/Caddyfile`** → the file is a symlink into `/home/kai/`,
+  which is mode 750. The caddy service user cannot traverse it, so any
+  fresh start dies. The only reason caddy was alive was a config
+  loaded into memory long before. Fix: replace the symlink with a real
+  root-owned file. Long-term: the
+  `caddy-config-deploy.path -> caddy-config-deploy.service` pair
+  installs the repo Caddyfile to `/etc/caddy/Caddyfile` as a real file
+  on every change. Bootstrap once via
+  `sudo bash scripts/install-caddy-config-deploy.sh`.
+  (coilysiren/infrastructure#292)
+- **Host Caddy logs show `acme-staging-v02.api.letsencrypt.org`** →
+  Caddy default was overridden to LE staging at some point and the
+  global block was lost. Browser-untrusted certs result. Fix: ensure
+  the Caddyfile global block carries
+  `acme_ca https://acme-v02.api.letsencrypt.org/directory`. Reload
+  caddy. Verify storage at
+  `/var/lib/caddy/.local/share/caddy/certificates/acme-v02.api.letsencrypt.org-directory/`.
+  (coilysiren/infrastructure#292)
+- **Repo Caddyfile updated by `git pull` but `/etc/caddy/Caddyfile`
+  still has stale blocks (e.g. cert spin on a deprovisioned subdomain)**
+  → the deploy hop from repo → /etc/caddy is missing. The
+  `caddy-config-deploy.path` unit installs the file on inotify
+  `IN_MOVED_TO` (which git rename-into-place fires). A missing or
+  disabled path unit is the root cause. Check
+  `systemctl status caddy-config-deploy.path`. Bootstrap with
+  `sudo bash scripts/install-caddy-config-deploy.sh` if the unit
+  isn't present. (coilysiren/infrastructure#292)
 
 ## 8. First-time setup checklist for a new repo
 
@@ -731,6 +769,16 @@ One line per trap. Every fix here has a commit in some repo's history.
   `git-lfs not installed` warning? Install it (`coily pkg brew install
   git-lfs --allow-untapped`), then `coily exec setup-git-lfs` wires the
   filters and re-smudges the degraded checkouts.
+- **Caddy restart fails, or `/etc/caddy/Caddyfile` is missing stale
+  blocks the repo has already removed** → either the file is still a
+  symlink to `/home/kai/...` (mode-750 traversal denial) or the
+  auto-deploy path unit isn't installed. Run
+  `systemctl status caddy-config-deploy.path`. If absent, bootstrap
+  via `sudo bash scripts/install-caddy-config-deploy.sh`. If present
+  but not firing, check that the repo Caddyfile actually changed
+  (`git -C ~/projects/coilysiren/infrastructure log -1 -- caddy/Caddyfile`)
+  and re-trigger by hand with
+  `sudo bash scripts/install-caddy-config.sh`.
 
 ## 10. Lore / load-bearing notes
 
@@ -811,3 +859,8 @@ One line per trap. Every fix here has a commit in some repo's history.
 - 2026-05-22 — wired Git LFS into `coilysiren-pull-all.sh` after
   eco-mods adopted LFS, so the daily pull fetches real content.
   (#286)
+- 2026-05-23 — added auto-deploy of the host Caddyfile via
+  `caddy-config-deploy.path` + `caddy-config-deploy.service` (real
+  file at `/etc/caddy/Caddyfile`, not a symlink into `/home/kai/`),
+  and pinned ACME to LE production in the Caddyfile global block.
+  (#292)

@@ -1,0 +1,17 @@
+[Unit]
+Description=Install repo Caddyfile into /etc/caddy and reload Caddy
+# Run after the pull-all unit so a same-tick path trigger sees the
+# fully-pulled tree, not a half-updated checkout. coilysiren-pull-all
+# also writes the source file we install from.
+After=coilysiren-pull-all.service network-online.target
+
+[Service]
+Type=oneshot
+# Runs as root so `install` into /etc/caddy and `systemctl reload caddy`
+# do not need a sudoers dance for the kai user. Triggered by
+# caddy-config-deploy.path on changes to the repo Caddyfile.
+User=root
+ExecStart=/home/kai/projects/coilysiren/infrastructure/scripts/install-caddy-config.sh
+
+# No [Install] section: this unit is only fired by the .path companion,
+# not enabled directly.

@@ -42,7 +42,7 @@ Baseline of `coilysiren/infrastructure`. Update when scope changes.
 ## Network and access
 
 - **DNS and routing** - `coilysiren.me` Route 53 zone. Service A records point to the WAN, NAT'd to the LAN side of the homelab. Tailnet kubeconfig uses the `kai-server` MagicDNS name. Concrete addresses live in the vault.
-- **Caddy (legacy)** - Pre-Traefik reverse proxy. Traefik Ingress is canonical now.
+- **Host Caddy on kai-server** - Tailnet-only front door. `caddy/sites/*.caddy` shortcuts to cluster Ingresses, `:8082` for the coily audit dashboard. `/etc/caddy/Caddyfile` auto-deploys from the repo via `systemd/caddy-config-deploy.{path,service}`. ACME pinned to LE prod.
 
 ## Tooling and policy
 

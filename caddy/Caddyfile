@@ -8,6 +8,13 @@
 # this machine's public IP, then replace ":80" below with your
 # domain name.
 
+# Global options. Pin ACME to LE production so any host-Caddy cert
+# (currently none, but the guard matters if a public site block ever
+# returns here) is browser-trusted. See infrastructure#292.
+{
+    acme_ca https://acme-v02.api.letsencrypt.org/directory
+}
+
 # Public-domain site blocks intentionally absent. Host Caddy is
 # tailnet-internal; public *.coilysiren.me traffic goes through Traefik
 # (k3s). api.coilysiren.me was deprovisioned. tangled.coilysiren.me is

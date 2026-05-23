@@ -1,0 +1,14 @@
+[Unit]
+Description=Watch the repo Caddyfile and redeploy /etc/caddy/Caddyfile on change
+
+[Path]
+# PathChanged watches the inotify events that fire when git fast-forwards
+# (rename-into-place produces IN_MOVED_TO, which PathChanged includes via
+# its parent-directory watch). Same fires on a manual edit.
+PathChanged=/home/kai/projects/coilysiren/infrastructure/caddy/Caddyfile
+# Trigger only on real content changes; the install script is itself
+# idempotent (cmp + reload-on-diff) so a redundant trigger is cheap.
+Unit=caddy-config-deploy.service
+
+[Install]
+WantedBy=multi-user.target
