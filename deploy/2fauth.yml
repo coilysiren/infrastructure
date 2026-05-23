@@ -1,0 +1,237 @@
+# 2FAuth (self-hosted TOTP manager) on kai-server k3s. Tailnet-only.
+#
+# Tailnet-only following the repo-recall.yml pattern: an in-pod tailscale
+# sidecar gives the Pod a tailnet IP, so peers reach the app at
+# `http://2fauth:8000`. No public Ingress, no cert-manager, no Route 53.
+#
+# Auth into the app is 2FAuth's own login (a tailnet peer hitting :8000
+# gets a login wall, not Kai's codes). The ts authkey is minted by
+# terraform/tailscale-devices/ (service `2fauth` in services.yaml) and
+# landed in SSM at /coilysiren/2fauth/ts-authkey. The APP_KEY that
+# encrypts the SQLite TOTP DB is in SSM at /coilysiren/2fauth/app-key.
+#
+# Apply: sudo k3s kubectl apply -f deploy/2fauth.yml
+# Tracker: coilysiren/infrastructure#266
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: 2fauth
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: 2fauth
+  namespace: 2fauth
+---
+# Lets the ts sidecar persist its device identity in the TS_KUBE_SECRET
+# state Secret. Scoped to that one Secret name, same shape as repo-recall.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: 2fauth-ts-state
+  namespace: 2fauth
+rules:
+  - apiGroups: [""]
+    resources: ["secrets"]
+    verbs: ["create"]
+  - apiGroups: [""]
+    resources: ["secrets"]
+    resourceNames: ["2fauth-ts-state"]
+    verbs: ["get", "update", "patch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: 2fauth-ts-state
+  namespace: 2fauth
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: 2fauth-ts-state
+subjects:
+  - kind: ServiceAccount
+    name: 2fauth
+    namespace: 2fauth
+---
+# SQLite DB + app data. Tiny: 2FAuth is one SQLite file. local-path is
+# the k3s built-in single-node provisioner.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: 2fauth-data
+  namespace: 2fauth
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: local-path
+  resources:
+    requests:
+      storage: 1Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: 2fauth
+  namespace: 2fauth
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: 2fauth
+  template:
+    metadata:
+      labels:
+        app: 2fauth
+    spec:
+      serviceAccountName: 2fauth
+      # Pin to kai-server: the ts sidecar needs /dev/net/tun, and
+      # local-path pins the volume to one node anyway.
+      nodeSelector:
+        kubernetes.io/hostname: kai-server
+      securityContext:
+        fsGroup: 1000
+      containers:
+        - name: app
+          image: 2fauth/2fauth:6.1.3
+          ports:
+            - name: http
+              containerPort: 8000
+          env:
+            - name: APP_ENV
+              value: production
+            - name: APP_URL
+              value: http://2fauth:8000
+            - name: DB_CONNECTION
+              value: sqlite
+            - name: DB_DATABASE
+              value: /2fauth/database.sqlite
+            # Encrypts the TOTP secrets at rest. Sourced from SSM
+            # /coilysiren/2fauth/app-key via the ExternalSecret below.
+            - name: APP_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: 2fauth-app-key
+                  key: app-key
+          volumeMounts:
+            - name: data
+              mountPath: /2fauth
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 384Mi
+          readinessProbe:
+            tcpSocket:
+              port: 8000
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          livenessProbe:
+            tcpSocket:
+              port: 8000
+            initialDelaySeconds: 30
+            periodSeconds: 30
+        # tailscale sidecar in kernel mode. Pod gains a tailnet IP, so
+        # tailnet peers reach the app container's :8000 at `2fauth`.
+        - name: ts
+          image: tailscale/tailscale:v1.78.1
+          env:
+            - name: TS_HOSTNAME
+              value: 2fauth
+            - name: TS_KUBE_SECRET
+              value: 2fauth-ts-state
+            - name: TS_USERSPACE
+              value: "false"
+            - name: TS_AUTH_ONCE
+              value: "true"
+            - name: TS_EXTRA_ARGS
+              value: "--accept-dns=false"
+            - name: TS_AUTHKEY
+              valueFrom:
+                secretKeyRef:
+                  name: 2fauth-ts-authkey
+                  key: authkey
+          securityContext:
+            privileged: true
+            runAsUser: 0
+            runAsGroup: 0
+            runAsNonRoot: false
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 200m
+              memory: 128Mi
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: 2fauth-data
+---
+# APP_KEY for the app container. Sourced from SSM /coilysiren/2fauth/app-key.
+apiVersion: external-secrets.io/v1
+kind: ExternalSecret
+metadata:
+  name: 2fauth-app-key
+  namespace: 2fauth
+spec:
+  refreshInterval: 1h
+  secretStoreRef:
+    name: aws-parameter-store
+    kind: ClusterSecretStore
+  target:
+    name: 2fauth-app-key
+    creationPolicy: Owner
+    template:
+      type: Opaque
+      data:
+        app-key: "{{ .appKey }}"
+  data:
+    - secretKey: appKey
+      remoteRef:
+        key: /coilysiren/2fauth/app-key
+---
+# TS_AUTHKEY for the ts sidecar. Sourced from SSM
+# /coilysiren/2fauth/ts-authkey, minted by terraform/tailscale-devices/.
+apiVersion: external-secrets.io/v1
+kind: ExternalSecret
+metadata:
+  name: 2fauth-ts-authkey
+  namespace: 2fauth
+spec:
+  refreshInterval: 1h
+  secretStoreRef:
+    name: aws-parameter-store
+    kind: ClusterSecretStore
+  target:
+    name: 2fauth-ts-authkey
+    creationPolicy: Owner
+    template:
+      type: Opaque
+      data:
+        authkey: "{{ .authkey }}"
+  data:
+    - secretKey: authkey
+      remoteRef:
+        key: /coilysiren/2fauth/ts-authkey
+---
+# ClusterIP for in-cluster routing only. Tailnet exposure is the ts
+# sidecar's WireGuard interface, not a Service annotation.
+apiVersion: v1
+kind: Service
+metadata:
+  name: 2fauth
+  namespace: 2fauth
+spec:
+  type: ClusterIP
+  selector:
+    app: 2fauth
+  ports:
+    - name: http
+      port: 8000
+      targetPort: 8000
+      protocol: TCP
