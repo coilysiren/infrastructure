@@ -1,0 +1,279 @@
+# OpenClaw gateway on k3s, pinned to the kai-desktop-tower-wsl agent node.
+# Single replica, loopback bind inside the pod, ClusterIP Service — reached
+# only via `kubectl port-forward` over the tailnet. No Ingress, no public
+# LoadBalancer. Matches the agentic-os-kai#719 charter rule "bind OpenClaw
+# to localhost only".
+#
+# The gateway calls Ollama running NATIVELY on the Windows side of the same
+# physical machine. Ollama on Windows binds to OLLAMA_HOST=0.0.0.0:11434 so
+# the WSL k3s pod can reach it via the tower's Windows-side tailnet FQDN.
+# The FQDN is opaque (tailnet subdomain identifies Kai's tailnet) so it
+# does not appear in this checked-in file — `<TOWER_WIN_TAILNET_FQDN>` is
+# a placeholder Kai resolves at apply time:
+#
+#   FQDN=$(coily ops aws ssm get-parameter \
+#     --name /coilysiren/kai-desktop-tower/tailnet-fqdn \
+#     --with-decryption --query Parameter.Value --output text)
+#   sed "s|<TOWER_WIN_TAILNET_FQDN>|$FQDN|g" deploy/openclaw.yml | \
+#     sudo k3s kubectl apply -f -
+#
+# OPENCLAW_GATEWAY_TOKEN is synced via ExternalSecret from SSM
+# /coilysiren/openclaw/gateway-token (SecureString). Provider API keys
+# (ANTHROPIC etc) are intentionally not wired — this deploy uses local
+# Ollama as the model provider, not a hosted API.
+#
+# Image: ghcr.io/openclaw/openclaw:slim. Pin a release if the floating
+# tag drifts (https://github.com/openclaw/openclaw/releases).
+#
+# Apply (from the infrastructure repo root):
+#   sed "s|<TOWER_WIN_TAILNET_FQDN>|$(coily ops aws ssm get-parameter \
+#     --name /coilysiren/kai-desktop-tower/tailnet-fqdn --with-decryption \
+#     --query Parameter.Value --output text)|g" deploy/openclaw.yml | \
+#     sudo k3s kubectl apply -f -
+#
+# Reach the Control UI from the Mac:
+#   kubectl port-forward -n openclaw svc/openclaw 18789:18789
+#   open http://localhost:18789
+#   # gateway token: coily ops aws ssm get-parameter \
+#   #   --name /coilysiren/openclaw/gateway-token --with-decryption \
+#   #   --query Parameter.Value --output text
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: openclaw
+---
+# Syncs OPENCLAW_GATEWAY_TOKEN from SSM into the in-cluster
+# `openclaw-secrets` Secret. The cluster-scoped aws-parameter-store
+# ClusterSecretStore (deploy/secretstore.yml) backs the lookup.
+apiVersion: external-secrets.io/v1beta1
+kind: ExternalSecret
+metadata:
+  name: openclaw-secrets
+  namespace: openclaw
+spec:
+  refreshInterval: 1h
+  secretStoreRef:
+    name: aws-parameter-store
+    kind: ClusterSecretStore
+  target:
+    name: openclaw-secrets
+    creationPolicy: Owner
+  data:
+    - secretKey: OPENCLAW_GATEWAY_TOKEN
+      remoteRef:
+        key: /coilysiren/openclaw/gateway-token
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: openclaw-config
+  namespace: openclaw
+  labels:
+    app: openclaw
+data:
+  openclaw.json: |
+    {
+      "gateway": {
+        "mode": "local",
+        "bind": "loopback",
+        "port": 18789,
+        "auth": { "mode": "token" },
+        "controlUi": { "enabled": true }
+      },
+      "models": {
+        "mode": "merge",
+        "providers": {
+          "ollama": {
+            "baseUrl": "http://<TOWER_WIN_TAILNET_FQDN>:11434/v1",
+            "api": "openai-completions",
+            "models": [
+              { "id": "qwen3:4b", "name": "Qwen3 4B", "input": ["text"], "contextWindow": 32768, "maxTokens": 4096 },
+              { "id": "qwen3:8b", "name": "Qwen3 8B", "input": ["text"], "contextWindow": 32768, "maxTokens": 4096 }
+            ]
+          }
+        }
+      },
+      "agents": {
+        "defaults": {
+          "workspace": "/home/node/.openclaw/workspace",
+          "model": { "primary": "ollama/qwen3:4b" }
+        },
+        "list": [
+          {
+            "id": "default",
+            "name": "OpenClaw Assistant",
+            "workspace": "/home/node/.openclaw/workspace",
+            "model": { "primary": "ollama/qwen3:4b" }
+          }
+        ]
+      },
+      "cron": { "enabled": false }
+    }
+  AGENTS.md: |
+    # OpenClaw Assistant
+
+    Local OpenClaw on Kai's desktop tower, calling a local Qwen3 model via
+    Ollama running on the Windows side of the same physical machine. For
+    trivial tasks. The 32B-class tier unlocks after the RTX 3090 swap.
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: openclaw-home-pvc
+  namespace: openclaw
+  labels:
+    app: openclaw
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: openclaw
+  namespace: openclaw
+  labels:
+    app: openclaw
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: openclaw
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app: openclaw
+    spec:
+      # Pin to the WSL2 tower node so the gateway is co-located with the
+      # Windows-side Ollama it calls. The other k3s nodes (kai-server,
+      # kai-macbook-pro-vm) can't reach the tower's Windows-host Ollama
+      # the same way and don't have the GPU.
+      nodeSelector:
+        kubernetes.io/hostname: kai-desktop-tower-wsl
+      automountServiceAccountToken: false
+      securityContext:
+        fsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
+      initContainers:
+        - name: init-config
+          image: busybox:1.37
+          imagePullPolicy: IfNotPresent
+          command:
+            - sh
+            - -c
+            - |
+              cp /config/openclaw.json /home/node/.openclaw/openclaw.json
+              mkdir -p /home/node/.openclaw/workspace
+              cp /config/AGENTS.md /home/node/.openclaw/workspace/AGENTS.md
+          securityContext:
+            runAsUser: 1000
+            runAsGroup: 1000
+          resources:
+            requests:
+              memory: 32Mi
+              cpu: 50m
+            limits:
+              memory: 64Mi
+              cpu: 100m
+          volumeMounts:
+            - name: openclaw-home
+              mountPath: /home/node/.openclaw
+            - name: config
+              mountPath: /config
+      containers:
+        - name: gateway
+          image: ghcr.io/openclaw/openclaw:slim
+          imagePullPolicy: IfNotPresent
+          command:
+            - node
+            - /app/dist/index.js
+            - gateway
+            - run
+          ports:
+            - name: gateway
+              containerPort: 18789
+              protocol: TCP
+          env:
+            - name: HOME
+              value: /home/node
+            - name: OPENCLAW_CONFIG_DIR
+              value: /home/node/.openclaw
+            - name: NODE_ENV
+              value: production
+            - name: OPENCLAW_GATEWAY_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: openclaw-secrets
+                  key: OPENCLAW_GATEWAY_TOKEN
+          resources:
+            requests:
+              memory: 512Mi
+              cpu: 250m
+            limits:
+              memory: 2Gi
+              cpu: "1"
+          livenessProbe:
+            exec:
+              command:
+                - node
+                - -e
+                - "require('http').get('http://127.0.0.1:18789/healthz', r => process.exit(r.statusCode < 400 ? 0 : 1)).on('error', () => process.exit(1))"
+            initialDelaySeconds: 60
+            periodSeconds: 30
+            timeoutSeconds: 10
+          readinessProbe:
+            exec:
+              command:
+                - node
+                - -e
+                - "require('http').get('http://127.0.0.1:18789/readyz', r => process.exit(r.statusCode < 400 ? 0 : 1)).on('error', () => process.exit(1))"
+            initialDelaySeconds: 15
+            periodSeconds: 10
+            timeoutSeconds: 5
+          volumeMounts:
+            - name: openclaw-home
+              mountPath: /home/node/.openclaw
+            - name: tmp-volume
+              mountPath: /tmp
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1000
+            runAsGroup: 1000
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
+      volumes:
+        - name: openclaw-home
+          persistentVolumeClaim:
+            claimName: openclaw-home-pvc
+        - name: config
+          configMap:
+            name: openclaw-config
+        - name: tmp-volume
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: openclaw
+  namespace: openclaw
+  labels:
+    app: openclaw
+spec:
+  type: ClusterIP
+  selector:
+    app: openclaw
+  ports:
+    - name: gateway
+      port: 18789
+      targetPort: 18789
+      protocol: TCP
