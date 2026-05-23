@@ -26,6 +26,12 @@ clickhouse:
   enabled: true
   nodeSelector:
     kubernetes.io/hostname: kai-server
+  # The Altinity clickhouse-operator reconciles the ClickHouse install.
+  # Pin it to kai-server too - on a flaky WSL2 node it stalls and blocks
+  # ClickHouse bringup for the whole stack.
+  clickhouseOperator:
+    nodeSelector:
+      kubernetes.io/hostname: kai-server
   persistence:
     enabled: true
     storageClass: local-path  # k3s default; lands on the NVMe.
