@@ -1,0 +1,15 @@
+[Unit]
+Description=Daily tick for coilysiren-tangled-knot-autodeploy.service
+Requires=coilysiren-tangled-knot-autodeploy.service
+
+[Timer]
+# 04:00 local time daily. Runs after the existing 02:45 / 03:00 / 03:15
+# / 03:30 / 03:45 cluster (pull-all, coily-update, repo-recall-update,
+# personal-dashboard-update, forgejo-mirror) so it is not competing
+# with them for network or CPU when picking up a new upstream tag.
+OnCalendar=*-*-* 04:00:00
+RandomizedDelaySec=600
+Persistent=true
+
+[Install]
+WantedBy=timers.target
