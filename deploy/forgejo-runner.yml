@@ -102,8 +102,10 @@ spec:
           image: data.forgejo.org/forgejo/runner:12
           command: ["forgejo-runner", "daemon"]
           env:
+            # dind sidecar listens on tcp 2375 when TLS_CERTDIR="".
+            # Same pod = localhost works.
             - name: DOCKER_HOST
-              value: unix:///var/run/docker.sock
+              value: tcp://localhost:2375
           workingDir: /data
           resources:
             requests:
@@ -115,17 +117,13 @@ spec:
           volumeMounts:
             - name: data
               mountPath: /data
-            - name: docker-sock
-              mountPath: /var/run
-        # Per-pod dockerd. Privileged because dind needs it. Scoped to
-        # the runner pod's namespace; no host docker socket exposed.
+        # Per-pod dockerd. Privileged because dind needs it. Talks to
+        # the runner over the pod's loopback at tcp 2375, TLS off.
         - name: dind
           image: docker:28-dind
           securityContext:
             privileged: true
           env:
-            # Plain socket inside the pod, no TLS. The runner container
-            # is the only consumer over a shared emptyDir.
             - name: DOCKER_TLS_CERTDIR
               value: ""
           resources:
@@ -136,13 +134,9 @@ spec:
               cpu: 2000m
               memory: 2Gi
           volumeMounts:
-            - name: docker-sock
-              mountPath: /var/run
             - name: docker-lib
               mountPath: /var/lib/docker
       volumes:
-        - name: docker-sock
-          emptyDir: {}
         - name: docker-lib
           emptyDir: {}
   volumeClaimTemplates:
