@@ -68,8 +68,9 @@ material that §8 and §9 cite.
     shortcuts to cluster services. Each shortcut is a `handle_path`
     block generated from a sibling repo's `config.yml`
     `tailnet.shortcut` field. Generator:
-    `scripts/generate-caddy-shortcuts.py`. Workflow:
-    `.github/workflows/caddy-shortcuts.yml` (daily cron + dispatch).
+    `scripts/generate-caddy-shortcuts.py` (reads Forgejo API).
+    Workflow: `.forgejo/workflows/caddy-shortcuts.yml` (daily cron +
+    dispatch on the in-cluster runners).
   - `/etc/caddy/Caddyfile` is a **real file**, not a symlink into
     `/home/kai/...` (the caddy service user cannot traverse mode-750
     `/home/kai`, so any restart would die on `permission denied`). The
