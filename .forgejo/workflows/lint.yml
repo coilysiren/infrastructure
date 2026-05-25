@@ -8,8 +8,7 @@ on:
 
 jobs:
   lint:
-    # https://github.com/actions/runner-images
-    runs-on: ubuntu-22.04
+    runs-on: docker
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v5
