@@ -3,13 +3,13 @@
 sibling repos' coily.yaml (or legacy config.yml) `tailnet.shortcut`
 declarations.
 
-Walks every coilysiren/* repo via `gh repo list`, fetches each default
+Walks every coilysiren/* repo on Forgejo, fetches each default
 branch's coily.yaml (falling back to config.yml during the
 agentic-os-kai#439 rename), and writes one Caddy site snippet per
 declared shortcut. Stale files (snippets whose owning repo no longer
 declares a shortcut, or was removed) are deleted.
 
-Runs in GitHub Actions (.github/workflows/caddy-shortcuts.yml) and
+Runs in Forgejo Actions (.forgejo/workflows/caddy-shortcuts.yml) and
 locally for debugging. Stdlib only - no PyYAML dependency. YAML parsing
 defers to `yq` (already present in the deploy toolchain).
 
@@ -24,10 +24,16 @@ from __future__ import annotations
 import argparse
 import base64
 import json
+import os
 import re
 import subprocess
 import sys
+import urllib.error
+import urllib.request
 from pathlib import Path
+
+FORGEJO_URL = os.environ.get("FORGEJO_URL", "https://forgejo.coilysiren.me").rstrip("/")
+FORGEJO_TOKEN = os.environ.get("FORGEJO_TOKEN", "")
 
 # Upstream that handles every Host header that already routes through
 # Traefik. Pulled from docs/k3s-deploy-notes.md §1: Traefik LoadBalancer
@@ -87,32 +93,49 @@ def main() -> int:
 
 
 def list_repos(owner: str) -> list[str]:
-    """Return repo names under owner (excluding forks and archived)."""
-    raw = sh(["gh", "repo", "list", owner, "--limit", "200", "--no-archived",
-              "--source", "--json", "name"])
-    return [r["name"] for r in json.loads(raw)]
+    """Return repo names under owner on Forgejo (excluding forks and archived).
+    Paginates over the search API."""
+    names: list[str] = []
+    page = 1
+    while True:
+        url = (
+            f"{FORGEJO_URL}/api/v1/repos/search"
+            f"?owner={owner}&limit=50&page={page}&archived=false"
+        )
+        payload = forgejo_get_json(url)
+        if not payload:
+            break
+        data = payload.get("data") or []
+        if not data:
+            break
+        for r in data:
+            if r.get("fork"):
+                continue
+            names.append(r["name"])
+        if len(data) < 50:
+            break
+        page += 1
+    return names
 
 
 def fetch_config(owner: str, repo: str) -> dict | None:
     """Fetch coily.yaml (or legacy config.yml) from a repo's default branch
-    and parse it via yq. Returns None if neither file is present.
+    on Forgejo and parse it via yq. Returns None if neither file is present.
 
     Transition: coilysiren/agentic-os-kai#439 renames per-repo deploy configs from
     `config.yml` to `coily.yaml`. Try the new name first, fall back to legacy.
     """
-    raw: str | None = None
+    payload: dict | None = None
     for filename in ("coily.yaml", "config.yml"):
-        try:
-            raw = sh(["gh", "api", f"repos/{owner}/{repo}/contents/{filename}"])
+        url = f"{FORGEJO_URL}/api/v1/repos/{owner}/{repo}/contents/{filename}"
+        payload = forgejo_get_json(url)
+        if payload is not None:
             break
-        except subprocess.CalledProcessError:
-            raw = None
-    if raw is None:
+    if payload is None:
         return None
     try:
-        payload = json.loads(raw)
         body = base64.b64decode(payload["content"]).decode("utf-8")
-    except (json.JSONDecodeError, KeyError, ValueError):
+    except (KeyError, ValueError):
         return None
     try:
         as_json = sh(["yq", "-o", "json", "."], stdin=body)
@@ -121,6 +144,19 @@ def fetch_config(owner: str, repo: str) -> dict | None:
     try:
         return json.loads(as_json)
     except json.JSONDecodeError:
+        return None
+
+
+def forgejo_get_json(url: str) -> dict | None:
+    """GET a Forgejo API URL and return the parsed JSON. Returns None on 404
+    or any error; this keeps the caller's "missing file = skip" semantics."""
+    req = urllib.request.Request(url)
+    if FORGEJO_TOKEN:
+        req.add_header("Authorization", f"token {FORGEJO_TOKEN}")
+    try:
+        with urllib.request.urlopen(req, timeout=15) as resp:
+            return json.loads(resp.read().decode("utf-8"))
+    except (urllib.error.HTTPError, urllib.error.URLError, json.JSONDecodeError):
         return None
 
 

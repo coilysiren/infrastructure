@@ -1,0 +1,59 @@
+name: caddy-shortcuts
+
+# Daily regen of caddy/sites/*.caddy from sibling repos' coily.yaml
+# `tailnet.shortcut` declarations. See coilysiren/infrastructure#129
+# for the design.
+#
+# Reload on kai-server is manual today:
+#   cd ~/projects/coilysiren/infrastructure && git pull
+#   sudo caddy reload --config /etc/caddy/Caddyfile
+#
+# Reads sibling repos via the Forgejo API (`forgejo.coilysiren.me`).
+# Auto-injected `GITHUB_TOKEN` is a Forgejo-issued token authenticating
+# against this Forgejo instance; gives rate-limit headroom + read access
+# to private siblings the runner user can see. The commit-back push to
+# Forgejo uses the same token.
+
+on:
+  schedule:
+    - cron: "17 6 * * *"   # 06:17 UTC daily, staggered from common cron alignment
+  workflow_dispatch:
+
+jobs:
+  regenerate:
+    runs-on: docker
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+      - run: uv sync
+
+      - name: install yq
+        run: |
+          curl -sSfL https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64 \
+            -o /usr/local/bin/yq
+          chmod +x /usr/local/bin/yq
+          yq --version
+
+      - name: regenerate snippets
+        env:
+          FORGEJO_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          uv run python scripts/generate-caddy-shortcuts.py
+
+      - name: commit if changed
+        run: |
+          set -euo pipefail
+          if git diff --quiet caddy/sites/; then
+            echo "no shortcut changes"
+            exit 0
+          fi
+          git config user.email "actions@forgejo.coilysiren.me"
+          git config user.name "forgejo-actions"
+          git add caddy/sites/
+          git commit -m "caddy: regenerate tailnet shortcut snippets, refs #129"
+          git push origin HEAD:main
