@@ -70,3 +70,7 @@ lunch-money: ## Deploy or upgrade the lunch-money-k8s MCP server (deploy/lunch-m
 
 terraform-aws-inventory: ## Run terraform against terraform/aws-inventory/ (managed S3 + Route53, SSM data-source). Args - action=plan|apply|init|destroy|output|import.
 	@uv run python scripts/k8s/terraform_aws_inventory.py $(or $(action),plan)
+
+caddy-shortcuts: ## Regenerate caddy/sites/*.caddy from sibling repos' coily.yaml on Forgejo. Args - dry_run=1 to preview without writing.
+	@FORGEJO_TOKEN=$$(aws ssm get-parameter --name /forgejo/api-token --with-decryption --query Parameter.Value --output text) \
+	  uv run python scripts/generate-caddy-shortcuts.py $(if $(dry_run),--dry-run)

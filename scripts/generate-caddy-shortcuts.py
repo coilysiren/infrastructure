@@ -128,8 +128,11 @@ def fetch_config(owner: str, repo: str) -> dict | None:
     payload: dict | None = None
     for filename in ("coily.yaml", "config.yml"):
         url = f"{FORGEJO_URL}/api/v1/repos/{owner}/{repo}/contents/{filename}"
-        payload = forgejo_get_json(url)
-        if payload is not None:
+        result = forgejo_get_json(url)
+        # Forgejo's contents endpoint returns an object for files and a
+        # list for directories. Only the file shape is useful here.
+        if isinstance(result, dict) and result.get("type") == "file":
+            payload = result
             break
     if payload is None:
         return None
@@ -147,9 +150,10 @@ def fetch_config(owner: str, repo: str) -> dict | None:
         return None
 
 
-def forgejo_get_json(url: str) -> dict | None:
-    """GET a Forgejo API URL and return the parsed JSON. Returns None on 404
-    or any error; this keeps the caller's "missing file = skip" semantics."""
+def forgejo_get_json(url: str):
+    """GET a Forgejo API URL and return the parsed JSON (dict or list).
+    Returns None on 404 or any error; this keeps the caller's
+    "missing = skip" semantics."""
     req = urllib.request.Request(url)
     if FORGEJO_TOKEN:
         req.add_header("Authorization", f"token {FORGEJO_TOKEN}")
@@ -188,6 +192,20 @@ def reconcile(sites_dir: Path, desired: dict[str, str], dry_run: bool) -> int:
     file-level changes (write + delete)."""
     changes = 0
     existing = {p.stem: p for p in sites_dir.glob("*.caddy")}
+
+    # Refuse mass-deletes when there's something to compare against. A
+    # transient Forgejo API failure (or an auth issue masking private
+    # repos) can make every desired shortcut disappear, which would
+    # otherwise blow away the whole sites dir on a green run.
+    to_delete = [s for s in existing if s not in desired]
+    if existing and len(to_delete) > max(2, len(existing) // 2):
+        print(
+            f"refusing to delete {len(to_delete)} of {len(existing)} shortcuts "
+            f"in one run (desired={len(desired)}); likely upstream enumeration "
+            "failed. re-run with --dry-run to inspect.",
+            file=sys.stderr,
+        )
+        sys.exit(2)
 
     for shortcut, body in desired.items():
         target = sites_dir / f"{shortcut}.caddy"

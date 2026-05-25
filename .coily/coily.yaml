@@ -59,6 +59,9 @@ commands:
   terraform-aws-inventory:
     run: make terraform-aws-inventory
     description: Run terraform against terraform/aws-inventory/ (managed S3 + Route53, SSM data-source). Args - action=plan|apply|init|destroy|output|import.
+  caddy-shortcuts:
+    run: make caddy-shortcuts
+    description: Regenerate caddy/sites/*.caddy from sibling repos' coily.yaml on Forgejo. Args - dry_run=1 to preview without writing.
 
 # Free-form ssh-passthrough target list. Schema: coilysiren/coily#187 phase 2.
 # `coily ssh <alias> -- <coily args>` resolves <alias> here, ssh's into the
