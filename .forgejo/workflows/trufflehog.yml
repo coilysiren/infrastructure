@@ -19,7 +19,12 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: TruffleHog (filesystem, offline)
+      - name: Install TruffleHog
+        run: |
+          curl -sSfL https://raw.githubusercontent.com/trufflesecurity/trufflehog/main/scripts/install.sh \
+            | sh -s -- -b /usr/local/bin
+
+      - name: Scan filesystem
         run: |
           cat > /tmp/trufflehog-exclude <<'EOF'
           (^|/)\.git/
@@ -32,10 +37,6 @@ jobs:
           (^|/)\.ruff_cache/
           (^|/)data/.*\.json$
           EOF
-          docker run --rm \
-            -v "$(pwd):/pwd:ro" \
-            -v /tmp/trufflehog-exclude:/exclude:ro \
-            trufflesecurity/trufflehog:latest \
-            filesystem /pwd \
+          trufflehog filesystem . \
             --no-verification --no-update --fail \
-            --exclude-paths=/exclude
+            --exclude-paths=/tmp/trufflehog-exclude
