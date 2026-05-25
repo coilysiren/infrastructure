@@ -270,6 +270,16 @@ spec:
                   key: metrics-token
             - name: FORGEJO__mailer__ENABLED
               value: "false"
+            # Forgejo Actions enabled cluster-wide. DEFAULT_ACTIONS_URL=github
+            # resolves `uses: actions/checkout@v4` (and other marketplace
+            # actions) to github.com. The default `data.forgejo.org` only
+            # mirrors a curated subset; `astral-sh/setup-uv` and similar
+            # community actions live on GH. See forgejo-runner deploy
+            # for the runner side (deploy/forgejo-runner.yml).
+            - name: FORGEJO__actions__ENABLED
+              value: "true"
+            - name: FORGEJO__actions__DEFAULT_ACTIONS_URL
+              value: "github"
           resources:
             requests:
               cpu: 200m
