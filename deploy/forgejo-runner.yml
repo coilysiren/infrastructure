@@ -1,0 +1,156 @@
+# Forgejo Actions runners on kai-server k3s. Same namespace as the
+# Forgejo server. Hand-rolled to match deploy/forgejo.yml shape.
+#
+# StatefulSet, two replicas. Each pod registers itself on first boot:
+# an initContainer mints a runner registration token by calling
+# Forgejo's admin API with the existing /forgejo/api-token, then runs
+# `act_runner register --no-interactive`. The daemon container then
+# runs `act_runner daemon`. Per-pod volumeClaimTemplate holds the
+# generated `.runner` state file so registration survives restarts.
+#
+# DinD sidecar per pod: act_runner talks to dockerd over a shared
+# /var/run socket via emptyDir. /var/lib/docker is ephemeral. Swap to
+# a PVC if build-cache reuse becomes worth the storage cost.
+#
+# Bump replicas to scale concurrent jobs. Each pod = 1 concurrent job
+# by default. No native k8s executor in Forgejo upstream yet, so DinD
+# is the path; tracked at codeberg.org/forgejo/discussions#66.
+#
+# Apply: sudo k3s kubectl apply -f deploy/forgejo-runner.yml
+---
+apiVersion: external-secrets.io/v1beta1
+kind: ExternalSecret
+metadata:
+  name: forgejo-runner-secrets
+  namespace: forgejo
+spec:
+  refreshInterval: 1h
+  secretStoreRef:
+    name: aws-parameter-store
+    kind: ClusterSecretStore
+  target:
+    name: forgejo-runner-secrets
+    creationPolicy: Owner
+  data:
+    - secretKey: api-token
+      remoteRef:
+        key: /forgejo/api-token
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: forgejo-runner
+  namespace: forgejo
+spec:
+  # One pod = one concurrent job. Bump to scale.
+  replicas: 2
+  serviceName: forgejo-runner
+  selector:
+    matchLabels:
+      app: forgejo-runner
+  template:
+    metadata:
+      labels:
+        app: forgejo-runner
+    spec:
+      nodeSelector:
+        kubernetes.io/hostname: kai-server
+      initContainers:
+        # Mints a per-pod registration token via the admin API and
+        # writes the .runner state file. Skips if already registered
+        # (re-applies / pod restarts mustn't re-register).
+        - name: register
+          image: data.forgejo.org/forgejo/runner:12
+          env:
+            - name: FORGEJO_INSTANCE_URL
+              value: http://forgejo.forgejo.svc.cluster.local
+            - name: API_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: forgejo-runner-secrets
+                  key: api-token
+          command:
+            - /bin/sh
+            - -c
+            - |
+              set -eu
+              cd /data
+              if [ -f .runner ]; then
+                echo "already registered, skipping"
+                exit 0
+              fi
+              # Forgejo admin API: mint an instance-level registration token.
+              TOKEN=$(wget -qO- \
+                --header="Authorization: token ${API_TOKEN}" \
+                "${FORGEJO_INSTANCE_URL}/api/v1/admin/runners/registration-token" \
+                | sed -n 's/.*"token":"\([^"]*\)".*/\1/p')
+              if [ -z "${TOKEN}" ]; then
+                echo "failed to mint registration token" >&2
+                exit 1
+              fi
+              forgejo-runner register \
+                --no-interactive \
+                --instance "${FORGEJO_INSTANCE_URL}" \
+                --token "${TOKEN}" \
+                --name "${HOSTNAME}"
+          volumeMounts:
+            - name: data
+              mountPath: /data
+          workingDir: /data
+      containers:
+        - name: runner
+          image: data.forgejo.org/forgejo/runner:12
+          command: ["forgejo-runner", "daemon"]
+          env:
+            - name: DOCKER_HOST
+              value: unix:///var/run/docker.sock
+          workingDir: /data
+          resources:
+            requests:
+              cpu: 200m
+              memory: 256Mi
+            limits:
+              cpu: 1000m
+              memory: 1Gi
+          volumeMounts:
+            - name: data
+              mountPath: /data
+            - name: docker-sock
+              mountPath: /var/run
+        # Per-pod dockerd. Privileged because dind needs it. Scoped to
+        # the runner pod's namespace; no host docker socket exposed.
+        - name: dind
+          image: docker:28-dind
+          securityContext:
+            privileged: true
+          env:
+            # Plain socket inside the pod, no TLS. The runner container
+            # is the only consumer over a shared emptyDir.
+            - name: DOCKER_TLS_CERTDIR
+              value: ""
+          resources:
+            requests:
+              cpu: 200m
+              memory: 512Mi
+            limits:
+              cpu: 2000m
+              memory: 2Gi
+          volumeMounts:
+            - name: docker-sock
+              mountPath: /var/run
+            - name: docker-lib
+              mountPath: /var/lib/docker
+      volumes:
+        - name: docker-sock
+          emptyDir: {}
+        - name: docker-lib
+          emptyDir: {}
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        storageClassName: local-path
+        resources:
+          requests:
+            storage: 1Gi
