@@ -140,11 +140,18 @@ locals {
 # single source of truth per host. Reassigning tags via terraform
 # requires the device to currently be authed by a user (not a tagged
 # auth key); the four physicals all qualify.
+#
+# depends_on ensures the ACL update lands first, registering any new
+# tagOwners, before the device-tag API tries to assign them. Without
+# this, a first-time bootstrap (or any run that adds a new tag to
+# both the policy and a device in the same apply) races and fails
+# with "requested tags are invalid or not permitted (400)".
 resource "tailscale_device_tags" "physical" {
   for_each = local.devices
 
-  device_id = local.device_id_by_short_name[each.key]
-  tags      = each.value
+  device_id  = local.device_id_by_short_name[each.key]
+  tags       = each.value
+  depends_on = [tailscale_acl.policy]
 }
 
 output "tagged_devices" {
