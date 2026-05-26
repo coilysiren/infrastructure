@@ -41,6 +41,12 @@ resource "tailscale_acl" "policy" {
   acl = jsonencode({
     acls = [
       { action = "accept", src = ["autogroup:member"], dst = ["*:*"] },
+      # Tagged devices fall out of autogroup:member. The physicals
+      # enumerated in devices.yaml are also tailnet clients (the Mac
+      # SSHes into kai-server, the laptops reach k3s NodePorts, etc.),
+      # so they need the same universal outbound permit member devices
+      # already have.
+      { action = "accept", src = ["tag:physical"], dst = ["*:*"] },
       { action = "accept", src = ["tag:ci"], dst = ["tag:server:*"] },
     ]
 
@@ -53,9 +59,12 @@ resource "tailscale_acl" "policy" {
     ]
 
     ssh = [
+      # Same logic as the tag:physical accept rule above - tagged
+      # client physicals need their own SSH-out permit since they no
+      # longer match autogroup:member after tagging.
       {
         action = "accept"
-        src    = ["autogroup:member"]
+        src    = ["autogroup:member", "tag:physical"]
         dst    = ["autogroup:self", "tag:server"]
         users  = ["autogroup:nonroot", "root"]
       },
