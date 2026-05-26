@@ -239,6 +239,15 @@ spec:
               value: "true"
             - name: FORGEJO__server__LFS_START_SERVER
               value: "true"
+            # Session storage in postgres so sessions survive pod rollouts.
+            # Default provider is `memory`, which wipes every login on each
+            # ReplicaSet swap. See infrastructure#127.
+            - name: FORGEJO__session__PROVIDER
+              value: db
+            - name: FORGEJO__session__PROVIDER_CONFIG
+              value: ""
+            - name: FORGEJO__session__SESSION_LIFE_TIME
+              value: "604800"
             # COOKIE_SECURE left at the default `auto`. ROOT_URL is
             # https, the public Ingress terminates TLS, so session
             # cookies come back Secure-only as they should. The phase-1
