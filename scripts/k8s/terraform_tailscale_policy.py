@@ -44,7 +44,7 @@ def main():
         )
         return
 
-    terraform_run("tailscale-policy", env=env, auto_approve=False)
+    terraform_run("tailscale-policy", env=env, auto_approve=True)
 
 
 if __name__ == "__main__":
