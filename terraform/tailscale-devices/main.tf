@@ -57,8 +57,12 @@ resource "tailscale_tailnet_key" "service" {
   ephemeral     = false
   preauthorized = true
   expiry        = 7776000 # 90 days in seconds
-  tags          = ["tag:k8s"]
-  description   = "k8s sidecar ${each.key}"
+  tags = [
+    "tag:k8s",
+    "tag:${each.key}",
+    "tag:host-kai-server",
+  ]
+  description = "k8s sidecar ${each.key}"
 }
 
 # SSM SecureString per service. Consumed by an ExternalSecret in the

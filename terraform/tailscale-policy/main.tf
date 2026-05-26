@@ -27,6 +27,18 @@ provider "tailscale" {
 
 locals {
   devices = yamldecode(file("${path.module}/devices.yaml")).devices
+
+  # Cross-module read of the sibling tailscale-devices module's service
+  # list. tailscale-devices is the single source of truth for which k8s
+  # sidecars exist; this file just registers their tagOwners so the
+  # auth keys minted there can carry tag:<service> alongside tag:k8s.
+  k8s_services = yamldecode(file("${path.module}/../tailscale-devices/services.yaml")).services
+
+  # Per-service tagOwners. Empty list -> only admin OAuth can assign,
+  # which matches the terraform-managed-auth-key flow.
+  service_tag_owners = {
+    for s in local.k8s_services : "tag:${s}" => []
+  }
 }
 
 # Owns the full tailnet policy file. First apply has to be a no-op:
@@ -85,17 +97,20 @@ resource "tailscale_acl" "policy" {
       },
     ]
 
-    tagOwners = {
-      "tag:ci"               = ["group:ci"]
-      "tag:k8s"              = []
-      "tag:server"           = []
-      "tag:physical"         = []
-      "tag:kai-server"       = []
-      "tag:kai-desktop-tower" = []
-      "tag:kai-windows-laptop" = []
-      "tag:kais-macbook-pro" = []
-      "tag:host-kai-server"  = []
-    }
+    tagOwners = merge(
+      {
+        "tag:ci"                 = ["group:ci"]
+        "tag:k8s"                = []
+        "tag:server"             = []
+        "tag:physical"           = []
+        "tag:kai-server"         = []
+        "tag:kai-desktop-tower"  = []
+        "tag:kai-windows-laptop" = []
+        "tag:kais-macbook-pro"   = []
+        "tag:host-kai-server"    = []
+      },
+      local.service_tag_owners,
+    )
   })
 }
 
