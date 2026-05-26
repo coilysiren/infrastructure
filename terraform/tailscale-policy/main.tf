@@ -59,13 +59,22 @@ resource "tailscale_acl" "policy" {
     ]
 
     ssh = [
-      # Same logic as the tag:physical accept rule above - tagged
-      # client physicals need their own SSH-out permit since they no
-      # longer match autogroup:member after tagging.
       {
         action = "accept"
-        src    = ["autogroup:member", "tag:physical"]
+        src    = ["autogroup:member"]
         dst    = ["autogroup:self", "tag:server"]
+        users  = ["autogroup:nonroot", "root"]
+      },
+      # Tagged client physicals need their own SSH-out permit since
+      # they no longer match autogroup:member after tagging. Split
+      # from the autogroup:member rule because autogroup:self is only
+      # legal with user-owned src - tagged devices have no user
+      # (owned by the tagged-devices meta-user), so the API rejects
+      # autogroup:self in dst when src is a tag.
+      {
+        action = "accept"
+        src    = ["tag:physical"]
+        dst    = ["tag:server"]
         users  = ["autogroup:nonroot", "root"]
       },
       {
