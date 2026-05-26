@@ -12,6 +12,7 @@ DEFAULT_GOAL := help
 	terraform-admin-kms \
 	terraform-tailscale-oidc \
 	terraform-tailscale-devices \
+	terraform-tailscale-policy \
 	dump-tailscale-acl \
 	sync-tailscale-oidc-secrets \
 	llama-deploy \
@@ -56,6 +57,9 @@ terraform-tailscale-oidc: ## Run terraform against terraform/tailscale-oidc/ (TS
 
 terraform-tailscale-devices: ## Run terraform against terraform/tailscale-devices/ (one tailscale_tailnet_key per k8s sidecar service; replaces tailscale-operator). Args - action=plan|apply|init|destroy.
 	@uv run python scripts/k8s/terraform_tailscale_devices.py $(or $(action),plan)
+
+terraform-tailscale-policy: ## Run terraform against terraform/tailscale-policy/ (owns tailnet policy file + per-physical-device tags). Args - action=plan|apply|init|destroy|import-acl.
+	@uv run python scripts/k8s/terraform_tailscale_policy.py $(or $(action),plan)
 
 dump-tailscale-acl: ## Dump current tailnet policy via admin OAuth (round-trip target for terraform/tailscale-policy/).
 	@uv run python scripts/k8s/dump_tailscale_acl.py

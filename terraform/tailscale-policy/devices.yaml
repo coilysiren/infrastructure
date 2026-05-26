@@ -1,0 +1,24 @@
+# Physical devices on the tailnet that should carry IaC-owned tags.
+#
+# Each entry maps the device's MagicDNS short name to the tag list the
+# tailscale_device_tags resource will assert. tag:server is preserved
+# from the pre-IaC state so the existing tag:ci -> tag:server ACL keeps
+# working. tag:physical is the cross-cutting bucket for "real hardware,
+# not a k8s pod". The per-host tag is what answers "which box is this".
+devices:
+  kai-server:
+    - tag:server
+    - tag:physical
+    - tag:kai-server
+  kai-desktop-tower:
+    - tag:server
+    - tag:physical
+    - tag:kai-desktop-tower
+  kai-windows-laptop:
+    - tag:server
+    - tag:physical
+    - tag:kai-windows-laptop
+  kais-macbook-pro:
+    - tag:server
+    - tag:physical
+    - tag:kais-macbook-pro
