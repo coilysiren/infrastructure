@@ -40,8 +40,11 @@ jobs:
           yq --version
 
       - name: regenerate snippets
-        env:
-          FORGEJO_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        # No FORGEJO_TOKEN: Forgejo's auto-injected GITHUB_TOKEN is scoped
+        # to the current repo only and cannot read sibling repos. The
+        # script enumerates and reads sibling coily.yaml anonymously
+        # (works for public repos). Private sibling repos with shortcuts
+        # will not render until a broader-scope token is in play.
         run: |
           uv run python scripts/generate-caddy-shortcuts.py
 
