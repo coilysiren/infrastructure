@@ -81,13 +81,14 @@ resource "tailscale_acl" "policy" {
   })
 }
 
-# Look each physical device up by MagicDNS short name. tailscale_device
-# resolves on `name` (full FQDN) or `hostname`; the data source matches
-# on either, so the short name from devices.yaml works.
+# Look each physical device up by its OS hostname. tailscale_device's
+# `name` argument matches the FQDN (e.g. kai-server.tailXXXX.ts.net);
+# `hostname` matches the short name reported by the device itself,
+# which is what devices.yaml uses as the map key.
 data "tailscale_device" "physical" {
   for_each = local.devices
 
-  name = each.key
+  hostname = each.key
 }
 
 # Overwrites the full tag list on each device, so devices.yaml is the
