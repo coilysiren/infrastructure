@@ -81,14 +81,22 @@ resource "tailscale_acl" "policy" {
   })
 }
 
-# Look each physical device up by its OS hostname. tailscale_device's
-# `name` argument matches the FQDN (e.g. kai-server.tailXXXX.ts.net);
-# `hostname` matches the short name reported by the device itself,
-# which is what devices.yaml uses as the map key.
-data "tailscale_device" "physical" {
-  for_each = local.devices
+# tailscale_device (singular) matches on `name` (FQDN) or `hostname`
+# (the raw OS-reported hostname). Neither is stable across the fleet:
+# Windows machines report "KAI-DESKTOP-TOWER" / "LAPTOP-5RANHQD2", and
+# the Mac reports "Kai's MacBook Pro". The FQDN is the only stable
+# identifier the short names in devices.yaml map to predictably, so
+# pull the full device list once and filter by FQDN prefix.
+data "tailscale_devices" "all" {}
 
-  hostname = each.key
+locals {
+  device_id_by_short_name = {
+    for short, _ in local.devices :
+    short => one([
+      for d in data.tailscale_devices.all.devices :
+      d.id if startswith(d.name, "${short}.")
+    ])
+  }
 }
 
 # Overwrites the full tag list on each device, so devices.yaml is the
@@ -98,7 +106,7 @@ data "tailscale_device" "physical" {
 resource "tailscale_device_tags" "physical" {
   for_each = local.devices
 
-  device_id = data.tailscale_device.physical[each.key].id
+  device_id = local.device_id_by_short_name[each.key]
   tags      = each.value
 }
 
