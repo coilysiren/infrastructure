@@ -36,8 +36,12 @@ locals {
 
   # Per-service tagOwners. Empty list -> only admin OAuth can assign,
   # which matches the terraform-managed-auth-key flow.
+  #
+  # `svc-` prefix because Tailscale rejects tag names that start with
+  # a digit after `tag:` (e.g. tag:2fauth fails 400). Also gives a
+  # clear namespace alongside tag:host-<host>.
   service_tag_owners = {
-    for s in local.k8s_services : "tag:${s}" => []
+    for s in local.k8s_services : "tag:svc-${s}" => []
   }
 }
 
