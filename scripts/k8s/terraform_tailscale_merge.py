@@ -77,21 +77,23 @@ def prepare(env):
     for stack in [*SOURCES, TARGET]:
         run(f"terraform -chdir=terraform/{stack} init", env=env)
 
-    # Drop the source ACL resource from tailscale-oidc state first so we
-    # don't migrate the duplicate. State rm from a pulled local file
-    # would lose this on push; do it against the live backend now.
-    run(
-        "terraform -chdir=terraform/tailscale-oidc state rm tailscale_acl.main",
-        env=env,
-        warn=True,
-    )
-
-    # Pull each source to /tmp.
+    # Pull each source to /tmp. All subsequent mutations target local
+    # files only - live backends stay untouched until `push` and `orphan`.
     for stack in SOURCES:
         run(
             f"terraform -chdir=terraform/{stack} state pull > {src_state_path(stack)}",
             env=env,
         )
+
+    # Drop the duplicate ACL from oidc's pulled state so it never lands
+    # in the merged file. The live `terraform_acl.main` row in the oidc
+    # backend gets cleaned up later by `orphan`.
+    run(
+        f"terraform -chdir=terraform/tailscale-oidc state rm "
+        f"-state={src_state_path('tailscale-oidc')} tailscale_acl.main",
+        env=env,
+        warn=True,
+    )
 
     # Pull (empty) target state.
     run(
@@ -138,6 +140,13 @@ def orphan(env):
                 env=env,
                 warn=True,
             )
+    # Duplicate ACL that prepare excluded from migration. Drop it from
+    # the oidc backend so retiring the dir leaves no dangling state.
+    run(
+        "terraform -chdir=terraform/tailscale-oidc state rm tailscale_acl.main",
+        env=env,
+        warn=True,
+    )
 
 
 def main():
