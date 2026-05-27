@@ -678,6 +678,18 @@ One line per trap. Every fix here has a commit in some repo's history.
   `systemctl status caddy-config-deploy.path`. Bootstrap with
   `sudo bash scripts/install-caddy-config-deploy.sh` if the unit
   isn't present. (coilysiren/infrastructure#292)
+- **Host TCP listeners on kai-server (sshd:22, apiserver:6443,
+  tailscaled PeerAPI) flap during forgejo-runner workflow runs while
+  pod-network ingress (caddy 80/443) keeps serving** → privileged DinD
+  sidecar in the runner pod creates/destroys `br-XXXXXXXX` bridges in
+  bursts, racing k3s kube-proxy's iptables sync. Host-namespace
+  forward rules get torn down and rebuilt; pod-net rules stay healthy
+  because flannel + kube-proxy own them. `tailscale ping` still works
+  (control plane up), TCP listeners timeout (not refused). Fix: pin
+  the runner StatefulSet to a worker node (`kai-desktop-tower-wsl`)
+  via `nodeSelector` so the bridge churn doesn't share a netns with
+  load-bearing host services. Don't try `dockerd --iptables=false`,
+  that's a trap. (coilysiren/infrastructure#151)
 
 ## 8. First-time setup checklist for a new repo
 
@@ -758,6 +770,11 @@ One line per trap. Every fix here has a commit in some repo's history.
 - **kubectl from laptop can't reach cluster**
   → `tailscale up` first. Then `ssh kai@kai-server` works from the
   tailnet.
+- **sshd / apiserver / tailscaled on kai-server flap during forgejo
+  workflow runs, caddy ingress unaffected**
+  → forgejo-runner DinD bridge churn racing kube-proxy. Verify the
+  runner StatefulSet is pinned to `kai-desktop-tower-wsl`, not
+  `kai-server`. `kubectl -n forgejo get pods -o wide | grep runner`.
 - **`make .deploy` says `namespace/<foo> unchanged, deployment
   configured, service unchanged, ingress unchanged` but site still
   shows old version**
