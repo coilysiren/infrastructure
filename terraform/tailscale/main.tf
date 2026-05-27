@@ -103,6 +103,17 @@ resource "tailscale_acl" "policy" {
         dst    = ["tag:server"]
         users  = ["autogroup:nonroot", "root"]
       },
+      # Companion rule so tagged client physicals can SSH into Kai's
+      # untagged user-owned devices (WSL, future joiners). Without this,
+      # the only ssh destination available to a tagged Mac/laptop is
+      # tag:server. autogroup:member is safe scope: Kai is the only
+      # human user account on the tailnet.
+      {
+        action = "accept"
+        src    = ["tag:physical"]
+        dst    = ["autogroup:member"]
+        users  = ["autogroup:nonroot", "root"]
+      },
       {
         action = "accept"
         src    = ["tag:ci"]
