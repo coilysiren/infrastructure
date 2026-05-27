@@ -14,6 +14,7 @@ DEFAULT_GOAL := help
 	terraform-tailscale-devices \
 	terraform-tailscale-policy \
 	terraform-tailscale-merge \
+	terraform-tailscale \
 	dump-tailscale-acl \
 	sync-tailscale-oidc-secrets \
 	llama-deploy \
@@ -64,6 +65,9 @@ terraform-tailscale-policy: ## Run terraform against terraform/tailscale-policy/
 
 terraform-tailscale-merge: ## One-shot merge of tailscale-{policy,oidc,devices} into terraform/tailscale/. Args - action=prepare|push|orphan.
 	@uv run python scripts/k8s/terraform_tailscale_merge.py $(or $(action),prepare)
+
+terraform-tailscale: ## Run terraform against terraform/tailscale/ (merged tailnet stack). Args - action=plan|apply|init|destroy.
+	@uv run python scripts/k8s/terraform_tailscale.py $(or $(action),plan)
 
 dump-tailscale-acl: ## Dump current tailnet policy via admin OAuth (round-trip target for terraform/tailscale-policy/).
 	@uv run python scripts/k8s/dump_tailscale_acl.py
