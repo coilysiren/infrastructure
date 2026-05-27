@@ -18,7 +18,8 @@ DEFAULT_GOAL := help
 	llama-deploy \
 	llama-deploy-secrets \
 	lunch-money \
-	terraform-aws-inventory
+	terraform-aws-inventory \
+	host-watch
 
 help: ## Print this help.
 	@awk 'BEGIN {FS = ":.*?## "} /^[a-zA-Z_-]+:.*?## / {printf "%-32s %s\n", $$1, $$2}' $(MAKEFILE_LIST)
@@ -82,3 +83,7 @@ terraform-aws-inventory: ## Run terraform against terraform/aws-inventory/ (mana
 caddy-shortcuts: ## Regenerate caddy/sites/*.caddy from sibling repos' coily.yaml on Forgejo. Args - dry_run=1 to preview without writing.
 	@FORGEJO_TOKEN=$$(aws ssm get-parameter --name /forgejo/api-token --with-decryption --query Parameter.Value --output text) \
 	  uv run python scripts/generate-caddy-shortcuts.py $(if $(dry_run),--dry-run)
+
+host-watch: ## Watch a tailnet host's SSH and capture a host-diag.sh snapshot on each dead->alive recovery. Args - host=<alias>.
+	@test -n "$(host)" || { echo "host=<alias> is required" >&2; exit 2; }
+	bash scripts/host-watch.sh $(host)

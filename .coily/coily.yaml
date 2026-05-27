@@ -68,6 +68,9 @@ commands:
   caddy-shortcuts:
     run: make caddy-shortcuts
     description: Regenerate caddy/sites/*.caddy from sibling repos' coily.yaml on Forgejo. Args - dry_run=1 to preview without writing.
+  host-watch:
+    run: make host-watch
+    description: Watch a tailnet host's SSH and capture a host-diag.sh snapshot on each dead->alive recovery. Args - host=<alias>.
 
 # Free-form ssh-passthrough target list. Schema: coilysiren/coily#187 phase 2.
 # `coily ssh <alias> -- <coily args>` resolves <alias> here, ssh's into the
