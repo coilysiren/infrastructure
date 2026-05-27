@@ -10,11 +10,8 @@ DEFAULT_GOAL := help
 	signoz \
 	terraform-grafana \
 	terraform-admin-kms \
-	terraform-tailscale-oidc \
-	terraform-tailscale-devices \
-	terraform-tailscale-policy \
-	terraform-tailscale-merge \
 	terraform-tailscale \
+	terraform-tailscale-merge \
 	dump-tailscale-acl \
 	sync-tailscale-oidc-secrets \
 	llama-deploy \
@@ -54,25 +51,16 @@ terraform-grafana: ## Run terraform against terraform/grafana/ (GRAFANA_AUTH wir
 terraform-admin-kms: ## Run terraform against terraform/admin-kms/ (admin-only KMS key for SSM-wrapping). Args - action=plan|apply|init|destroy.
 	@uv run python scripts/k8s/terraform_admin_kms.py $(or $(action),plan)
 
-terraform-tailscale-oidc: ## Run terraform against terraform/tailscale-oidc/ (TS admin OAuth wired from SSM). Args - action=plan|apply|init|destroy.
-	@uv run python scripts/k8s/terraform_tailscale_oidc.py $(or $(action),plan)
-
-terraform-tailscale-devices: ## Run terraform against terraform/tailscale-devices/ (one tailscale_tailnet_key per k8s sidecar service; replaces tailscale-operator). Args - action=plan|apply|init|destroy.
-	@uv run python scripts/k8s/terraform_tailscale_devices.py $(or $(action),plan)
-
-terraform-tailscale-policy: ## Run terraform against terraform/tailscale-policy/ (owns tailnet policy file + per-physical-device tags). Args - action=plan|apply|init|destroy|import-acl.
-	@uv run python scripts/k8s/terraform_tailscale_policy.py $(or $(action),plan)
-
 terraform-tailscale-merge: ## One-shot merge of tailscale-{policy,oidc,devices} into terraform/tailscale/. Args - action=prepare|push|orphan.
 	@uv run python scripts/k8s/terraform_tailscale_merge.py $(or $(action),prepare)
 
 terraform-tailscale: ## Run terraform against terraform/tailscale/ (merged tailnet stack). Args - action=plan|apply|init|destroy.
 	@uv run python scripts/k8s/terraform_tailscale.py $(or $(action),plan)
 
-dump-tailscale-acl: ## Dump current tailnet policy via admin OAuth (round-trip target for terraform/tailscale-policy/).
+dump-tailscale-acl: ## Dump current tailnet policy via admin OAuth (round-trip target for terraform/tailscale/).
 	@uv run python scripts/k8s/dump_tailscale_acl.py
 
-sync-tailscale-oidc-secrets: ## Push TS_CLIENT_ID + TS_AUDIENCE to each repo in tailscale-oidc/repos.yaml via gh CLI live auth.
+sync-tailscale-oidc-secrets: ## Push TS_CLIENT_ID + TS_AUDIENCE to each repo in terraform/tailscale/repos.yaml via gh CLI live auth.
 	@uv run python scripts/k8s/sync_tailscale_oidc_secrets.py
 
 llama-deploy: ## Apply llama/deploy.yml into the llama namespace.

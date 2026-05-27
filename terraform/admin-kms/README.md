@@ -25,7 +25,7 @@ Default `admin_group_name = "admins"`. Override in `terraform.tfvars` if needed.
 
 ## Consumers
 
-- `terraform/tailscale-oidc/` - admin Tailscale OAuth pair at `/tailscale/admin/oauth-client-*` is wrapped under this key.
+- `terraform/tailscale/` - admin Tailscale OAuth pair at `/tailscale/admin/oauth-client-*` is wrapped under this key.
 
 When stashing a new admin param:
 

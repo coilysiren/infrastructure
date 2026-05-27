@@ -10,7 +10,7 @@ Today every deployable repo carries the same `/tailscale/oauth-client-id` + `/ta
 
 - `tailscale_federated_identity` per repo, keyed by repo name. Subject `repo:coilysiren/<name>:ref:refs/heads/main`, scope `auth_keys`, tags `["tag:ci"]`.
 - `github_actions_secret.TS_CLIENT_ID` and `TS_AUDIENCE` per repo.
-- `tailscale_acl.main` carries the **full tailnet ACL** (groups, tagOwners, acls, ssh, nodeAttrs). The resource is a singleton in the Tailscale provider - applying it replaces the entire policy document. All tailnet edits go through this module; the admin console is read-only from here on.
+- `tailscale_acl.policy` carries the **full tailnet ACL** (groups, tagOwners, acls, ssh, nodeAttrs). The resource is a singleton in the Tailscale provider - applying it replaces the entire policy document. All tailnet edits go through this module; the admin console is read-only from here on.
 
 Workflow side:
 
@@ -50,15 +50,15 @@ Distinct from the runtime CI OAuth client at `/tailscale/oauth-*` (devices/auth_
 
 ## Module
 
-`terraform/tailscale-oidc/`. Run via:
+`terraform/tailscale/`. Run via:
 
 ```
-coily exec terraform-tailscale-oidc action=init
-coily exec terraform-tailscale-oidc action=plan
-coily exec terraform-tailscale-oidc action=apply
+coily exec terraform-tailscale action=init
+coily exec terraform-tailscale action=plan
+coily exec terraform-tailscale action=apply
 ```
 
-The wrapper pulls `/tailscale/admin/oauth-client-id`, `/tailscale/admin/oauth-client-secret`, and `/github/pat` from SSM and exports them as `TAILSCALE_OAUTH_CLIENT_ID` + `TAILSCALE_OAUTH_CLIENT_SECRET` + `GITHUB_TOKEN`. State at `s3://coilysiren-assets/terraform-state/infrastructure/tailscale-oidc.tfstate` (native lockfile, same shape as `terraform/grafana/`).
+The wrapper pulls `/tailscale/admin/oauth-client-id`, `/tailscale/admin/oauth-client-secret`, and `/github/pat` from SSM and exports them as `TAILSCALE_OAUTH_CLIENT_ID` + `TAILSCALE_OAUTH_CLIENT_SECRET` + `GITHUB_TOKEN`. State at `s3://coilysiren-assets/terraform-state/infrastructure/tailscale.tfstate` (native lockfile, same shape as `terraform/grafana/`).
 
 Adding a repo: append to `terraform.tfvars` `repos = [{ name = "<repo>" }, ...]` and re-apply.
 
@@ -98,4 +98,4 @@ Per repo:
 ## See also
 
 - [docs/k3s-deploy-notes.md](k3s-deploy-notes.md) - homelab topology, SSM inventory.
-- [terraform/tailscale-oidc/README.md](../terraform/tailscale-oidc/README.md) - module shape and run instructions.
+- [terraform/tailscale/README.md](../terraform/tailscale/README.md) - module shape and run instructions.

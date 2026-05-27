@@ -6,7 +6,7 @@
 #
 # Auth into the app is 2FAuth's own login (a tailnet peer hitting :8000
 # gets a login wall, not Kai's codes). The ts authkey is minted by
-# terraform/tailscale-devices/ (service `2fauth` in services.yaml) and
+# terraform/tailscale/ (service `2fauth` in services.yaml) and
 # landed in SSM at /coilysiren/2fauth/ts-authkey. The APP_KEY that
 # encrypts the SQLite TOTP DB is in SSM at /coilysiren/2fauth/app-key.
 #
@@ -196,7 +196,7 @@ spec:
         key: /coilysiren/2fauth/app-key
 ---
 # TS_AUTHKEY for the ts sidecar. Sourced from SSM
-# /coilysiren/2fauth/ts-authkey, minted by terraform/tailscale-devices/.
+# /coilysiren/2fauth/ts-authkey, minted by terraform/tailscale/.
 apiVersion: external-secrets.io/v1
 kind: ExternalSecret
 metadata:

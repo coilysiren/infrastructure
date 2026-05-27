@@ -7,7 +7,7 @@
 # reach `repo-recall.<tailnet>.ts.net:8080` directly).
 #
 # The ts sidecar replaces the tailscale-operator's per-Service ts-proxy
-# StatefulSet. Auth key is minted by terraform/tailscale-devices/ and
+# StatefulSet. Auth key is minted by terraform/tailscale/ and
 # materialized into the namespace via the ExternalSecret below. State
 # persists in a k8s Secret (TS_KUBE_SECRET) so pod restarts re-use the
 # device identity without re-consuming the single-use auth key.

@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
 """Dump the current tailnet policy file via the admin OAuth pair.
 
-Round-trip target for `terraform/tailscale-policy/`. Prints the HuJSON
-policy body as returned by the API (api.tailscale.com/api/v2/tailnet/-/acl)
-so it can be pasted into the new module's `tailscale_acl.policy` body
-before `terraform import` adopts current state.
+Round-trip target for `terraform/tailscale/`. Prints the HuJSON policy
+body as returned by the API (api.tailscale.com/api/v2/tailnet/-/acl) so
+it can be pasted into the module's `tailscale_acl.policy` body before
+`terraform import` adopts current state.
 
-Admin OAuth pair at /tailscale/admin/oauth-client-{id,secret} (same as
-terraform/tailscale-{devices,oidc}/). all:write scope needed; acl:read
-alone would also work but the admin pair is already wired.
+Admin OAuth pair at /tailscale/admin/oauth-client-{id,secret}. all:write
+scope needed; acl:read alone would also work but the admin pair is
+already wired.
 
 Usage: dump_tailscale_acl.py
 """

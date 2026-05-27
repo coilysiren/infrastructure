@@ -26,7 +26,7 @@
 # need an explicit base-url, sourced from SSM (the ntfy-base-url
 # ExternalSecret) so the opaque tailnet suffix never lands in the repo.
 #
-# The ts authkey is minted by terraform/tailscale-devices/ (service
+# The ts authkey is minted by terraform/tailscale/ (service
 # `ntfy` in services.yaml) and landed in SSM at
 # /coilysiren/ntfy/ts-authkey. ntfy itself needs no app secret - the
 # cache and auth DBs are created at runtime on the PVC.
@@ -253,7 +253,7 @@ spec:
             name: ntfy-ts-serve
 ---
 # TS_AUTHKEY for the ts sidecar. Sourced from SSM
-# /coilysiren/ntfy/ts-authkey, minted by terraform/tailscale-devices/.
+# /coilysiren/ntfy/ts-authkey, minted by terraform/tailscale/.
 apiVersion: external-secrets.io/v1
 kind: ExternalSecret
 metadata:

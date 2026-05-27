@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Push TS_CLIENT_ID + TS_AUDIENCE to each repo in `repos.yaml`.
 
-Reads the `client_ids` + `audiences` outputs from the tailscale-oidc
+Reads the `client_ids` + `audiences` outputs from the terraform/tailscale/
 terraform state and writes each pair into the corresponding repo's GH
 Actions secrets via `coily ops gh secret set`. The gh CLI uses Kai's
 live device-auth session, so no PAT is needed in SSM (the /github/pat
@@ -19,7 +19,7 @@ import json
 import subprocess
 import sys
 
-CHDIR = "terraform/tailscale-oidc"
+CHDIR = "terraform/tailscale"
 
 
 def tf_output_json(name: str) -> dict[str, str]:

@@ -38,15 +38,6 @@ commands:
   terraform-admin-kms:
     run: make terraform-admin-kms
     description: Run terraform against terraform/admin-kms/ (admin-only KMS key for SSM-wrapping). Args - action=plan|apply|init|destroy.
-  terraform-tailscale-oidc:
-    run: make terraform-tailscale-oidc
-    description: Run terraform against terraform/tailscale-oidc/ (TS admin OAuth wired from SSM). Args - action=plan|apply|init|destroy.
-  terraform-tailscale-devices:
-    run: make terraform-tailscale-devices
-    description: Run terraform against terraform/tailscale-devices/ (one tailscale_tailnet_key per k8s sidecar service; replaces tailscale-operator). Args - action=plan|apply|init|destroy.
-  terraform-tailscale-policy:
-    run: make terraform-tailscale-policy
-    description: Run terraform against terraform/tailscale-policy/ (owns tailnet policy file + per-physical-device tags). Args - action=plan|apply|init|destroy|import-acl.
   terraform-tailscale-merge:
     run: make terraform-tailscale-merge
     description: One-shot merge of tailscale policy/oidc/devices into terraform/tailscale/. Args - action=prepare|push|orphan.
@@ -55,10 +46,10 @@ commands:
     description: Run terraform against terraform/tailscale/ (merged tailnet stack). Args - action=plan|apply|init|destroy.
   dump-tailscale-acl:
     run: make dump-tailscale-acl
-    description: Dump current tailnet policy via admin OAuth (round-trip target for terraform/tailscale-policy/).
+    description: Dump current tailnet policy via admin OAuth (round-trip target for terraform/tailscale/).
   sync-tailscale-oidc-secrets:
     run: make sync-tailscale-oidc-secrets
-    description: Push TS_CLIENT_ID + TS_AUDIENCE to each repo in tailscale-oidc/repos.yaml via gh CLI live auth.
+    description: Push TS_CLIENT_ID + TS_AUDIENCE to each repo in terraform/tailscale/repos.yaml via gh CLI live auth.
   llama-deploy:
     run: make llama-deploy
     description: Apply llama/deploy.yml into the llama namespace.

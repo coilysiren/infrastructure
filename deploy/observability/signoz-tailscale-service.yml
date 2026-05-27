@@ -21,7 +21,7 @@
 # The .ts.net suffix is unavoidable: a TLS cert can only be issued for
 # the device's full MagicDNS name, not the bare `signoz` short name.
 #
-# The ts authkey is minted by terraform/tailscale-devices/ (service
+# The ts authkey is minted by terraform/tailscale/ (service
 # `signoz` in services.yaml) and landed in SSM at
 # /coilysiren/signoz/ts-authkey.
 #
