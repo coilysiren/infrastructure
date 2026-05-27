@@ -47,6 +47,9 @@ commands:
   terraform-tailscale-policy:
     run: make terraform-tailscale-policy
     description: Run terraform against terraform/tailscale-policy/ (owns tailnet policy file + per-physical-device tags). Args - action=plan|apply|init|destroy|import-acl.
+  terraform-tailscale-merge:
+    run: make terraform-tailscale-merge
+    description: One-shot merge of tailscale policy/oidc/devices into terraform/tailscale/. Args - action=prepare|push|orphan.
   dump-tailscale-acl:
     run: make dump-tailscale-acl
     description: Dump current tailnet policy via admin OAuth (round-trip target for terraform/tailscale-policy/).

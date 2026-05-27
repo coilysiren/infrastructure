@@ -1,0 +1,22 @@
+# Services that join the tailnet via a static tailscale sidecar in their
+# k8s Deployment. Each entry mints one tailscale_tailnet_key tagged
+# tag:k8s, and pushes the key into SSM at
+# /coilysiren/<service>/ts-authkey for the ExternalSecret in the
+# service's namespace to consume.
+#
+# Add a service here, terraform apply, then add the sidecar to its
+# Deployment manifest. Remove a service here only after the sidecar is
+# gone from the cluster - the device persists in the tailnet device list
+# and needs a separate revoke step.
+services:
+  - 2fauth
+  - repo-recall
+  - vmsingle
+  - eco-mcp
+  - eco-spec
+  - galaxy-gen
+  - backend
+  - backend-db
+  - forgejo
+  - signoz
+  - ntfy

@@ -1,0 +1,10 @@
+# Deployable repos that get a federated identity + TS_CLIENT_ID / TS_AUDIENCE pair.
+# Add entries here as repos migrate off the long-lived /tailscale/oauth-* SSM pair.
+# Flat list of "coilysiren/<name>". Branch is hardcoded to main in main.tf.
+repos:
+  - "coilysiren/backend"
+  - "coilysiren/eco-jobs-tracker"
+  - "coilysiren/eco-mcp"
+  - "coilysiren/galaxy-gen"
+  - "coilysiren/personal-dashboard"
+  - "coilysiren/repo-recall"
