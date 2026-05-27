@@ -41,6 +41,33 @@ def terraform_run(chdir, *, env=None, auto_approve=False):
     run(f"{base} {action}{flags}", env=env)
 
 
+def tailscale_admin_bearer():
+    """Exchange the admin OAuth client_credentials for a short-lived bearer.
+
+    Returned token authorizes the Tailscale REST API at api.tailscale.com.
+    Used by helpers that need to hit the API directly rather than via the
+    terraform provider (dump_tailscale_acl, list_tailscale_devices, etc.).
+    """
+    import base64  # pylint: disable=import-outside-toplevel
+    import json as _json  # pylint: disable=import-outside-toplevel
+    import urllib.parse  # pylint: disable=import-outside-toplevel
+    import urllib.request  # pylint: disable=import-outside-toplevel
+
+    env = tailscale_admin_oauth_env()
+    req = urllib.request.Request(
+        "https://api.tailscale.com/api/v2/oauth/token",
+        data=urllib.parse.urlencode({"grant_type": "client_credentials"}).encode(),
+        headers={
+            "Content-Type": "application/x-www-form-urlencoded",
+            "Authorization": "Basic " + base64.b64encode(
+                f"{env['TAILSCALE_OAUTH_CLIENT_ID']}:{env['TAILSCALE_OAUTH_CLIENT_SECRET']}".encode()
+            ).decode(),
+        },
+    )
+    with urllib.request.urlopen(req) as resp:
+        return _json.loads(resp.read())["access_token"]
+
+
 def tailscale_admin_oauth_env():
     """A copy of os.environ with the admin Tailscale OAuth pair from SSM
     added, ready to hand to terraform.

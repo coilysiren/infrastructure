@@ -47,6 +47,9 @@ commands:
   dump-tailscale-acl:
     run: make dump-tailscale-acl
     description: Dump current tailnet policy via admin OAuth (round-trip target for terraform/tailscale/).
+  list-tailscale-devices:
+    run: make list-tailscale-devices
+    description: List every tailnet device with hostname, user, tags, addresses.
   sync-tailscale-oidc-secrets:
     run: make sync-tailscale-oidc-secrets
     description: Push TS_CLIENT_ID + TS_AUDIENCE to each repo in terraform/tailscale/repos.yaml via gh CLI live auth.
