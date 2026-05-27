@@ -103,15 +103,17 @@ resource "tailscale_acl" "policy" {
         dst    = ["tag:server"]
         users  = ["autogroup:nonroot", "root"]
       },
-      # Companion rule so tagged client physicals can SSH into Kai's
-      # untagged user-owned devices (WSL, future joiners). Without this,
-      # the only ssh destination available to a tagged Mac/laptop is
-      # tag:server. autogroup:member is safe scope: Kai is the only
-      # human user account on the tailnet.
+      # Companion rule so tagged client physicals can SSH into each
+      # other (Mac -> WSL, tower -> Mac, etc.). Without this, the only
+      # ssh destination available to a tagged Mac/laptop is tag:server.
+      # Tailscale rejects autogroup:member as an ssh dst, so the rule
+      # has to be expressed in terms of tags. Anything Kai wants
+      # ssh-reachable from another physical needs an entry in
+      # devices.yaml that carries tag:physical.
       {
         action = "accept"
         src    = ["tag:physical"]
-        dst    = ["autogroup:member"]
+        dst    = ["tag:physical"]
         users  = ["autogroup:nonroot", "root"]
       },
       {
@@ -128,10 +130,11 @@ resource "tailscale_acl" "policy" {
         "tag:k8s"                = []
         "tag:server"             = []
         "tag:physical"           = []
-        "tag:kai-server"         = []
-        "tag:kai-desktop-tower"  = []
-        "tag:kai-windows-laptop" = []
-        "tag:kais-macbook-pro"   = []
+        "tag:kai-server"             = []
+        "tag:kai-desktop-tower"      = []
+        "tag:kai-desktop-tower-wsl"  = []
+        "tag:kai-windows-laptop"     = []
+        "tag:kais-macbook-pro"       = []
         "tag:host-kai-server"    = []
       },
       local.service_tag_owners,

@@ -21,6 +21,9 @@ devices:
   kai-desktop-tower:
     - tag:physical
     - tag:kai-desktop-tower
+  kai-desktop-tower-wsl:
+    - tag:physical
+    - tag:kai-desktop-tower-wsl
   kai-windows-laptop:
     - tag:physical
     - tag:kai-windows-laptop
