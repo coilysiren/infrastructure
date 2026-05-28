@@ -94,6 +94,3 @@ catalog:
   lifecycle: production
   description: "k3s cluster, systemd units, and invoke tasks that run kai-server, the host behind personal apps and sites."
   dependsOn: []
-  providesApis:
-    - k3s-cluster
-    - systemd-units
