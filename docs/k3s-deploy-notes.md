@@ -690,6 +690,17 @@ One line per trap. Every fix here has a commit in some repo's history.
   via `nodeSelector` so the bridge churn doesn't share a netns with
   load-bearing host services. Don't try `dockerd --iptables=false`,
   that's a trap. (coilysiren/infrastructure#151)
+- **`systemctl restart k3s` blocks forever, unit stuck in
+  `activating`, k3s itself healthy (node Ready, workloads running)** →
+  the `Type=notify` unit runs k3s through a non-`exec` bash wrapper
+  (`scripts/k3s-start.sh`, kept for the SIGTERM cleanup trap) under the
+  default `NotifyAccess=main`, so k3s's `sd_notify READY` comes from a
+  child PID and systemd drops it. Workaround in the moment is
+  `systemctl restart k3s --no-block`. Fix: add `NotifyAccess=all` to
+  `[Service]` in `systemd/k3s.service` (preserves the wrapper's trap),
+  or `exec` the k3s binary inside the wrapper so the notifying PID is
+  the main PID (loses the trap; ExecStop already does the same pkills).
+  (coilysiren/infrastructure#170)
 
 ## 8. First-time setup checklist for a new repo
 
@@ -941,3 +952,7 @@ Forgejo job as a kubeconfig secret pointing at
   file at `/etc/caddy/Caddyfile`, not a symlink into `/home/kai/`),
   and pinned ACME to LE production in the Caddyfile global block.
   (#292)
+- 2026-05-28 — added `NotifyAccess=all` to `systemd/k3s.service` so
+  k3s's `sd_notify READY` (emitted by a child of the bash wrapper)
+  reaches systemd. Without it `systemctl restart k3s` hung forever in
+  `activating` even though k3s was healthy. (#170)

@@ -9,6 +9,10 @@ WantedBy=multi-user.target
 
 [Service]
 Type=notify
+# k3s runs under a bash wrapper (k3s-start.sh) for SIGTERM cleanup, so the
+# notifying PID is a child of the main PID. Default NotifyAccess=main drops it
+# and the unit hangs in `activating` forever despite k3s being healthy.
+NotifyAccess=all
 Environment="K3S_IPTABLES_LEGACY=true"
 EnvironmentFile=-/etc/default/%N
 EnvironmentFile=-/etc/sysconfig/%N
