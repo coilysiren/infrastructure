@@ -16,7 +16,10 @@ for _ in $(seq 1 30); do
   sleep 2
 done
 
-/usr/local/bin/k3s server \
+# exec so k3s becomes the unit's Main PID; otherwise its sd_notify READY=1 is
+# dropped (Type=notify + default NotifyAccess=main) and the unit hangs in
+# 'activating' forever. Teardown is handled by the unit's ExecStop lines.
+exec /usr/local/bin/k3s server \
   --write-kubeconfig-mode=0644 \
   --node-ip="$NODE_IP" \
   --flannel-iface=tailscale0
