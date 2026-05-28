@@ -50,7 +50,7 @@ The underlying IAM user `kai-server-k3s` is in two groups:
 
 Each game server has a `-pre.sh` and a `-start.sh` script. Pre scripts run `steamcmd` updates and any config edits; start scripts exec the binary.
 
-- `k3s.service` — runs `scripts/k3s-start.sh`, which launches `/usr/local/bin/k3s server` as a child (not `exec`'d) so a SIGTERM trap can clean up containerd. The unit sets `NotifyAccess=all` so k3s's `sd_notify READY` from that child PID reaches systemd (#170)
+- `k3s.service` — runs `scripts/k3s-start.sh`, which resolves the tailnet node-ip then `exec`s `/usr/local/bin/k3s server` so k3s becomes the unit's Main PID. The `exec` is required: under `Type=notify` + default `NotifyAccess=main` a non-`exec` child's `sd_notify READY` is dropped and the unit hangs in `activating` forever. Teardown is handled by the unit's `ExecStop` lines (#170)
 - `core-keeper-server.service` — Core Keeper "Coily Keeper" world
 - `eco-server.service` — Eco game server
 - `factorio-server.service`, `icarus-server.service` — other game servers
