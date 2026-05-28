@@ -129,6 +129,11 @@ spec:
           image: docker:28-dind
           securityContext:
             privileged: true
+          # --insecure-registry: the in-cluster registry (deploy/registry.yml)
+          # serves plain http at the kai-server LAN IP NodePort. dockerd
+          # refuses to push to a non-TLS registry unless it's allowlisted here.
+          args:
+            - "--insecure-registry=192.168.0.194:30500"
           env:
             - name: DOCKER_TLS_CERTDIR
               value: ""

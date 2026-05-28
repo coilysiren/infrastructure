@@ -867,6 +867,65 @@ One line per trap. Every fix here has a commit in some repo's history.
 
 ---
 
+## 11. In-cluster registry (GitHub-free deploy path)
+
+GitHub Actions no longer joins the tailnet. All `TS_*` secrets were
+stripped from every deployable repo (backend, eco-jobs-tracker,
+galaxy-gen, personal-dashboard, repo-recall). Deploys move to the
+in-cluster Forgejo runner, which builds and pushes to an in-cluster
+OCI registry that kai-server pulls from. No GHCR, no tailnet join, no
+node SSH.
+
+Topology:
+
+- Registry: `deploy/registry.yml` - `registry:2`, namespace
+  `registry`, pinned to kai-server, NodePort `30500` -> `:5000`,
+  20Gi local-path PVC.
+- Address (no DNS, no TLS): `192.168.0.194:30500` (kai-server LAN IP,
+  reachable from both the WSL-node runner's DinD and kai-server's
+  containerd).
+- Image ref scheme: `192.168.0.194:30500/<name-dashed>:<git-sha>`.
+- DinD push: `deploy/forgejo-runner.yml` dind sidecar carries
+  `--insecure-registry=192.168.0.194:30500`.
+
+Bring-up runbook (steps marked **[node-root]** need a shell on
+kai-server; **[cluster]** is a `kubectl apply`):
+
+1. **[cluster]** Apply the registry and the updated runner:
+   `sudo k3s kubectl apply -f deploy/registry.yml`
+   `sudo k3s kubectl apply -f deploy/forgejo-runner.yml`
+   (the runner StatefulSet pods must restart to pick up the DinD flag).
+2. **[node-root]** Tell kai-server's containerd the registry is
+   insecure. Edit `/etc/rancher/k3s/registries.yaml`:
+   ```yaml
+   mirrors:
+     "192.168.0.194:30500":
+       endpoint:
+         - "http://192.168.0.194:30500"
+   configs:
+     "192.168.0.194:30500":
+       tls:
+         insecure_skip_verify: true
+   ```
+   then `sudo systemctl restart k3s` (k3s reads registries.yaml only
+   at start).
+3. **Verify push** (from any tailnet host with docker, or the runner):
+   `docker pull alpine && docker tag alpine 192.168.0.194:30500/probe:1
+   && docker push 192.168.0.194:30500/probe:1` - expect a successful
+   push (after step 1).
+4. **Verify pull on kai-server** (proves step 2 took):
+   `sudo k3s ctr -n k8s.io images pull --plain-http
+   192.168.0.194:30500/probe:1` - expect `done`. If it errors with
+   `http: server gave HTTP response to HTTPS client`, registries.yaml
+   didn't load - recheck step 2 and the restart.
+
+Once steps 3-4 pass, the registry is the verified bridge and each
+repo's `.forgejo/workflows/build-publish-deploy.yml` can build -> push
+-> `kubectl set image` against it. Per-repo deploy creds: a scoped
+`deployer` ServiceAccount + token in each app namespace, handed to the
+Forgejo job as a kubeconfig secret pointing at
+`https://192.168.0.194:6443` (LAN IP is in the API cert SANs).
+
 ## Change log
 
 - 2026-04-21 — initial writeup after the four-repo mess
