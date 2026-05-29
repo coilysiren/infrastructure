@@ -156,6 +156,17 @@ resource "aws_route53_record" "bridge" {
   records = ["coilyco-bridge.netlify.app."]
 }
 
+# MX - Google Workspace mail for coilysiren.me (agentic-os-kai#528). Google
+# moved to a single record in April 2023; smtp.google.com priority 1 is the
+# current set for new domains, replacing the legacy 5-record ASPMX set.
+resource "aws_route53_record" "mx" {
+  zone_id = local.zone_id
+  name    = "coilysiren.me"
+  type    = "MX"
+  ttl     = 300
+  records = ["1 smtp.google.com"]
+}
+
 # TXT verification records. All three are world-readable DNS by design
 # (Google site verification, atproto handle DID, Discord domain hash).
 resource "aws_route53_record" "txt" {
@@ -210,6 +221,7 @@ locals {
       "${aws_route53_record.www.name} ${aws_route53_record.www.type}",
       "${aws_route53_record.flightdeck.name} ${aws_route53_record.flightdeck.type}",
       "${aws_route53_record.bridge.name} ${aws_route53_record.bridge.type}",
+      "${aws_route53_record.mx.name} ${aws_route53_record.mx.type}",
       "${aws_route53_record.ns.name} ${aws_route53_record.ns.type}",
       "${aws_route53_record.soa.name} ${aws_route53_record.soa.type}",
     ],
