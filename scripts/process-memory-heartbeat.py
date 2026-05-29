@@ -20,7 +20,7 @@
 
 import argparse
 import os
-import pwd
+import pwd  # pylint: disable=import-error  # Unix-only stdlib; this script runs on Linux (kai-server)
 import re
 import socket
 import sys
