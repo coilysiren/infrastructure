@@ -74,6 +74,10 @@ resource "tailscale_acl" "policy" {
       # already have.
       { action = "accept", src = ["tag:physical"], dst = ["*:*"] },
       { action = "accept", src = ["tag:ci"], dst = ["tag:server:*"] },
+      # The Mac SOCKS5 proxy container (tooling-tailscale) is scoped to
+      # SSH-out to kai-server only - TCP :22 against tag:server, nothing
+      # else on the tailnet.
+      { action = "accept", src = ["tag:proxy"], dst = ["tag:server:22"] },
     ]
 
     groups = {
@@ -122,6 +126,15 @@ resource "tailscale_acl" "policy" {
         dst    = ["tag:server"]
         users  = ["autogroup:nonroot", "root"]
       },
+      # Mac SOCKS5 proxy container (tooling-tailscale) SSH to kai-server.
+      # Tag src needs a tag dst (autogroup:self is only legal with a
+      # user-owned src), same shape as the tag:ci rule above.
+      {
+        action = "accept"
+        src    = ["tag:proxy"]
+        dst    = ["tag:server"]
+        users  = ["autogroup:nonroot", "root"]
+      },
     ]
 
     tagOwners = merge(
@@ -130,6 +143,7 @@ resource "tailscale_acl" "policy" {
         "tag:k8s"                = []
         "tag:server"             = []
         "tag:physical"           = []
+        "tag:proxy"              = []
         "tag:kai-server"             = []
         "tag:kai-desktop-tower"      = []
         "tag:kai-desktop-tower-wsl"  = []
@@ -236,6 +250,36 @@ resource "aws_ssm_parameter" "ts_authkey" {
   type        = "SecureString"
   value       = tailscale_tailnet_key.service[each.key].key
   description = "tailscale auth key for ${each.key} sidecar (terraform-managed; min(state Secret loss, 90 days) before re-apply needed)"
+}
+
+# Auth key for the local Mac SOCKS5 proxy container (tooling-tailscale
+# skill). Unlike the k8s sidecar keys above, this one is reusable +
+# ephemeral: the Docker container holds no persisted ts-state volume, so
+# it must re-auth on every recreate, and ephemeral keeps dead containers
+# from littering the device list. Tagged tag:proxy (least privilege):
+# the policy above scopes tag:proxy to TCP :22 plus SSH against
+# tag:server only, so a leaked key reaches kai-server's SSH and nothing
+# else on the tailnet.
+resource "tailscale_tailnet_key" "mac_proxy" {
+  reusable      = true
+  ephemeral     = true
+  preauthorized = true
+  expiry        = 7776000 # 90 days in seconds, the tailscale max
+  tags          = ["tag:proxy"]
+  description   = "mac docker socks5 proxy"
+
+  # tag:proxy is registered in tagOwners by tailscale_acl.policy; that
+  # ACL update must land before this key is minted or the API rejects
+  # the tag with "requested tags are invalid or not permitted (400)".
+  # Same first-apply race the device-tags resource guards against.
+  depends_on = [tailscale_acl.policy]
+}
+
+resource "aws_ssm_parameter" "mac_proxy_authkey" {
+  name        = "/coilysiren/mac-proxy/ts-authkey"
+  type        = "SecureString"
+  value       = tailscale_tailnet_key.mac_proxy.key
+  description = "tailscale auth key for the mac docker socks5 proxy (terraform-managed, reusable+ephemeral, tag:proxy)"
 }
 
 output "tagged_devices" {
