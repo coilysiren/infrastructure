@@ -137,6 +137,25 @@ resource "aws_route53_record" "www" {
   records = ["coilysiren-dot-me.netlify.app."]
 }
 
+# Coily Co fleet subdomains - Netlify-hosted sites, same pattern as www.
+# Each points at its Netlify site's anycast subdomain; Netlify serves the
+# custom domain + provisions TLS once the domain is added to the site.
+resource "aws_route53_record" "flightdeck" {
+  zone_id = local.zone_id
+  name    = "flightdeck.coilysiren.me"
+  type    = "CNAME"
+  ttl     = 60
+  records = ["coilyco-flight-deck.netlify.app."]
+}
+
+resource "aws_route53_record" "bridge" {
+  zone_id = local.zone_id
+  name    = "bridge.coilysiren.me"
+  type    = "CNAME"
+  ttl     = 60
+  records = ["coilyco-bridge.netlify.app."]
+}
+
 # TXT verification records. All three are world-readable DNS by design
 # (Google site verification, atproto handle DID, Discord domain hash).
 resource "aws_route53_record" "txt" {
@@ -189,6 +208,8 @@ locals {
     [
       "${aws_route53_record.apex_a.name} ${aws_route53_record.apex_a.type}",
       "${aws_route53_record.www.name} ${aws_route53_record.www.type}",
+      "${aws_route53_record.flightdeck.name} ${aws_route53_record.flightdeck.type}",
+      "${aws_route53_record.bridge.name} ${aws_route53_record.bridge.type}",
       "${aws_route53_record.ns.name} ${aws_route53_record.ns.type}",
       "${aws_route53_record.soa.name} ${aws_route53_record.soa.type}",
     ],
