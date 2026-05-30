@@ -172,6 +172,17 @@ resource "aws_route53_record" "txt" {
   records = [each.value]
 }
 
+# MX - Google Workspace mail for kai@coilysiren.me. Single smtp.google.com
+# record at priority 1, Google's post-2023 standard that replaces the old
+# 5-record ASPMX set. See coilysiren/agentic-os-kai#528.
+resource "aws_route53_record" "mx" {
+  zone_id = local.zone_id
+  name    = "coilysiren.me"
+  type    = "MX"
+  ttl     = 3600
+  records = ["1 smtp.google.com."]
+}
+
 # Apex NS and SOA. AWS pre-creates both with the zone. The NS values are
 # the zone's assigned name servers - hardcoded with trailing dots to
 # match what Route53 stores (the zone's name_servers attribute drops
@@ -210,6 +221,7 @@ locals {
       "${aws_route53_record.www.name} ${aws_route53_record.www.type}",
       "${aws_route53_record.flightdeck.name} ${aws_route53_record.flightdeck.type}",
       "${aws_route53_record.bridge.name} ${aws_route53_record.bridge.type}",
+      "${aws_route53_record.mx.name} ${aws_route53_record.mx.type}",
       "${aws_route53_record.ns.name} ${aws_route53_record.ns.type}",
       "${aws_route53_record.soa.name} ${aws_route53_record.soa.type}",
     ],
