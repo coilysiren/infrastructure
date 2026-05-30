@@ -15,9 +15,10 @@ Everything Kai needs to stand up and operate **kai-server**. Systemd units, shel
 ├── llama/            # llama-service k8s manifests
 ├── scripts/          # systemd unit ExecStart/ExecPre scripts + Python helpers for coily verbs
 ├── systemd/          # systemd unit files
-├── Makefile          # entry points for coily verbs
-└── eco.md            # Eco server configuration notes
+└── Makefile          # entry points for coily verbs
 ```
+
+Eco server setup notes live in [`docs/eco-server-setup.md`](docs/eco-server-setup.md).
 
 ## Operating the cluster
 
