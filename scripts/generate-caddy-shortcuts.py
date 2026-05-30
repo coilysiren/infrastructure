@@ -122,7 +122,7 @@ def fetch_config(owner: str, repo: str) -> dict | None:
     """Fetch coily.yaml (or legacy config.yml) from a repo's default branch
     on Forgejo and parse it via yq. Returns None if neither file is present.
 
-    Transition: coilysiren/agentic-os-kai#439 renames per-repo deploy configs from
+    Transition: coilyco-bridge/agentic-os-kai#439 renames per-repo deploy configs from
     `config.yml` to `coily.yaml`. Try the new name first, fall back to legacy.
     """
     payload: dict | None = None

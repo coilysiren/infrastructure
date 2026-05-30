@@ -5,7 +5,7 @@
 # the tailnet-only session-sink Flask app on kai-server.
 #
 # This is component 1 of the cross-machine session-aggregation pipeline
-# (coilysiren/infrastructure#224). The chain, bottom to top:
+# (coilyco-flight-deck/infrastructure#224). The chain, bottom to top:
 #
 #   watcher (this script)  ->  session-sink Flask app  ->  repo-recall  ->  luca
 #

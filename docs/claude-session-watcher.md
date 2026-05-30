@@ -4,7 +4,7 @@ Per-machine watcher that ships Claude Code session files to a central
 sink so every machine's sessions are queryable from one place.
 
 This is component 1 of the cross-machine session-aggregation pipeline.
-Tracker: [coilysiren/infrastructure#224](https://github.com/coilysiren/infrastructure/issues/224).
+Tracker: [coilyco-flight-deck/infrastructure#224](https://github.com/coilyco-flight-deck/infrastructure/issues/224).
 
 ## Why
 

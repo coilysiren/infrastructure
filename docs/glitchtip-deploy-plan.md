@@ -1,6 +1,6 @@
 # GlitchTip deploy plan
 
-Drafted 2026-05-13. Tracking issue: [coilysiren/infrastructure#137](https://github.com/coilysiren/infrastructure/issues/137).
+Drafted 2026-05-13. Tracking issue: [coilyco-flight-deck/infrastructure#137](https://github.com/coilyco-flight-deck/infrastructure/issues/137).
 
 `<HOME_PUBLIC_IP>` resolves from SSM `/coilysiren/home/public-ip`. See `k3s-deploy-notes.md`.
 
@@ -114,7 +114,7 @@ Document the helm install + upgrade commands for GlitchTip, alongside the existi
 
 **Pattern: commit local → push to GitHub → SSH to kai-server → `git pull` → `helm install` / `helm upgrade`.** Same shape as the observability stack README's "First-time install" section, and the same SSH-based apply discipline the forgejo plan settled on.
 
-`coily ssh kubectl` blocker from the forgejo plan turned out to be solvable per the [coily#56](https://github.com/coilysiren/coily/issues/56) retro note: `k3s kubectl ...` directly via `ssh kai-server '...'` works without sudo because `/etc/rancher/k3s/k3s.yaml` is mode 644. Use that for watching from this Mac.
+`coily ssh kubectl` blocker from the forgejo plan turned out to be solvable per the [coily#56](https://github.com/coilyco-bridge/coily/issues/56) retro note: `k3s kubectl ...` directly via `ssh kai-server '...'` works without sudo because `/etc/rancher/k3s/k3s.yaml` is mode 644. Use that for watching from this Mac.
 
 ## Apply order - phase 1 (tailnet-only)
 

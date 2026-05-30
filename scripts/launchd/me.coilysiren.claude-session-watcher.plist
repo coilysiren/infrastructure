@@ -6,7 +6,7 @@
   Watches ~/.claude/projects for session-file changes and HTTP POSTs
   each one to the tailnet-only session-sink on kai-server. Component 1
   of the cross-machine session-aggregation pipeline
-  (coilysiren/infrastructure#224).
+  (coilyco-flight-deck/infrastructure#224).
 
   This file is a TEMPLATE. scripts/claude-session-watcher-install-mac.sh
   substitutes the {{...}} placeholders and writes the result to

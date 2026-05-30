@@ -88,7 +88,7 @@ The zip naming convention is `<Name>.zip` (one mod per zip for individual pushes
 
 `coily eco mod push --src <zip>` wraps the three steps above. It scp's the zip to `config.eco.server_dir` (default `/home/kai/Steam/steamapps/common/EcoServer`), runs `unzip -o` from that directory, and removes the uploaded `.zip` afterward unless `--keep-remote` is set. It does **not** restart the server; chain with `coily eco restart` when ready.
 
-Implementation: `github.com/coilysiren/coily/cmd/coily/ops_eco_mod.go`. SFTP upload goes through `pkg/ssh.CopyTo` (same transport, host-key verification, and auth as the other `coily eco` verbs — no ssh subprocess).
+Implementation: `github.com/coilyco-bridge/coily/cmd/coily/ops_eco_mod.go`. SFTP upload goes through `pkg/ssh.CopyTo` (same transport, host-key verification, and auth as the other `coily eco` verbs — no ssh subprocess).
 
 ### Push via invoke (legacy, per-repo)
 

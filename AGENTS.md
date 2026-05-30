@@ -6,7 +6,7 @@ This repo follows the default `coilysiren/*` git workflow: commit to `main`, pus
 
 **Exception:** confirm before kubectl writes and before any cloud write that can clobber state (SSM `put-parameter --overwrite`, `delete-parameter`, S3 writes, IAM mutations, etc.). `coily ops aws ssm put-parameter` without `--overwrite` is pre-authorized - the call fails with `ParameterAlreadyExists` if the param exists, so it cannot silently clobber. Never print decrypted SSM values. These ops are migrating to the `coily` CLI.
 
-**Forgejo-primary.** This repo's `origin` is `forgejo.coilysiren.me/coilysiren/infrastructure`. Local `origin` fans out push to both Forgejo and GitHub (`git remote -v` shows two push URLs). CI runs on Forgejo Actions via the in-cluster runners (`deploy/forgejo-runner.yml`); `.github/workflows/` is intentionally empty. Cross-repo deploy knowledge in `docs/k3s-deploy-notes.md` still documents GHA for sibling repos that haven't migrated.
+**Forgejo-primary.** This repo's `origin` is `forgejo.coilysiren.me/coilyco-flight-deck/infrastructure`. Local `origin` fans out push to both Forgejo and GitHub (`git remote -v` shows two push URLs). CI runs on Forgejo Actions via the in-cluster runners (`deploy/forgejo-runner.yml`); `.github/workflows/` is intentionally empty. Cross-repo deploy knowledge in `docs/k3s-deploy-notes.md` still documents GHA for sibling repos that haven't migrated.
 
 ---
 
@@ -37,7 +37,7 @@ Never print decrypted SSM values to the transcript. Pipe them directly into `gh 
 Per the workspace "Default to proactive scheduling" rule: after pushing to `main`, schedule a wake-up to verify CI passed. The infrastructure repo's CI is config-validation only - it doesn't deploy anything by itself, but a regression in validation usually means a downstream sibling repo's deploy will break next time it ships.
 
 - **Cadence**: 300s after push.
-- **Verify CI**: query the Forgejo Actions API at `forgejo.coilysiren.me/api/v1/repos/coilysiren/infrastructure/actions/runs?limit=1` with the `/forgejo/api-token` SSM secret; the top run should be `status: success`. Re-schedule once at +180s if still `running`.
+- **Verify CI**: query the Forgejo Actions API at `forgejo.coilysiren.me/api/v1/repos/coilyco-flight-deck/infrastructure/actions/runs?limit=1` with the `/forgejo/api-token` SSM secret; the top run should be `status: success`. Re-schedule once at +180s if still `running`.
 - **On failure**: surface the failed run via the Forgejo UI URL and stop. Don't auto-retry - infra CI failures are usually real.
 - **Skip** for docs-only pushes.
 
@@ -51,4 +51,4 @@ Route every dev command through coily, which reads [`.coily/coily.yaml`](.coily/
 - [docs/FEATURES.md](docs/FEATURES.md) - inventory of what ships today.
 - [.coily/coily.yaml](.coily/coily.yaml) - allowlisted commands. Agents route through coily, not bare `make` / `uv` / `python` / `npm` / `cargo` / `dotnet`.
 
-Cross-reference convention from [coilysiren/agentic-os-kai#313](https://github.com/coilysiren/agentic-os-kai/issues/313).
+Cross-reference convention from [coilyco-bridge/agentic-os-kai#313](https://github.com/coilyco-bridge/agentic-os-kai/issues/313).

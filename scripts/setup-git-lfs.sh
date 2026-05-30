@@ -6,7 +6,7 @@
 # pulls fetch real content. This script is the one-shot repair for a
 # checkout that was pulled before the filters existed and now holds
 # pointer text instead of binary assets. See
-# coilysiren/infrastructure#286.
+# coilyco-flight-deck/infrastructure#286.
 #
 # Idempotent: `git lfs install --skip-repo` just rewrites the global
 # filter config, and `git lfs pull` is a no-op once content is real.

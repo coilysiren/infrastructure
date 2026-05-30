@@ -3,7 +3,7 @@
 # watcher as a launchd agent on a Mac (desktop or laptop).
 #
 # Component 1 of the cross-machine session-aggregation pipeline
-# (coilysiren/infrastructure#224). Watches ~/.claude/projects and HTTP
+# (coilyco-flight-deck/infrastructure#224). Watches ~/.claude/projects and HTTP
 # POSTs each changed session file to the tailnet-only session-sink on
 # kai-server.
 #

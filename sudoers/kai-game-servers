@@ -27,7 +27,7 @@ kai ALL=(root) NOPASSWD: /bin/systemctl restart factorio-server, /bin/systemctl 
 # fdr-remake is a sidecar bound to factorio-server.service via PartOf=,
 # so stopping/restarting factorio-server cascades. The four-verb line
 # below is for direct ops (debugging the bridge without bouncing the
-# game). See coilysiren/infrastructure#101.
+# game). See coilyco-flight-deck/infrastructure#101.
 kai ALL=(root) NOPASSWD: /bin/systemctl restart fdr-remake, /bin/systemctl stop fdr-remake, /bin/systemctl start fdr-remake, /bin/systemctl status fdr-remake
 
 # factorio-backup ships as a oneshot + timer pair. The timer needs

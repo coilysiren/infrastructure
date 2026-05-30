@@ -20,7 +20,7 @@ Baseline of `coilysiren/infrastructure`. Update when scope changes.
 - **Eco** - `eco-server.service` with API token from SSM. Mods pushed via `coily gaming eco mod push`. Service ops `coily gaming eco {status,tail,start,stop,restart}`.
 - **Eco config-as-code** - Configs sync from `coilysiren/eco-configs`. World + config rewrites live in `eco-cycle-prep`.
 - **Core Keeper, Icarus, Factorio** - Parallel systemd units. `coily gaming <name> ...`. Factorio adds a backup timer.
-- **Factorio Discord chat bridge** - `fdr-remake` sidecar pinned to `factorio-server.service`. Reads `--console-log`, writes via localhost RCON. SSM keys at `/factorio/fdr/*`. Bringup: `bash scripts/install-fdr-remake.sh`. Reference: `coilysiren/infrastructure#101`, `#139`.
+- **Factorio Discord chat bridge** - `fdr-remake` sidecar pinned to `factorio-server.service`. Reads `--console-log`, writes via localhost RCON. SSM keys at `/factorio/fdr/*`. Bringup: `bash scripts/install-fdr-remake.sh`. Reference: `coilyco-flight-deck/infrastructure#101`, `#139`.
 
 ## Observability
 
@@ -37,7 +37,7 @@ Baseline of `coilysiren/infrastructure`. Update when scope changes.
 
 ## Cross-machine session aggregation
 
-- **Claude session watcher** - Per-machine `watchdog`-driven process that ships `~/.claude/projects` session files to a tailnet-only sink so every machine's Claude sessions are queryable from one place. Runs on the 4 non-kai-server environments (Mac desktop/laptop, Windows native, WSL) via launchd / Scheduled Task / systemd. Component 1 of the pipeline in `coilysiren/infrastructure#224`. See `docs/claude-session-watcher.md`.
+- **Claude session watcher** - Per-machine `watchdog`-driven process that ships `~/.claude/projects` session files to a tailnet-only sink so every machine's Claude sessions are queryable from one place. Runs on the 4 non-kai-server environments (Mac desktop/laptop, Windows native, WSL) via launchd / Scheduled Task / systemd. Component 1 of the pipeline in `coilyco-flight-deck/infrastructure#224`. See `docs/claude-session-watcher.md`.
 
 ## Network and access
 
@@ -64,4 +64,4 @@ Baseline of `coilysiren/infrastructure`. Update when scope changes.
 - [AGENTS.md](../AGENTS.md) - agent-facing operating rules.
 - [.coily/coily.yaml](../.coily/coily.yaml) - allowlisted commands.
 
-Cross-reference convention from [coilysiren/agentic-os-kai#313](https://github.com/coilysiren/agentic-os-kai/issues/313).
+Cross-reference convention from [coilyco-bridge/agentic-os-kai#313](https://github.com/coilyco-bridge/agentic-os-kai/issues/313).

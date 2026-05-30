@@ -27,7 +27,7 @@ fi
 eval "${BREW_ENV_LINE}"
 
 echo "==> brew install coilysiren/coily/coily"
-brew tap coilysiren/coily https://github.com/coilysiren/coily
+brew tap coilysiren/coily https://github.com/coilyco-bridge/coily
 brew install coilysiren/coily/coily || brew upgrade coilysiren/coily/coily
 coily setup
 

@@ -1,6 +1,6 @@
 # lunch-money deployment
 
-Deploys the [lunch-money-k8s](https://github.com/coilysiren/lunch-money-k8s) MCP
+Deploys the [lunch-money-k8s](https://github.com/coilyco-flight-deck/lunch-money-k8s) MCP
 server to the kai-server k3s cluster. The chart lives in that repo. This folder
 holds the real deployment values and the token wiring.
 

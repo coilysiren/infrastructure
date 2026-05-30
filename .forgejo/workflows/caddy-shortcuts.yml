@@ -1,7 +1,7 @@
 name: caddy-shortcuts
 
 # Daily regen of caddy/sites/*.caddy from sibling repos' coily.yaml
-# `tailnet.shortcut` declarations. See coilysiren/infrastructure#129
+# `tailnet.shortcut` declarations. See coilyco-flight-deck/infrastructure#129
 # for the design.
 #
 # Reload on kai-server is manual today:

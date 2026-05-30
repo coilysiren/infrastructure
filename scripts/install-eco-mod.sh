@@ -114,7 +114,7 @@ fi
 # from the process CWD ($SERVER_DIR for the eco-server unit) and dumps
 # exporter / SDK errors to LogDirectory. Without this we have no surface
 # for OTLP export failures, since the SDK swallows them by default.
-# Tracked in coilysiren/eco-telemetry#5 (metrics not reaching vmsingle).
+# Tracked in coilyco-flight-deck/eco-telemetry#5 (metrics not reaching vmsingle).
 if [[ "$NAME" == "EcoTelemetry" ]]; then
   diag="$SERVER_DIR/OTEL_DIAGNOSTICS.json"
   log_dir="$SERVER_DIR/Logs/EcoTelemetry"

@@ -1,6 +1,6 @@
 # Tailscale OIDC for CI deploys
 
-Per-repo federated identities, no long-lived shared OAuth secret. Tracker: [coilysiren/infrastructure#177](https://github.com/coilysiren/infrastructure/issues/177).
+Per-repo federated identities, no long-lived shared OAuth secret. Tracker: [coilyco-flight-deck/infrastructure#177](https://github.com/coilyco-flight-deck/infrastructure/issues/177).
 
 ## Why
 

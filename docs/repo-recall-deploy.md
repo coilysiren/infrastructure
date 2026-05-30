@@ -13,7 +13,7 @@ DNS, no Ingress, no Route 53. MagicDNS hostname:
   with `tailscale.com/expose: "true"` + `tailscale.com/hostname:
   repo-recall`. Same pattern as forgejo.
 - **Images**: `ghcr.io/coilysiren/repo-recall-{api,web}:latest`.
-  Pushed by [`.github/workflows/docker.yml`](https://github.com/coilysiren/repo-recall/blob/main/.github/workflows/docker.yml)
+  Pushed by [`.github/workflows/docker.yml`](https://github.com/coilyco-flight-deck/repo-recall/blob/main/.github/workflows/docker.yml)
   in coilysiren/repo-recall on every push to `main` (and on tags).
   Images are public, no `imagePullSecret`.
 - **Traffic**:
@@ -97,7 +97,7 @@ sudo k3s kubectl -n repo-recall rollout status  deployment/repo-recall
   systemd unit had unrestricted host access; the k3s replacement
   needs an explicit `hostPath` mount or a local-path PVC populated by
   a sidecar - decision pending in a follow-up to
-  coilysiren/infrastructure#176.
+  coilyco-flight-deck/infrastructure#176.
 - **`gh` is not authenticated** inside the API container. The runtime
   layer carries `gh` so the ingest can shell out, but
   `GH_TOKEN`/`gh auth login` plumbing also lands in the

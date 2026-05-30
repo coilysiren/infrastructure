@@ -72,7 +72,7 @@ commands:
     run: make host-watch
     description: Watch a tailnet host's SSH and capture a host-diag.sh snapshot on each dead->alive recovery. Args - host=<alias>.
 
-# Free-form ssh-passthrough target list. Schema: coilysiren/coily#187 phase 2.
+# Free-form ssh-passthrough target list. Schema: coilyco-bridge/coily#187 phase 2.
 # `coily ssh <alias> -- <coily args>` resolves <alias> here, ssh's into the
 # target, and runs the supplied coily subcommand. Remote coily's lockdown is
 # the security boundary, not this client side. working_dir is a git toplevel
@@ -85,7 +85,7 @@ ssh:
       working_dir: /home/kai/projects/coilysiren/infrastructure
 
 # Catalog metadata for the cross-repo knowledge graph.
-# Schema: coilysiren/agentic-os-kai#420 (tracker).
+# Schema: coilyco-bridge/agentic-os-kai#420 (tracker).
 catalog:
   kind: Component
   type: configuration

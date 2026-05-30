@@ -31,7 +31,7 @@ fi
 # Git LFS: eco-mods and infrastructure track binary assets via LFS.
 # Wire the global smudge/clean filters so every pull below fetches real
 # content, not pointer files. Idempotent; warns if git-lfs is absent.
-# See coilysiren/infrastructure#286.
+# See coilyco-flight-deck/infrastructure#286.
 if command -v git-lfs >/dev/null 2>&1; then
   git lfs install --skip-repo >/dev/null
 else
@@ -95,7 +95,7 @@ done
 # Refresh agentic-os-kai's host setup (skill symlinks, ~/.claude/CLAUDE.md,
 # merged Claude settings) whenever its pull succeeded. setup.sh is
 # idempotent and cheap. Picked up by the daily restart at 03:00, gated
-# by claude-remote-control-restart-precheck.sh. See coilysiren/infrastructure#211.
+# by claude-remote-control-restart-precheck.sh. See coilyco-flight-deck/infrastructure#211.
 if (( agentic_os_kai_ok == 1 )); then
   setup="$ROOT/agentic-os-kai/setup.sh"
   if [[ -x "$setup" ]]; then

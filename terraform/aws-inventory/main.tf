@@ -174,7 +174,7 @@ resource "aws_route53_record" "txt" {
 
 # MX - Google Workspace mail for kai@coilysiren.me. Single smtp.google.com
 # record at priority 1, Google's post-2023 standard that replaces the old
-# 5-record ASPMX set. See coilysiren/agentic-os-kai#528.
+# 5-record ASPMX set. See coilyco-bridge/agentic-os-kai#528.
 resource "aws_route53_record" "mx" {
   zone_id = local.zone_id
   name    = "coilysiren.me"
