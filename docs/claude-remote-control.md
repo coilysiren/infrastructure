@@ -7,6 +7,7 @@ The three hosts that drive claude.ai/code's Remote Control dropdown:
 | kai-server                 | Linux (systemd) | `/home/kai/projects/coilysiren` | `kai-server`                  | [`scripts/claude-remote-control-install.sh`](../scripts/claude-remote-control-install.sh) |
 | kai-desktop-tower (WSL)    | Linux (systemd inside WSL2) | `/mnt/x/projects-x/coilysiren` | `kai-desktop-tower-wsl`      | [`scripts/claude-remote-control-install-wsl.sh`](../scripts/claude-remote-control-install-wsl.sh) |
 | kai-desktop-tower (native) | Windows (Scheduled Task) | `X:\projects-x\coilysiren`       | `kai-desktop-tower-native`   | [`scripts/claude-remote-control-install-windows.ps1`](../scripts/claude-remote-control-install-windows.ps1) |
+| kais-macbook-pro           | macOS (launchd LaunchAgent) | `/Users/kai/projects/coilysiren` | `kais-macbook-pro`          | [`scripts/claude-remote-control-install-macos.sh`](../scripts/claude-remote-control-install-macos.sh) |
 
 All three pass both `--name` and `--remote-control-session-name-prefix` set to the same value. The dropdown row in claude.ai/code is keyed off the **prefix** (default: `hostname`), not `--name`; `--name` labels the pre-created session inside the daemon. Passing both keeps every surface labelled. Setting the prefix explicitly is what prevents the WSL/Windows-native collision: inside WSL `hostname` returns the Windows host name, so the unscoped default produced two indistinguishable dropdown rows.
 
@@ -43,6 +44,17 @@ cd X:\projects-x\coilysiren\infrastructure   # or wherever this repo is checked 
 ```
 
 Prereqs: `claude` on PATH (npm-global under `firem`), `claude login` already run once as `firem`, `claude --help` lists a `remote-control` subcommand. The script aborts loudly if any of these fail.
+
+### kais-macbook-pro (macOS)
+
+```bash
+cd ~/projects/coilysiren/infrastructure   # or wherever this repo is checked out
+./scripts/claude-remote-control-install-macos.sh
+```
+
+Prereqs: `claude` on PATH, `claude login` already run once as the user, `claude remote-control --help` lists the subcommand. No sudo - macOS uses a **user LaunchAgent** (`~/Library/LaunchAgents/me.coilysiren.claude-remote-control.plist`), not a root LaunchDaemon, because the daemon needs the user's login keychain, PATH, git/SSH creds, and the workspace under `/Users/kai`. The installer patches `~/.claude.json` (same trust keys as the Linux unit), writes the plist with `claude`'s resolved path plus an explicit PATH for spawned sessions, then `launchctl bootstrap`s it.
+
+**Laptop caveat:** a LaunchAgent only runs while logged in and the Mac is awake. Closed lid -> the dropdown entry goes offline. Unlike always-on kai-server, this host is best-effort - fine for interactive remote control, not for unattended scheduled routines (those should target kai-server).
 
 ## Cleanup: removing stale duplicate entries from the dropdown
 
@@ -93,5 +105,6 @@ Hard-coded, no env-var fallback to `hostname`. Each installer passes both `--nam
 - `systemd/claude-remote-control.service` -> `kai-server`
 - `systemd/claude-remote-control-wsl.service` -> `kai-desktop-tower-wsl`
 - `scripts/claude-remote-control-install-windows.ps1` -> default `-Name kai-desktop-tower-native`
+- `scripts/claude-remote-control-install-macos.sh` -> `kais-macbook-pro`
 
 If you ever add a fourth host, give it a distinct `--name` and add a row to the table above before shipping the installer.
