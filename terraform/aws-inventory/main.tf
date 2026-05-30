@@ -171,7 +171,7 @@ resource "aws_route53_record" "mx" {
 # (Google site verification, atproto handle DID, Discord domain hash).
 resource "aws_route53_record" "txt" {
   for_each = {
-    "@"        = "google-site-verification=cx2k2l_2F2Pqb_5HrLe03mMu5x_EHU8znVXkfmPmGV8"
+    "@"        = "google-site-verification=AvxW9N5GEqed5vSgm6OHGpnOdPfFgAKSU0-94Ls1iew"
     "_atproto" = "did=did:plc:xvgmere7jp42xfc5xn47lvyi"
     "_discord" = "dh=caaf268c3e61b84d806cf8c4e3d502be5f7be768"
   }
