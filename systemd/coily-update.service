@@ -8,6 +8,20 @@ Type=oneshot
 User=kai
 WorkingDirectory=/home/kai/projects/coilysiren
 Environment=COILY_LOCKDOWN_ROOT=/home/kai/projects/coilysiren
+# `brew upgrade` can source-compile heavy formulae - e.g. session-lattice
+# pulls duckdb / pydantic_core wheels that build via cc1plus. Unbounded
+# parallel compiles spiked RAM on this k3s host at 03:07 on 2026-05-30 and
+# tripped the global OOM killer, which killed game-server / repo-recall pods
+# instead of the compiler. Two-part containment:
+#   1. Serialize every build system to one job so peak RSS stays bounded.
+#   2. Cap the cgroup so any runaway build is memcg-OOM'd inside this slice
+#      rather than global-OOMing the box and its k3s workloads.
+Environment=HOMEBREW_MAKE_JOBS=1
+Environment=MAKEFLAGS=-j1
+Environment=CMAKE_BUILD_PARALLEL_LEVEL=1
+Environment=MAX_JOBS=1
+MemoryHigh=6G
+MemoryMax=8G
 ExecStart=/home/kai/projects/coilysiren/infrastructure/scripts/coily-update.sh
 
 [Install]
