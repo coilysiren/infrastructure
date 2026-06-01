@@ -703,6 +703,34 @@ One line per trap. Every fix here has a commit in some repo's history.
   does the same `pkill -9 containerd-shim/containerd/k3s`.) The
   alternative, `NotifyAccess=all`, would also work but is unneeded once
   the notifier is the Main PID. (coilysiren/infrastructure#170)
+- **#151 runner repin to `kai-desktop-tower-wsl` schedules the pods but
+  never serves CI; runner sticks at `Init:CrashLoopBackOff` and jobs
+  pile up `waiting`** → two compounding faults on top of the
+  scale-to-zero the Monday incident left behind (live `replicas: 0`
+  vs manifest `2` - reconcile with `kubectl -n forgejo apply -f
+  deploy/forgejo-runner.yml`, not a bare `kubectl scale`). (1) The
+  pre-repin `local-path` PVCs (`data-forgejo-runner-{0,1}`) were
+  node-bound to kai-server, so the repinned pods hit `volume node
+  affinity conflict` and stay `Pending`. Delete the stale PVCs
+  (`kubectl -n forgejo delete pvc data-forgejo-runner-0
+  data-forgejo-runner-1`); the StatefulSet recreates them on the new
+  node and the runner image re-registers from the empty `.runner`
+  volume. (2) Once scheduled, the register initContainer fails because
+  the worker node's pods cannot reach the forgejo ClusterIP - or any
+  kai-server pod at all: cross-node flannel VXLAN is dead. Root cause is
+  the worker node `InternalIP`s - `kai-desktop-tower-wsl` advertises a
+  WSL2-internal NAT address (`172.27.x.x`) and `kai-macbook-pro-vm` a
+  tailnet CGNAT address (`100.x`), neither routable from kai-server's
+  LAN VXLAN endpoint (`192.168.0.194`). Proof: from a debug pod on
+  either worker, ping to a kai-server pod IP is 100% loss and DNS to
+  `10.43.0.10` times out. Same root cause explains the apiserver to
+  kubelet `502` (logs/exec unavailable) on the WSL node - its
+  `172.27.x.x` kubelet IP isn't routable either. Fix is to give flannel
+  a common routable plane across all nodes (set each k3s agent's
+  `--node-ip` / `--flannel-iface` to the tailnet interface, kai-server
+  included), then re-test cross-node reach before expecting runners to
+  register. Until that lands the runners can't live on any worker node,
+  and #151 forbids kai-server. (coilysiren/infrastructure#163)
 
 ## 8. First-time setup checklist for a new repo
 
@@ -788,6 +816,18 @@ One line per trap. Every fix here has a commit in some repo's history.
   → forgejo-runner DinD bridge churn racing kube-proxy. Verify the
   runner StatefulSet is pinned to `kai-desktop-tower-wsl`, not
   `kai-server`. `kubectl -n forgejo get pods -o wide | grep runner`.
+- **forgejo CI jobs pile up `waiting`; runner pod is `Pending` or
+  `Init:CrashLoopBackOff` on the worker node**
+  → `Pending` with `volume node affinity conflict`? Stale kai-server
+  `local-path` PVCs survived the repin. Delete `data-forgejo-runner-0`
+  / `-1`, the StatefulSet recreates them on the worker.
+  → `Init:CrashLoopBackOff`? The register step can't reach forgejo.
+  Cross-node flannel VXLAN is dead because the worker `InternalIP` is
+  non-routable from kai-server (WSL `172.27.x`, VM tailnet `100.x` vs
+  kai-server LAN `192.168.0.194`). Confirm with a debug pod on the
+  worker: `ping <kai-server-pod-ip>` = 100% loss. Fix flannel onto a
+  common routable plane (tailnet `--node-ip`/`--flannel-iface` on every
+  agent) before expecting runners to register. See §7. (#163)
 - **`make .deploy` says `namespace/<foo> unchanged, deployment
   configured, service unchanged, ingress unchanged` but site still
   shows old version**
@@ -954,6 +994,13 @@ Forgejo job as a kubeconfig secret pointing at
   file at `/etc/caddy/Caddyfile`, not a symlink into `/home/kai/`),
   and pinned ACME to LE production in the Caddyfile global block.
   (#292)
+- 2026-05-27 — diagnosed why the #151 runner repin to
+  `kai-desktop-tower-wsl` never served CI: live `replicas: 0` drift,
+  stale kai-server-bound `local-path` PVCs causing `volume node
+  affinity conflict`, and (the blocker) dead cross-node flannel VXLAN
+  because worker `InternalIP`s are non-routable from kai-server.
+  Reconciled to `replicas: 2` and cleared the stale PVCs; the flannel
+  fix needs worker-host access and is tracked on #163. (§7, §9)
 - 2026-05-28 — `exec` k3s in `scripts/k3s-start.sh` so it becomes the
   unit's Main PID and its `Type=notify` `sd_notify READY` reaches
   systemd. Without it `systemctl restart k3s` hung forever in
