@@ -149,6 +149,7 @@ resource "tailscale_acl" "policy" {
         "tag:kai-desktop-tower-wsl"  = []
         "tag:kai-windows-laptop"     = []
         "tag:kais-macbook-pro"       = []
+        "tag:ser8"                   = []
         "tag:host-kai-server"    = []
       },
       local.service_tag_owners,

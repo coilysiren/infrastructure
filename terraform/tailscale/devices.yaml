@@ -30,3 +30,7 @@ devices:
   kais-macbook-pro:
     - tag:physical
     - tag:kais-macbook-pro
+  ser8:
+    - tag:server
+    - tag:physical
+    - tag:ser8
