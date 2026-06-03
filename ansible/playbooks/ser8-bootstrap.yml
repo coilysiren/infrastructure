@@ -1,0 +1,55 @@
+---
+# First-time bring-up for ser8 (R9GH channel).
+#
+# Idempotent. Safe to re-run.
+#
+# Run mode: local. Either via the one-shot bootstrap (scp tree to
+# /tmp/ansible on ser8, apt install ansible, invoke this playbook with
+# --connection=local), or after bootstrap with the on-host checkout.
+- name: ser8 bring-up
+  hosts: localhost
+  connection: local
+  gather_facts: true
+  become: true
+
+  tasks:
+    - name: Refuse to run anywhere but ser8
+      ansible.builtin.assert:
+        that:
+          - ansible_hostname == "ser8"
+        fail_msg: "This playbook is ser8-only. Found hostname {{ ansible_hostname }}."
+
+    - name: Deploy Ansible-managed sudoers fragment for the coilysiren account
+      ansible.builtin.copy:
+        src: ../files/sudoers-coilysiren-fleet
+        dest: /etc/sudoers.d/coilysiren-fleet
+        owner: root
+        group: root
+        mode: "0440"
+        validate: /usr/sbin/visudo -cf %s
+
+    - name: Remove the temporary bootstrap sudoers fragment
+      ansible.builtin.file:
+        path: /etc/sudoers.d/coilysiren-nopasswd
+        state: absent
+
+    - name: Purge the preinstalled microk8s snap
+      ansible.builtin.command:
+        cmd: snap remove --purge microk8s
+      register: microk8s_purge
+      changed_when: microk8s_purge.rc == 0
+      failed_when:
+        - microk8s_purge.rc != 0
+        - "'snap \"microk8s\" is not installed' not in (microk8s_purge.stderr | default(''))"
+
+    - name: Grow ubuntu-lv to use all free VG space
+      community.general.lvol:
+        vg: ubuntu-vg
+        lv: ubuntu-lv
+        size: +100%FREE
+        resizefs: true
+        force: true
+      register: lv_grow
+      failed_when:
+        - lv_grow.failed
+        - "'matches existing size' not in (lv_grow.msg | default(''))"
