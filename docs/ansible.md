@@ -1,6 +1,6 @@
 # Ansible
 
-Fleet host-level configuration management.
+Fleet host-level configuration management. The tree lives at `ansible/` at the repo root.
 
 ## Constraints
 
