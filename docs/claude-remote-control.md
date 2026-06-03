@@ -85,7 +85,7 @@ Background: claude.ai/code's Remote Control dropdown keys on the `--name` the da
 
 4. **Re-install** with the new installer for that host (see above). Each installer registers exactly one `--name`.
 
-5. **Confirm exactly one `claude remote-control` per host.** Check each host as in step 2 (this time expecting exactly one match on Linux, one process on Windows). In the claude.ai/code dropdown you should now see exactly three live entries: `kai-server`, `kai-desktop-tower-wsl`, `kai-desktop-tower-native`.
+5. **Confirm exactly one `claude remote-control` per host.** Check each host as in step 2 (this time expecting exactly one match on Linux, one process on Windows). In the claude.ai/code dropdown you should now see up to four live entries: `kai-server`, `kai-desktop-tower-wsl`, `kai-desktop-tower-native`, and `kais-macbook-pro` (the Mac is best-effort, so it shows only while logged in and awake).
 
 ## Disabling legacy `claude.service` user units
 
