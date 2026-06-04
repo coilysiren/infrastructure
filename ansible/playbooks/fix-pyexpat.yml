@@ -1,0 +1,58 @@
+---
+# Repoint Homebrew python@3.14's pyexpat.so at Homebrew's expat (which has
+# the symbol macOS Tahoe's /usr/lib/libexpat.1.dylib does not export), then
+# re-sign so dyld accepts the modified Mach-O.
+#
+# Root cause: the python@3.14 3.14.5 arm64_tahoe bottle ships
+# pyexpat.cpython-314-darwin.so linked to /usr/lib/libexpat.1.dylib for
+# _XML_SetAllocTrackerActivationThreshold, which Tahoe's system libexpat does
+# not export. `brew reinstall python@3.14` reproduces the broken bottle.
+# This task is a workaround until Homebrew ships a fixed Tahoe bottle.
+#
+# Idempotent: detects whether `import pyexpat` already works and skips the
+# rewrite if so. Safe to re-run after `brew upgrade python@3.14`.
+
+- name: Patch Homebrew python@3.14 pyexpat for macOS Tahoe
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars:
+    python_bin: /opt/homebrew/Cellar/awscli/2.34.61/libexec/bin/python
+    pyexpat_so: /opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/lib/python3.14/lib-dynload/pyexpat.cpython-314-darwin.so
+    system_expat: /usr/lib/libexpat.1.dylib
+    brew_expat: /opt/homebrew/opt/expat/lib/libexpat.1.dylib
+  tasks:
+    - name: Probe whether pyexpat already imports
+      ansible.builtin.command: "{{ python_bin }} -c 'import pyexpat'"
+      register: pyexpat_probe
+      changed_when: false
+      failed_when: false
+
+    - name: Repoint pyexpat at Homebrew expat
+      ansible.builtin.command: >-
+        install_name_tool -change {{ system_expat }} {{ brew_expat }} {{ pyexpat_so }}
+      when: pyexpat_probe.rc != 0
+
+    - name: Re-sign pyexpat with the ad-hoc identity
+      ansible.builtin.command: codesign -fs - {{ pyexpat_so }}
+      when: pyexpat_probe.rc != 0
+
+    - name: Verify pyexpat imports
+      ansible.builtin.command: "{{ python_bin }} -c 'import pyexpat'"
+      changed_when: false
+
+    - name: Verify aws CLI runs
+      ansible.builtin.command: aws --version
+      changed_when: false
+
+    - name: Verify SSM fetch end-to-end
+      ansible.builtin.command: >-
+        aws ssm get-parameter --name /forgejo/api-token
+        --with-decryption --query Parameter.Value --output text
+      register: ssm_probe
+      changed_when: false
+      no_log: true
+
+    - name: Report success
+      ansible.builtin.debug:
+        msg: "pyexpat patched, aws + SSM working"
