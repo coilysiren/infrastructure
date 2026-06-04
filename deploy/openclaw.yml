@@ -151,9 +151,9 @@ spec:
         app: openclaw
     spec:
       # Pin to the WSL2 tower node so the gateway is co-located with the
-      # Windows-side Ollama it calls. The other k3s nodes (kai-server,
-      # kai-macbook-pro-vm) can't reach the tower's Windows-host Ollama
-      # the same way and don't have the GPU.
+      # Windows-side Ollama it calls. The other k3s node (kai-server)
+      # can't reach the tower's Windows-host Ollama the same way and
+      # doesn't have the GPU.
       nodeSelector:
         kubernetes.io/hostname: kai-desktop-tower-wsl
       automountServiceAccountToken: false
