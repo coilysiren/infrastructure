@@ -1,6 +1,5 @@
 # Validate the cross-org repo dependency tree: FAIL on any flight-deck -> bridge
-# dependsOn edge. Read-only, so it runs the same in check and apply mode. Absent
-# data files degrade to a skip, not a failure. See docs/ansible.md.
+# dependsOn edge. Read-only; absent data degrades to a skip. See docs/ansible.md.
 - name: Validate the cross-org repo dependency tree
   repo_deptree:
     catalog_graph: "{{ deptree_catalog_graph }}"

@@ -57,6 +57,7 @@ Baseline of `coilysiren/infrastructure`. Update when scope changes.
 ## Network and access
 
 - **DNS and routing** - `coilysiren.me` Route 53 zone. Service A records point to the WAN, NAT'd to the LAN side of the homelab. Tailnet kubeconfig uses the `kai-server` MagicDNS name. Concrete addresses live in the vault.
+- **fail2ban sshd jail** - Brute-force throttling on the public sshd listener (`0.0.0.0:22`). `fail2ban/jail.local` enables the `sshd` jail with the systemd-journal backend, 1h ban after 5 failures in 10m, `ignoreip` over loopback + RFC1918 so LAN/tailscale keys never self-lock. Idempotent bringup: `bash scripts/fail2ban-install.sh`. No sshd binding or exposure change. See `docs/fail2ban.md`, `coilysiren/infrastructure#104`.
 - **Host Caddy on kai-server** - Tailnet-only front door. `caddy/sites/*.caddy` shortcuts to cluster Ingresses, `:8082` for the coily audit dashboard. `/etc/caddy/Caddyfile` auto-deploys from the repo via `systemd/caddy-config-deploy.{path,service}`. ACME pinned to LE prod.
 
 ## Tooling and policy

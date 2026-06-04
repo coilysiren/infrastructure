@@ -31,6 +31,7 @@ RECONCILE_PIN = frozenset({"agentic-os-kai"})
 
 def _git(repo, *args):
     """Run git in `repo`, returning (rc, stripped-stdout)."""
+    # pylint: disable=duplicate-code
     try:
         r = subprocess.run(
             ["git", "-C", repo, *args], capture_output=True, text=True, check=False,
@@ -80,6 +81,7 @@ def _in_progress_op(repo):
     if not gitdir:
         return ""
     base = gitdir if os.path.isabs(gitdir) else os.path.join(repo, gitdir)
+    # pylint: disable=duplicate-code
     markers = (
         ("rebase", ("rebase-merge", "rebase-apply")),
         ("merge", ("MERGE_HEAD",)),

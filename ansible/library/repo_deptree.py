@@ -52,7 +52,7 @@ def _load_buckets(path):
     return buckets
 
 
-def run_module():
+def run_module():  # pylint: disable=too-many-locals
     module = AnsibleModule(
         argument_spec={
             "catalog_graph": {"type": "path", "required": True},

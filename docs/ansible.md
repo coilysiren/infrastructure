@@ -185,6 +185,20 @@ module runs identically in check and apply mode.
 - **Seeded baseline.** Seeding from the live machine makes the first apply a
   near no-op, so the diff is the signal - anything non-empty is real drift.
 
+## The fix-pyexpat playbook
+
+`playbooks/fix-pyexpat.yml` is a one-off macOS Tahoe workaround. The
+`python@3.14` 3.14.5 `arm64_tahoe` bottle ships
+`pyexpat.cpython-314-darwin.so` linked against `/usr/lib/libexpat.1.dylib`
+for `_XML_SetAllocTrackerActivationThreshold`, a symbol Tahoe's system
+libexpat does not export (`brew reinstall python@3.14` reproduces the broken
+bottle). The play repoints the `.so` at Homebrew's own expat with
+`install_name_tool`, re-signs it ad-hoc so dyld accepts the modified Mach-O,
+then verifies `import pyexpat`, the aws CLI, and an end-to-end SSM fetch. It
+is idempotent - it probes whether `import pyexpat` already works and skips the
+rewrite if so - and safe to re-run after `brew upgrade python@3.14`. Remove it
+once Homebrew ships a fixed Tahoe bottle.
+
 ## Adding a host
 
 Add the host under the `mac` group in `inventory/hosts.yml`. A new Mac picks up

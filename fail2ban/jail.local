@@ -1,0 +1,28 @@
+# jail.local - explicit fail2ban policy for kai-server. Installed to
+# /etc/fail2ban/jail.local by scripts/fail2ban-install.sh. jail.local
+# overrides jail.conf wholesale on the keys it sets and survives package
+# upgrades (jail.conf is replaced on upgrade, jail.local is not).
+#
+# Scope: throttle repeated failed-auth against the public sshd listener.
+# No sshd binding, firewall topology, or exposure change - this only bans
+# source IPs after maxretry failed attempts in findtime. See infrastructure#104
+# (parent audit: infrastructure#103).
+
+[DEFAULT]
+# Modern Ubuntu logs sshd auth to the systemd journal, not a plain
+# /var/log/auth.log. The systemd backend reads the journal directly so the
+# sshd jail works regardless of whether rsyslog is writing auth.log.
+backend = systemd
+
+# Ban escalation. 1h ban, count failures over a 10m window, ban after 5.
+bantime = 1h
+findtime = 10m
+maxretry = 5
+
+# Never ban loopback or RFC1918 / tailnet-adjacent private ranges - a
+# fat-fingered key from the LAN or over tailscale must not lock Kai out.
+ignoreip = 127.0.0.1/8 ::1 10.0.0.0/8 172.16.0.0/12 192.168.0.0/16 100.64.0.0/10
+
+[sshd]
+enabled = true
+port = ssh

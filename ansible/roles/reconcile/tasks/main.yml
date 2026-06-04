@@ -1,6 +1,5 @@
 # Reconcile the local checkout layout against origin remotes: move/remove each
-# drifted clone to match its origin org. Runs before git so the sweep sees the
-# corrected layout. Check mode reports the plan. See docs/ansible.md.
+# drifted clone to match its origin org. Check mode reports. See docs/ansible.md.
 - name: Reconcile local checkout layout against origin remotes
   repo_reconcile:
     root: "{{ repos_root }}"

@@ -1,16 +1,6 @@
 ---
-# Repoint Homebrew python@3.14's pyexpat.so at Homebrew's expat (which has
-# the symbol macOS Tahoe's /usr/lib/libexpat.1.dylib does not export), then
-# re-sign so dyld accepts the modified Mach-O.
-#
-# Root cause: the python@3.14 3.14.5 arm64_tahoe bottle ships
-# pyexpat.cpython-314-darwin.so linked to /usr/lib/libexpat.1.dylib for
-# _XML_SetAllocTrackerActivationThreshold, which Tahoe's system libexpat does
-# not export. `brew reinstall python@3.14` reproduces the broken bottle.
-# This task is a workaround until Homebrew ships a fixed Tahoe bottle.
-#
-# Idempotent: detects whether `import pyexpat` already works and skips the
-# rewrite if so. Safe to re-run after `brew upgrade python@3.14`.
+# Repoint Homebrew python@3.14's pyexpat.so at Homebrew's expat, then re-sign
+# so dyld accepts the modified Mach-O. Full rationale in docs/ansible.md.
 
 - name: Patch Homebrew python@3.14 pyexpat for macOS Tahoe
   hosts: localhost
