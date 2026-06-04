@@ -95,6 +95,16 @@ resource "tailscale_acl" "policy" {
         dst    = ["autogroup:self", "tag:server"]
         users  = ["autogroup:nonroot", "root"]
       },
+      # Kai's user-owned devices (phone, mac, etc.) need to reach her
+      # tagged client physicals. autogroup:self only covers user-owned
+      # devices owned by the same user; tagged devices have no user
+      # owner so they fall out, requiring this explicit permit.
+      {
+        action = "accept"
+        src    = ["autogroup:member"]
+        dst    = ["tag:physical"]
+        users  = ["autogroup:nonroot", "root"]
+      },
       # Tagged client physicals need their own SSH-out permit since
       # they no longer match autogroup:member after tagging. Split
       # from the autogroup:member rule because autogroup:self is only
