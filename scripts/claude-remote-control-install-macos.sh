@@ -22,8 +22,11 @@
 
 set -euo pipefail
 
-NAME="kais-macbook-pro"
-WORKDIR="${HOME}/projects/coilysiren"
+# NAME and WORKDIR are overridable for additional macOS hosts (each host
+# needs a distinct --name or the claude.ai/code dropdown rows collide).
+# Defaults target kais-macbook-pro; kai-mac-kapwing sets both via env.
+NAME="${CLAUDE_RC_NAME:-kais-macbook-pro}"
+WORKDIR="${CLAUDE_RC_WORKDIR:-${HOME}/projects/coilysiren}"
 LABEL="me.coilysiren.claude-remote-control"
 PLIST="${HOME}/Library/LaunchAgents/${LABEL}.plist"
 CLAUDE_JSON="${HOME}/.claude.json"
