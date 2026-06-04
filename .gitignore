@@ -12,3 +12,5 @@ deploy/coredns_filled.yml
 __pycache__/
 *.pyc
 .terraform/
+ansible/collections/
+*.retry

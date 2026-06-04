@@ -8,7 +8,7 @@ Everything needed to stand up and operate **kai-server**: systemd units, shell s
 
 ## Project shape
 
-`deploy/` holds cluster-wide manifests (cert-manager, external-secrets, SecretStore to AWS SSM). `terraform/` holds per-stack IaC. `scripts/` + `systemd/` carry unit ExecStart helpers and Python for coily verbs. `docs/` holds durable ops runbooks. `caddy/` is legacy pre-Traefik config.
+`deploy/` holds cluster-wide manifests (cert-manager, external-secrets, SecretStore to AWS SSM). `terraform/` holds per-stack IaC. `ansible/` converges workstation/host state (today: macOS Homebrew via the `mac` inventory group, driven by `coily ansible-mac`). `scripts/` + `systemd/` carry unit ExecStart helpers and Python for coily verbs. `docs/` holds durable ops runbooks. `caddy/` is legacy pre-Traefik config.
 
 ## Repo boundaries
 

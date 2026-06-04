@@ -6,6 +6,7 @@ Everything Kai needs to stand up and operate **kai-server**. Systemd units, shel
 
 ```
 .
+├── ansible/          # workstation/host convergence (macOS Homebrew today) - see ansible/README.md
 ├── caddy/            # (legacy, pre-traefik caddy config)
 ├── deploy/           # cluster-wide manifests applied via coily verbs
 │   ├── cert_manager.yml     # cert-manager ClusterIssuers (DNS-01 via Route 53)

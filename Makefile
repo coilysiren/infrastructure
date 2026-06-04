@@ -19,7 +19,9 @@ DEFAULT_GOAL := help
 	llama-deploy-secrets \
 	lunch-money \
 	terraform-aws-inventory \
-	host-watch
+	host-watch \
+	ansible-mac \
+	ansible-mac-seed
 
 help: ## Print this help.
 	@awk 'BEGIN {FS = ":.*?## "} /^[a-zA-Z_-]+:.*?## / {printf "%-32s %s\n", $$1, $$2}' $(MAKEFILE_LIST)
@@ -90,3 +92,9 @@ host-watch: ## Watch a tailnet host's SSH and capture a host-diag.sh snapshot on
 
 claude-remote-control-install: ## (Re)install the kai-server remote-control daemon, node-tooling-ensure units, and self-heal settings. Idempotent; recovers a latched daemon. Run on kai-server.
 	bash scripts/claude-remote-control-install.sh
+
+ansible-mac: ## Converge this Mac's Homebrew state via ansible/playbooks/mac.yml. Args - action=check|apply (default check).
+	@uv run python scripts/ansible/mac.py $(or $(action),check)
+
+ansible-mac-seed: ## Seed ansible/group_vars/mac.yml from this machine's live brew leaves/casks/taps.
+	@uv run python scripts/ansible/seed_mac_brew.py

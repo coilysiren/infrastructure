@@ -1,0 +1,46 @@
+# group_vars for the `mac` inventory group. Seeded from the live machine by
+# `coily ansible-mac-seed` (scripts/ansible/seed_mac_brew.py).
+# Additive: ansible ensures these are present, never uninstalls.
+# Curate by hand after seeding - this is the fleet's declared baseline.
+
+# Third-party taps (core/cask omitted).
+homebrew_taps:
+  - coilyco-flight-deck/ward
+  - coilysiren/agent-guard
+  - coilysiren/coily
+  - coilysiren/o2r
+  - coilysiren/repo-recall
+  - coilysiren/session-lattice
+  - getsentry/tools
+  - homebrew/services
+  - openhue/cli
+  - steipete/tap
+
+# Top-level formulae (brew leaves), not their dependencies.
+homebrew_installed_packages: []
+
+# GUI apps + tools installed as casks.
+homebrew_cask_apps:
+  - android-platform-tools
+  - aptakube
+  - blender
+  - codex
+  - corelocationcli
+  - docker
+  - docker-desktop
+  - freelens
+  - gcloud-cli
+  - google-chrome
+  - hammerspoon
+  - headlamp
+  - intellij-idea-ce
+  - ngrok
+  - obsidian
+  - orbstack
+  - powershell
+  - proxyman
+  - tableplus
+  - tailscale-app
+  - visual-studio-code
+  - warp
+  - warp@preview

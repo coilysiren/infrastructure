@@ -1,0 +1,22 @@
+# Homebrew convergence for macOS workstations. Uses the community.general
+# homebrew modules (shipped in the `ansible` package pinned in pyproject.toml).
+- name: Ensure Homebrew taps are present
+  community.general.homebrew_tap:
+    name: "{{ item }}"
+    state: present
+  loop: "{{ homebrew_taps }}"
+
+- name: Ensure Homebrew formulae are present
+  community.general.homebrew:
+    name: "{{ homebrew_installed_packages }}"
+    state: present
+  when: homebrew_installed_packages | length > 0
+
+- name: Ensure Homebrew casks are present
+  community.general.homebrew_cask:
+    name: "{{ item }}"
+    state: present
+    # accept_external_apps avoids reinstall churn when an app was first
+    # installed outside brew (common for Chrome / Docker Desktop).
+    accept_external_apps: true
+  loop: "{{ homebrew_cask_apps }}"

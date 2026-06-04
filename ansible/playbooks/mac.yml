@@ -1,0 +1,15 @@
+# Converge a macOS workstation's Homebrew state (taps, formulae, casks).
+#
+# Idempotent and additive: it ensures the declared packages are present and
+# does NOT uninstall anything absent from the lists. The lists in
+# group_vars/mac.yml are seeded from the live machine by
+# `coily ansible-mac-seed`, so a first apply on a seeded host is a near no-op.
+#
+# Run check-mode first:  coily ansible-mac            (alias for action=check)
+# Apply for real:        coily ansible-mac action=apply
+- name: Converge macOS workstation
+  hosts: mac
+  gather_facts: true
+  become: false
+  roles:
+    - homebrew
