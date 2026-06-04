@@ -33,6 +33,8 @@ Baseline of `coilysiren/infrastructure`. Update when scope changes.
 
 - **Coily verb surface** - Cluster-bootstrap verbs (cert-manager, aws-secrets, observability, terraform-grafana, llama-deploy, k3s-list-dns). Python helpers in `scripts/k8s.py` and `scripts/llama.py`.
 - **GitHub Actions CI** - Config validation here. Per-repo CI in sibling repos builds to GHCR and `kubectl apply` against the tailnet. Canonical shape: test, build-publish, deploy.
+- **Forgejo build runner** - In-cluster `act_runner` StatefulSet (`deploy/forgejo-runner.yml`), DinD sidecar, instance-level registration. Runs every repo's Forgejo Actions job.
+- **Forgejo tap-writer runner** - Lightweight DinD-free `act_runner` (`deploy/forgejo-runner-tap-writer.yml`) for cross-repo formula bumps into the coilyco-flight-deck homebrew tap(s). Host executor, label `tap-writer`, opt-in via `runs-on: tap-writer`. Carries a repo-write token from SSM `/forgejo/tap-bump-token` through a git credential helper, so the token never enters a job env or a Forgejo Actions secret. Provision the token with `scripts/provision-tap-bump-token.sh`.
 - **llama.cpp inference** - k8s Deployment in `llama` namespace, initContainer pulls TinyLLama-1.1B, serves :8080. Verbs: `coily llama-deploy`, `coily llama-deploy-secrets`.
 
 ## Cross-machine session aggregation
