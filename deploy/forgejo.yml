@@ -1,14 +1,5 @@
-# Forgejo (self-hosted git) on kai-server k3s.
-#
-# Phase 2 of the rollout in docs/forgejo-deploy-plan.md: public at
-# https://forgejo.coilysiren.me/. The tailnet ts-proxy front door stays
-# in place; the Ingress block at the bottom adds the public path via
-# Traefik + cert-manager DNS-01. Hardening folded in for the public
-# surface: image on the 15.0.2 security release, /metrics gated by a
-# bearer token, Traefik rate-limit + HSTS middlewares, account emails
-# private by default. See the security review on the phase-2 issue.
-#
-# Apply: sudo k3s kubectl apply -f deploy/forgejo.yml
+# Forgejo (self-hosted git) on kai-server k3s, public via Traefik + cert-manager
+# DNS-01. Details: docs/forgejo-deploy-plan.md, docs/k3s-deploy-notes.md.
 ---
 apiVersion: v1
 kind: Namespace
@@ -177,10 +168,8 @@ spec:
         runAsGroup: 1000
         fsGroup: 1000
       hostAliases:
-        # Pin *.coilysiren.me back to the homelab LAN IP so any
-        # in-pod call back into the cluster (webhooks, mirrors)
-        # doesn't egress to the public internet. See
-        # docs/k3s-deploy-notes.md §10.
+        # Pin *.coilysiren.me to the homelab LAN IP so in-pod calls (webhooks,
+        # mirrors) don't egress to the internet. See docs/k3s-deploy-notes.md §10.
         - ip: 192.168.0.194
           hostnames:
             - eco.coilysiren.me
@@ -212,11 +201,8 @@ spec:
                 secretKeyRef:
                   name: forgejo-secrets
                   key: db-password
-            # INSTALL_LOCK skips the web installer and is also required
-            # for the `forgejo admin user create` CLI to run (otherwise
-            # MustInstalled() fails with "Unable to load config file for
-            # an installed Forgejo instance"). Env-driven config makes
-            # the web installer redundant.
+            # INSTALL_LOCK skips the web installer and lets the `forgejo admin
+            # user create` CLI run. See docs/k3s-deploy-notes.md.
             - name: FORGEJO__security__INSTALL_LOCK
               value: "true"
             - name: FORGEJO__database__DB_TYPE
@@ -239,24 +225,16 @@ spec:
               value: "true"
             - name: FORGEJO__server__LFS_START_SERVER
               value: "true"
-            # Session storage in postgres so sessions survive pod rollouts.
-            # Default provider is `memory`, which wipes every login on each
-            # ReplicaSet swap. See infrastructure#127.
+            # Session storage in postgres so logins survive pod rollouts; the
+            # default `memory` provider wipes them each swap. See infrastructure#127.
             - name: FORGEJO__session__PROVIDER
               value: db
             - name: FORGEJO__session__PROVIDER_CONFIG
               value: ""
             - name: FORGEJO__session__SESSION_LIFE_TIME
               value: "604800"
-            # COOKIE_SECURE left at the default `auto`. ROOT_URL is
-            # https, the public Ingress terminates TLS, so session
-            # cookies come back Secure-only as they should. The phase-1
-            # COOKIE_SECURE=false override was removed at phase 2.
-            # Registration is open, but only via GitHub SSO. The username
-            # + password signup form stays closed (ALLOW_ONLY_EXTERNAL_
-            # REGISTRATION), so there is no password-account spam surface.
-            # ENABLE_AUTO_REGISTRATION auto-provisions a Forgejo account on
-            # first GitHub sign-in. See infrastructure#263.
+            # Registration is GitHub-SSO only (password signup closed) with
+            # auto-provision on first sign-in. See infrastructure#263.
             - name: FORGEJO__service__DISABLE_REGISTRATION
               value: "false"
             - name: FORGEJO__service__ALLOW_ONLY_EXTERNAL_REGISTRATION
@@ -268,10 +246,8 @@ spec:
               value: "true"
             - name: FORGEJO__metrics__ENABLED
               value: "true"
-            # /metrics is reachable on the public Ingress; gate it with a
-            # bearer token so repo/user counts aren't world-readable.
-            # Nothing in-cluster scrapes it yet, so the token costs no
-            # scraper wiring. Callers send `Authorization: Bearer <token>`.
+            # /metrics is public on the Ingress; gate it with a bearer token so
+            # repo/user counts aren't world-readable (`Authorization: Bearer`).
             - name: FORGEJO__metrics__TOKEN
               valueFrom:
                 secretKeyRef:
@@ -279,12 +255,8 @@ spec:
                   key: metrics-token
             - name: FORGEJO__mailer__ENABLED
               value: "false"
-            # Forgejo Actions enabled cluster-wide. DEFAULT_ACTIONS_URL=github
-            # resolves `uses: actions/checkout@v4` (and other marketplace
-            # actions) to github.com. The default `data.forgejo.org` only
-            # mirrors a curated subset; `astral-sh/setup-uv` and similar
-            # community actions live on GH. See forgejo-runner deploy
-            # for the runner side (deploy/forgejo-runner.yml).
+            # Actions enabled; DEFAULT_ACTIONS_URL=github resolves `uses:` refs to
+            # github.com (wider than data.forgejo.org). See deploy/forgejo-runner.yml.
             - name: FORGEJO__actions__ENABLED
               value: "true"
             - name: FORGEJO__actions__DEFAULT_ACTIONS_URL
@@ -318,23 +290,16 @@ spec:
           persistentVolumeClaim:
             claimName: forgejo-data
 ---
-# tailnet-exposed front door. Standalone ts-proxy Deployment pattern
-# (same shape as vmsingle in deploy/observability/vmsingle-tailscale-
-# service.yml). The forgejo container is rootless and opinionated
-# about :3000, so the in-pod sidecar pattern that repo-recall and the
-# eco-* services use doesn't fit cleanly here. The Service does the
-# port 80 -> 3000 translation; the ts proxy forwards inbound tailnet
-# traffic to TS_DEST_IP which is this Service's ClusterIP.
+# tailnet-exposed front door: standalone ts-proxy Deployment forwarding to this
+# Service's ClusterIP (port 80 -> 3000). See docs/k3s-deploy-notes.md.
 apiVersion: v1
 kind: Service
 metadata:
   name: forgejo
   namespace: forgejo
 spec:
-  # Pinned to the existing allocation so TS_DEST_IP below stays stable
-  # across recreates. ClusterIP is immutable post-create; future
-  # changes need delete+recreate of the Service plus the TS_DEST_IP
-  # below in lockstep.
+  # Pinned ClusterIP so TS_DEST_IP stays stable across recreates; changing it
+  # needs delete+recreate of the Service and TS_DEST_IP in lockstep.
   clusterIP: 10.43.221.226
   type: ClusterIP
   selector:
@@ -435,10 +400,8 @@ spec:
               value: "true"
             - name: TS_EXTRA_ARGS
               value: "--accept-dns=false"
-            # Standalone-proxy mode. containerboot forwards inbound
-            # tailnet traffic to this IP at the same destination port,
-            # so tailnet :80 lands at forgejo Service :80 which the
-            # Service translates to targetPort 3000 on the workload pod.
+            # Standalone-proxy mode: containerboot forwards inbound tailnet :80
+            # to forgejo Service :80, translated to targetPort 3000 on the pod.
             - name: TS_DEST_IP
               value: "10.43.221.226"
             - name: TS_AUTHKEY
@@ -459,16 +422,8 @@ spec:
               cpu: 200m
               memory: 128Mi
 ---
-# Phase-2 public path. Traefik v3 CRDs (traefik.io/v1alpha1, the group
-# k3s ships). Middlewares are referenced from the Ingress below via the
-# traefik.ingress.kubernetes.io/router.middlewares annotation (the prefix
-# the Kubernetes Ingress provider reads), name-formatted as
-# <namespace>-<middleware>@kubernetescrd.
-#
-# Rate limit: moderate per-source-IP cap. Generous enough for the web UI
-# (many asset requests) and git-over-HTTP, tight enough to blunt crude
-# floods and credential-stuffing bursts. Determined slow brute force is
-# bounded separately by admin-invite-only accounts.
+# Phase-2 public path: Traefik v3 middlewares referenced from the Ingress below.
+# Rate limit is a moderate per-source-IP cap. See docs/k3s-deploy-notes.md.
 apiVersion: traefik.io/v1alpha1
 kind: Middleware
 metadata:
@@ -480,9 +435,8 @@ spec:
     burst: 100
     period: 1s
 ---
-# HSTS. cert-manager gives TLS, not the Strict-Transport-Security header.
-# includeSubdomains stays false on purpose: *.coilysiren.me has sibling
-# subdomains (api, eco) that should not inherit this policy. No preload.
+# HSTS header (cert-manager only gives TLS). includeSubdomains stays false so
+# sibling *.coilysiren.me subdomains don't inherit it. No preload.
 apiVersion: traefik.io/v1alpha1
 kind: Middleware
 metadata:

@@ -1,21 +1,8 @@
 #!/usr/bin/env bash
-# install-caddy-config-deploy.sh - one-time bootstrap on kai-server for
-# the auto-deploy of /etc/caddy/Caddyfile from the repo Caddyfile.
-#
-# Installs:
-#   - caddy-config-deploy.service (oneshot, runs install-caddy-config.sh
-#     as root)
-#   - caddy-config-deploy.path    (watches repo Caddyfile for changes)
-#
-# Then enables the path unit and fires an initial deploy so the current
-# repo Caddyfile lands at /etc/caddy/Caddyfile before the first inotify
-# event arrives.
-#
-# Run as: sudo bash /home/kai/projects/coilysiren/infrastructure/scripts/install-caddy-config-deploy.sh
-#
-# After this runs once, every change to caddy/Caddyfile (via daily
-# coilysiren-pull-all.timer, manual git pull, or hand edit) auto-deploys
-# without further operator action. See infrastructure#292.
+# One-time root bootstrap on kai-server: installs the caddy-config-deploy .service
+# + .path units, enables the path watcher, and fires an initial Caddyfile deploy.
+
+# Run via sudo bash. Repo Caddyfile changes then auto-deploy. See infrastructure#292.
 
 set -euo pipefail
 

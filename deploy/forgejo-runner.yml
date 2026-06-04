@@ -1,28 +1,5 @@
-# Forgejo Actions runners on kai-server k3s. Same namespace as the
-# Forgejo server. Hand-rolled to match deploy/forgejo.yml shape.
-#
-# StatefulSet, two replicas. Each pod registers itself on first boot:
-# an initContainer mints a runner registration token by calling
-# Forgejo's admin API with the existing /forgejo/api-token, then runs
-# `act_runner register --no-interactive`. The daemon container then
-# runs `act_runner daemon`. Per-pod volumeClaimTemplate holds the
-# generated `.runner` state file so registration survives restarts.
-#
-# DinD sidecar per pod: act_runner talks to dockerd over a shared
-# /var/run socket via emptyDir. /var/lib/docker is ephemeral. Swap to
-# a PVC if build-cache reuse becomes worth the storage cost.
-#
-# Bump replicas to scale concurrent jobs. Each pod = 1 concurrent job
-# by default. No native k8s executor in Forgejo upstream yet, so DinD
-# is the path; tracked at codeberg.org/forgejo/discussions#66.
-#
-# Pinned to kai-desktop-tower-wsl, not kai-server: DinD bridge churn
-# races k3s kube-proxy iptables sync. On kai-server that knocked out
-# host TCP listeners (sshd:22, apiserver:6443, tailscaled). Worker
-# node has no comparable host-namespace exposure. See
-# forgejo.coilysiren.me/coilyco-flight-deck/infrastructure/issues/151.
-#
-# Apply: sudo k3s kubectl apply -f deploy/forgejo-runner.yml
+# Forgejo Actions runners on kai-server k3s: StatefulSet with per-pod DinD,
+# pinned to kai-desktop-tower-wsl. Details: docs/k3s-deploy-notes.md §7.
 ---
 apiVersion: external-secrets.io/v1beta1
 kind: ExternalSecret
@@ -62,9 +39,8 @@ spec:
       nodeSelector:
         kubernetes.io/hostname: kai-desktop-tower-wsl
       initContainers:
-        # Mints a per-pod registration token via the admin API and
-        # writes the .runner state file. Skips if already registered
-        # (re-applies / pod restarts mustn't re-register).
+        # Mints a per-pod registration token via the admin API and writes the
+        # .runner state file; skips if already registered (restarts mustn't re-register).
         - name: register
           image: data.forgejo.org/forgejo/runner:12
           env:
@@ -130,8 +106,7 @@ spec:
           securityContext:
             privileged: true
           # --insecure-registry: the in-cluster registry (deploy/registry.yml)
-          # serves plain http at the kai-server LAN IP NodePort. dockerd
-          # refuses to push to a non-TLS registry unless it's allowlisted here.
+          # serves plain http, so dockerd needs it allowlisted to push.
           args:
             - "--insecure-registry=192.168.0.194:30500"
           env:

@@ -1,22 +1,6 @@
 #!/usr/bin/env bash
-# claude-remote-control-install-wsl.sh - install the Claude Code
-# remote-control daemon unit on the WSL side of kai-desktop-tower, plus
-# its daily 3am restart timer. Idempotent: re-run after editing the
-# unit files.
-#
-# This host registers as `kai-desktop-tower-wsl` in claude.ai/code's
-# Remote Control dropdown. The Windows-native installer registers the
-# same physical tree as `kai-desktop-tower-native`; the two `--name`s
-# must stay distinct or the dropdown collapses them to one entry.
-#
-# Prereqs:
-#   - nvm installed for kai with a default node version selected.
-#   - `claude` (npm package) installed under that node version.
-#   - `claude login` already run as kai against the active claude.ai
-#     subscription (Pro/Max/Team/Enterprise; API keys not supported).
-#   - /mnt/x/projects-x/coilysiren reachable (DrvFs auto-mount).
-#
-# Run as the `kai` user from the repo checkout. Sudo is invoked per-step.
+# Install the remote-control daemon + 3am restart timer on the WSL side of
+# kai-desktop-tower. Run as kai. See docs/claude-remote-control.md.
 
 set -euo pipefail
 
@@ -29,12 +13,8 @@ if [[ ! -d "${WORKDIR}" ]]; then
   exit 1
 fi
 
-# Without this WSL inherits the Windows host's COMPUTERNAME, which
-# collides with the Windows-native daemon in the claude.ai/code Remote
-# Control dropdown (both report the same gethostname(2)). /etc/wsl.conf
-# is read by /init at distro boot, so the change takes effect after the
-# next `wsl --shutdown` on Windows. Bail-don't-overwrite if a different
-# hostname is already configured.
+# Distinct WSL hostname avoids colliding with the Windows-native daemon in the
+# dropdown; applied after `wsl --shutdown`. See docs/claude-remote-control.md.
 WSL_HOSTNAME="kai-desktop-tower-wsl"
 echo "==> ensure /etc/wsl.conf sets hostname=${WSL_HOSTNAME}"
 if [[ -f /etc/wsl.conf ]] && grep -Eq '^\s*hostname\s*=' /etc/wsl.conf; then
@@ -57,10 +37,8 @@ EOF
 fi
 
 echo "==> install unit files"
-# The WSL service file in the repo is named *-wsl.service so the
-# kai-server and WSL units can coexist in version control; on disk the
-# canonical name stays claude-remote-control.service so the restart
-# timer (shared with kai-server) targets the right unit.
+# Repo names it *-wsl.service to coexist with the kai-server unit; on disk it
+# installs as claude-remote-control.service so the shared timer targets it.
 sudo install -m 0644 "${REPO_DIR}/systemd/claude-remote-control-wsl.service"     /etc/systemd/system/claude-remote-control.service
 sudo install -m 0644 "${REPO_DIR}/systemd/claude-remote-control-restart.service" /etc/systemd/system/
 sudo install -m 0644 "${REPO_DIR}/systemd/claude-remote-control-restart.timer"   /etc/systemd/system/

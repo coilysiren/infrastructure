@@ -1,17 +1,6 @@
 #!/usr/bin/bash
-# factorio-server-start.sh - launch the factorio dedicated server.
-#
-# Loads the most recent save under SAVES_DIR via
-# --start-server-load-latest, so cycle rotations (new save names per
-# cycle, autosave rotation within a cycle) don't require touching
-# this script. The previously-hardcoded ./saves/q4-2025.zip is gone.
-#
-# Pre-conditions:
-#   - SAVES_DIR exists and contains at least one .zip save. First-time
-#     setup: `factorio --create $SAVES_DIR/<name>.zip` once before the
-#     first start.
-#   - server-settings.json under SERVER_DIR (auto_pause, autosave_slots,
-#     visibility, whitelist, etc) lives next to mods/ and saves/.
+# Launch the factorio dedicated server, loading the newest save under SAVES_DIR.
+# Needs >=1 .zip save and server-settings.json; first save: `factorio --create`.
 
 set -euo pipefail
 
@@ -26,10 +15,8 @@ if [ ! -d "${SAVES_DIR}" ] || [ -z "$(find "${SAVES_DIR}" -maxdepth 1 -name '*.z
   exit 2
 fi
 
-# RCON is for the fdr-remake Discord bridge sidecar. Soft-fail if the
-# password isn't in SSM yet (e.g. first boot after install, or AWS
-# creds rotated): factorio still starts, the bridge just won't connect
-# until the next restart picks up the password. coilyco-flight-deck/infrastructure#101.
+# RCON feeds the fdr-remake Discord bridge. Soft-fail if /factorio/rcon-password
+# is absent: factorio still starts, bridge connects next restart (infrastructure#101).
 RCON_ARGS=()
 if rcon_password=$(aws ssm get-parameter --name /factorio/rcon-password --with-decryption --query Parameter.Value --output text 2>/dev/null); then
   RCON_ARGS=(--rcon-port "${RCON_PORT}" --rcon-password "${rcon_password}")
@@ -38,10 +25,8 @@ else
 fi
 
 cd "${SERVER_DIR}"
-# Pick the newest .zip explicitly. --start-server-load-latest looks in
-# ~/.factorio/saves/ (a path we don't control), and --write-data isn't
-# a recognized flag. The explicit-path approach is more portable and
-# robust to multiple saves.
+# Pick the newest .zip explicitly: --start-server-load-latest looks in an
+# uncontrolled ~/.factorio/saves/, so an explicit path is more portable.
 LATEST=$(find "${SAVES_DIR}" -maxdepth 1 -name '*.zip' -printf '%T@ %p\n' | sort -nr | head -1 | cut -d' ' -f2-)
 echo "factorio-server-start: loading ${LATEST}"
 exec ./bin/x64/factorio --start-server "${LATEST}" \

@@ -1,21 +1,5 @@
-# Static tailnet exposure of vmsingle. Replaces the operator-managed
-# ts-proxy with a standalone ts-vmsingle Deployment that runs only the
-# tailscale container with TS_DEST_IP pointed at the Service ClusterIP.
-#
-# vmsingle's primary Service is headless (clusterIP: None) because the
-# helm chart wires it as the StatefulSet's pod-DNS service. So we keep
-# this side-car ClusterIP Service that selects the same pod, plus a
-# port: 80 entry so tailnet peers can hit `http://vmsingle` without a
-# port suffix.
-#
-# Pattern: standalone ts-proxy Deployment, distinct from the in-pod
-# sidecar repo-recall uses. Used for any workload whose Pod template
-# isn't ours to modify (helm-managed StatefulSets, third-party
-# operators, etc.). The repo-recall canary uses the in-pod sidecar
-# pattern; see deploy/repo-recall.yml.
-#
-# Apply alongside the helm chart:
-#   sudo k3s kubectl apply -f deploy/observability/vmsingle-tailscale-service.yml
+# Static tailnet exposure of vmsingle via a standalone ts-vmsingle Deployment plus a
+# ClusterIP sidecar Service (chart's primary is headless). See docs/tailscale.md.
 ---
 apiVersion: v1
 kind: Service
@@ -25,10 +9,8 @@ metadata:
   labels:
     app: vmsingle-tailscale
 spec:
-  # Pinned to the existing allocation so TS_DEST_IP below stays stable
-  # across recreates. Service ClusterIP is immutable post-creation; if
-  # this ever needs to change, delete + recreate the Service and update
-  # both the IP here and TS_DEST_IP in the Deployment in lockstep.
+  # Pinned so TS_DEST_IP below stays stable across recreates. To change it, delete +
+  # recreate the Service and update both this IP and TS_DEST_IP in lockstep.
   clusterIP: 10.43.140.169
   type: ClusterIP
   selector:
@@ -139,10 +121,8 @@ spec:
               value: "true"
             - name: TS_EXTRA_ARGS
               value: "--accept-dns=false"
-            # Standalone-proxy mode. containerboot forwards inbound
-            # tailnet traffic to this IP at the same destination port,
-            # so tailnet :80 lands at vmsingle-tailscale :80 which the
-            # Service translates to targetPort 8428 on the helm pod.
+            # Standalone-proxy mode: containerboot forwards tailnet :80 to this IP,
+            # the vmsingle-tailscale Service, which maps to targetPort 8428.
             - name: TS_DEST_IP
               value: "10.43.140.169"
             - name: TS_AUTHKEY

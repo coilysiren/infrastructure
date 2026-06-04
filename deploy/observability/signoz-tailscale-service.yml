@@ -1,31 +1,5 @@
-# Tailnet exposure of the SigNoz UI over HTTPS.
-#
-# Same TS_SERVE_CONFIG HTTPS-termination pattern as deploy/ntfy.yml, with
-# one adaptation: ntfy runs the ts container as an in-pod sidecar and
-# proxies to 127.0.0.1, but SigNoz's pod is helm-managed and not ours to
-# add a sidecar to. So ts-signoz stays a standalone proxy Deployment and
-# its serve config proxies to the in-cluster signoz-tailscale Service
-# instead of localhost.
-#
-# The ts sidecar terminates HTTPS on :443 - TS_SERVE_CONFIG (the
-# signoz-ts-serve ConfigMap) makes it provision a Let's Encrypt cert for
-# signoz.<tailnet>.ts.net and reverse-proxy to the SigNoz app. Reach the
-# UI at https://signoz.<tailnet>.ts.net.
-#
-# HTTPS is not cosmetic: on plain HTTP browsers degrade password-manager
-# autofill, so HTTPS is what makes the SigNoz login a silent one-click
-# autofill instead of a typed password. No public Ingress, no cert-
-# manager, no Route 53 - the cert is tailnet-internal, issued via the
-# tailnet's HTTPS feature.
-#
-# The .ts.net suffix is unavoidable: a TLS cert can only be issued for
-# the device's full MagicDNS name, not the bare `signoz` short name.
-#
-# The ts authkey is minted by terraform/tailscale/ (service
-# `signoz` in services.yaml) and landed in SSM at
-# /coilysiren/signoz/ts-authkey.
-#
-# Apply: sudo k3s kubectl apply -f deploy/observability/signoz-tailscale-service.yml
+# Tailnet HTTPS exposure of the SigNoz UI via a standalone ts-signoz proxy Deployment
+# (helm-managed pod, no sidecar). Authkey from SSM. See docs/tailscale.md.
 ---
 apiVersion: v1
 kind: Service
@@ -82,11 +56,8 @@ subjects:
     name: ts-signoz
     namespace: observability
 ---
-# Serve config for the tailscale sidecar's HTTPS termination. The
-# ${TS_CERT_DOMAIN} placeholder is expanded by containerboot to the
-# device's MagicDNS FQDN at container start, so the opaque tailnet
-# suffix is never written into this repo. Proxies to the signoz-tailscale
-# Service, which fronts the helm-managed signoz app pod on :8080.
+# Serve config for the ts sidecar HTTPS termination; containerboot expands
+# ${TS_CERT_DOMAIN} at start. Proxies to signoz-tailscale. See docs/tailscale.md.
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -160,9 +131,8 @@ spec:
               value: "true"
             - name: TS_EXTRA_ARGS
               value: "--accept-dns=false"
-            # Terminate HTTPS on :443 and reverse-proxy to the signoz app.
-            # containerboot substitutes ${TS_CERT_DOMAIN} in the file at
-            # startup. Replaces the old TS_DEST_IP L3-forward mode.
+            # Terminate HTTPS on :443 and reverse-proxy to signoz; containerboot
+            # substitutes ${TS_CERT_DOMAIN} at startup. See docs/tailscale.md.
             - name: TS_SERVE_CONFIG
               value: /etc/ts-serve/serve-config.json
             - name: TS_AUTHKEY

@@ -1,18 +1,9 @@
 #!/usr/bin/env bash
-# Pull the latest release zip(s) of an Eco mod from GitHub and unzip
-# them into the EcoServer Mods tree. Generalizes the old install-eco-
-# telemetry.sh: takes the mod NAME as the only positional arg.
-#
-# For each repo in {coilyco-bridge/eco-mods, coilyco-flight-deck/eco-mods-public,
-# coilysiren/NAME} (whichever exist and have releases), look at the
-# latest release for assets matching NAME-*.zip, download every match,
-# and unzip -o each one into $SERVER_DIR. unzip -o handles the merge
-# case where the same mod ships split across two repos (e.g. Librarian).
-#
-# Run as kai (or whichever user owns the EcoServer tree). No root
-# needed: everything lives under /home/kai/.
-#
-# Argv: install-eco-mod.sh NAME
+# Download an Eco mod's latest NAME-*.zip release assets from the candidate repos and
+# unzip -o each into the EcoServer Mods tree. See docs/eco-server-setup.md.
+
+# unzip -o merges mods split across repos. Runs as kai, no root.
+# Argv: install-eco-mod.sh NAME.
 
 set -euo pipefail
 
@@ -23,9 +14,8 @@ fi
 
 NAME="$1"
 
-# Defensive: coily already validates NAME, but the script is also
-# runnable by hand and the rest of it interpolates NAME into curl URLs
-# and shell glob matches.
+# Defensive re-validation: coily checks NAME, but this is also hand-runnable and NAME
+# gets interpolated into curl URLs and globs.
 if [[ ! "$NAME" =~ ^[A-Za-z0-9._-]+$ ]] || [[ "$NAME" == -* ]]; then
   echo "install-eco-mod: NAME '$NAME' rejected (letters/digits/._- only, no leading dash)" >&2
   exit 2
@@ -37,29 +27,21 @@ if [[ ! -d "$SERVER_DIR" ]]; then
   exit 1
 fi
 
-# Cruft from the pre-2026-04-28 EcoTelemetry zip layout (top-level
-# EcoTelemetry/ instead of Mods/EcoTelemetry/). Eco never loaded it.
-# Remove on sight whenever we deploy that mod.
+# Remove stale top-level EcoTelemetry/ cruft from the pre-2026-04-28 zip layout
+# (Eco never loaded it) on sight whenever we deploy that mod.
 if [[ "$NAME" == "EcoTelemetry" && -e "$SERVER_DIR/EcoTelemetry" && ! -L "$SERVER_DIR/EcoTelemetry" ]]; then
   echo ">>> removing stale $SERVER_DIR/EcoTelemetry (wrong-layout cruft)"
   rm -rf "$SERVER_DIR/EcoTelemetry"
 fi
 
-# AutoGen-orphan sweep used to live here. It moved to
-# eco-cycle-prep/mods.sweep_autogen_on_server, which runs automatically
-# after `coily mods-sync` and `coily mods-disable`, and is also exposed
-# as `coily mods-sweep` for ad-hoc cleanup. See eco-cycle-prep#5.
+# The AutoGen-orphan sweep moved to eco-cycle-prep/mods.sweep_autogen_on_server
+# (runs after coily mods-sync/mods-disable, or coily mods-sweep). See eco-cycle-prep#5.
 
 tmp="$(mktemp -d)"
 trap 'rm -rf "$tmp"' EXIT
 
-# Repos that may publish a release asset for this mod. Order is only a
-# tiebreaker: when the same filename ships from multiple repos, the
-# later download overwrites the earlier one (unzip -o is idempotent).
-# Try both PascalCase (NAME) and kebab-case (NAME_KEBAB) probes for the
-# per-mod repo - "EcoTelemetry" lives at coilysiren/eco-telemetry, while
-# older repos (EcoJobsTracker) use the PascalCase form. The seen map
-# below dedups when they collapse to the same string.
+# Candidate repos for this mod's release asset. Order is just a tiebreaker (later
+# overwrites earlier, unzip -o). Probe both PascalCase and kebab-case per-mod repos.
 NAME_KEBAB="$(printf '%s' "$NAME" | sed -E 's/([a-z0-9])([A-Z])/\1-\2/g' | tr '[:upper:]' '[:lower:]')"
 REPOS=("coilyco-bridge/eco-mods" "coilyco-flight-deck/eco-mods-public" "coilysiren/$NAME" "coilysiren/$NAME_KEBAB")
 
@@ -75,9 +57,8 @@ for repo in "${REPOS[@]}"; do
   echo ">>> querying $repo for $NAME-*.zip in latest release"
   api_url="https://api.github.com/repos/$repo/releases/latest"
 
-  # 404 (no releases / no repo) is expected for the speculative
-  # coilysiren/NAME probe; -f turns those into a non-zero exit we can
-  # ignore without aborting the loop.
+  # 404 is expected for the speculative coilysiren/NAME probe. -f makes that a
+  # non-zero exit we ignore without aborting the loop.
   body="$(curl -sfL "$api_url" 2>/dev/null || true)"
   if [[ -z "$body" ]]; then
     echo "    no latest release on $repo, skipping"
@@ -110,11 +91,8 @@ if [[ $found_any -eq 0 ]]; then
   exit 1
 fi
 
-# OpenTelemetry .NET self-diagnostics. The SDK reads OTEL_DIAGNOSTICS.json
-# from the process CWD ($SERVER_DIR for the eco-server unit) and dumps
-# exporter / SDK errors to LogDirectory. Without this we have no surface
-# for OTLP export failures, since the SDK swallows them by default.
-# Tracked in coilyco-flight-deck/eco-telemetry#5 (metrics not reaching vmsingle).
+# OTel .NET self-diagnostics: the SDK reads OTEL_DIAGNOSTICS.json from the process CWD
+# and dumps otherwise-swallowed export errors to LogDirectory. See eco-telemetry#5.
 if [[ "$NAME" == "EcoTelemetry" ]]; then
   diag="$SERVER_DIR/OTEL_DIAGNOSTICS.json"
   log_dir="$SERVER_DIR/Logs/EcoTelemetry"

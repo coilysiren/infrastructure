@@ -1,46 +1,6 @@
 #!/usr/bin/env python3
-# claude-session-watcher.py - per-machine watcher for Claude Code session
-# files. Sits inside ~/.claude/projects, listens for real file-system
-# events (create / modify), and HTTP POSTs each changed session file to
-# the tailnet-only session-sink Flask app on kai-server.
-#
-# This is component 1 of the cross-machine session-aggregation pipeline
-# (coilyco-flight-deck/infrastructure#224). The chain, bottom to top:
-#
-#   watcher (this script)  ->  session-sink Flask app  ->  repo-recall  ->  luca
-#
-# Runs on the 4 local environments that are NOT kai-server: Mac desktop,
-# Mac laptop, Windows-native, Windows WSL. kai-server needs no watcher -
-# prod repo-recall reads its sessions off local disk directly.
-#
-# Design notes:
-#   - Event-driven, not a poll. watchdog gives real OS events (FSEvents
-#     on macOS, ReadDirectoryChangesW on Windows, inotify on Linux).
-#   - Per-file debounce. Session .jsonl files are appended to constantly
-#     while a session is live; POSTing on every single append would be
-#     needlessly chatty. We coalesce events and POST a file once it has
-#     been quiet for SESSION_WATCHER_DEBOUNCE seconds.
-#   - The POST is a multipart upload, NOT an scp. The sink is a dumb
-#     write-only HTTP endpoint; it does not care how the file got there.
-#   - Failures never crash the watcher. A file that fails to POST stays
-#     dirty and is retried on the next flush tick.
-#
-# Config (all via environment, install scripts wire these up):
-#   SESSION_SINK_URL          required. Full ingest URL of the Flask app,
-#                             e.g. http://<sink-host>:<port>/ingest
-#   SESSION_WATCHER_MACHINE   required. Stable machine id, e.g.
-#                             kai-mac-desktop / kai-desktop-tower-wsl.
-#                             Sent so the sink namespaces files per host
-#                             and session UUIDs cannot collide.
-#   CLAUDE_PROJECTS_DIR       optional. Defaults to ~/.claude/projects.
-#   SESSION_WATCHER_DEBOUNCE  optional. Quiescence window, seconds.
-#                             Default 3.0.
-#   SESSION_WATCHER_TIMEOUT   optional. Per-POST timeout, seconds.
-#                             Default 30.
-#
-# Dependencies: watchdog, requests. The install scripts provision these
-# into a dedicated venv so the watcher never collides with system
-# Python or another project's environment.
+# Per-machine watcher: debounce-POSTs changed Claude session .jsonl files to the
+# tailnet session-sink on kai-server. See docs/claude-session-watcher.md.
 
 import argparse
 import dataclasses
@@ -57,9 +17,8 @@ from watchdog.observers import Observer
 
 LOG = logging.getLogger("claude-session-watcher")
 
-# Only these files are session transcripts worth shipping. Claude Code
-# also drops sidecar files (lock files, bare-UUID temp files) into the
-# same directories; ignore everything that is not a .jsonl.
+# Only .jsonl files are session transcripts worth shipping; ignore the
+# sidecar lock/temp files Claude Code drops in the same directories.
 SESSION_SUFFIX = ".jsonl"
 
 

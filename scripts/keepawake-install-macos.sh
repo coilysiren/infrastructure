@@ -1,38 +1,9 @@
 #!/usr/bin/env bash
-# keepawake-install-macos.sh - hold a macOS workstation awake so remote
-# dispatch keeps running after Kai walks away from the desk, whether or not
-# the laptop is plugged in. Installs a root LaunchDaemon that ticks every 60s
-# and reconciles `pmset disablesleep`.
-# Idempotent: re-run after changing args; it rewrites the manager + plist and
-# re-bootstraps the daemon.
-#
-# Why a root LaunchDaemon (not a user LaunchAgent like the remote-control one):
-# `pmset disablesleep` requires root, and the hold must survive logout / the
-# login window, which a user-scoped LaunchAgent does not.
-#
-# Behavior - held awake by default (power-source-agnostic, so it survives
-# battery AND lid-closed, the only state `disablesleep` covers), released in
-# two cases so the hold can never do harm:
-#   - the nightly maintenance window (MAINT_HOUR, default 03 -> 03:00-03:59
-#     local) so the software-update + reboot cycle runs clean, then re-asserts;
-#   - on battery below FLOOR% (default 30) so an unattended pack can't drain
-#     to zero.
-# Display sleep is left untouched. Every flip logs to /var/log/keepawake.log.
-#
-# Why a script and not an Ansible role: writing /Library/LaunchDaemons +
-# /usr/local/sbin needs root, and `coily ansible-freshen` is a deliberately
-# password-free pipeline (every role runs become: false) driven TTY-less by
-# coily, which cannot answer a sudo prompt - same reason sudoers/ and systemd/
-# ship as one-time `sudo install` artifacts rather than freshen steps.
-#
-# Run from the repo checkout as the target user; it self-escalates via sudo
-# (one password prompt). Override defaults with env vars, e.g.
-#   FLOOR=15 MAINT_HOUR=04 bash scripts/keepawake-install-macos.sh
-#
-# Uninstall:
-#   sudo launchctl bootout system /Library/LaunchDaemons/me.coilysiren.keepawake.plist
-#   sudo rm /Library/LaunchDaemons/me.coilysiren.keepawake.plist /usr/local/sbin/keepawake-manager.sh
-#   sudo pmset -a disablesleep 0
+# Hold a macOS workstation awake (root LaunchDaemon reconciling `pmset disablesleep`
+# every 60s) so remote dispatch survives Kai leaving the desk. Idempotent.
+
+# Held by default, released only in the nightly maint window (MAINT_HOUR) and on battery
+# below FLOOR%. Run as the target user, self-escalates via sudo. Override via env vars.
 
 set -euo pipefail
 
@@ -54,8 +25,9 @@ echo "==> write manager -> ${MGR}"
 install -d -m 0755 "$(dirname "${MGR}")"
 cat > "${MGR}" <<MGREOF
 #!/bin/bash
-# keepawake manager - one reconcile tick. Managed by
-# scripts/keepawake-install-macos.sh; edit there and re-run, not here.
+
+# keepawake manager, one reconcile tick. Managed by keepawake-install-macos.sh:
+# edit there and re-run, not here.
 set -euo pipefail
 FLOOR=${FLOOR}
 MAINT_HOUR="${MAINT_HOUR}"

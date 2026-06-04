@@ -1,13 +1,6 @@
 #!/usr/bin/env bash
-# coily-update-install.sh - install the coily auto-update unit + timer
-# on kai-server. Idempotent: re-run after editing the unit files.
-#
-# Prereqs:
-#   - coily already installed via scripts/coily-install.sh.
-#   - Broad NOPASSWD coily sudoers rule in place so `coily systemctl start
-#     coily-update.service` self-elevates non-TTY (coily#203).
-#
-# Run as the `kai` user from the repo checkout. Sudo is invoked per-step.
+# Install the coily auto-update unit + timer on kai-server. Idempotent. Prereqs:
+# coily-install.sh plus the NOPASSWD coily sudoers rule (coily#203). Run as kai.
 
 set -euo pipefail
 

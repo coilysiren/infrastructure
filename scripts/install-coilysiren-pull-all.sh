@@ -1,8 +1,5 @@
 #!/usr/bin/env bash
-# install-coilysiren-pull-all.sh - install the pull-all unit + timer on
-# kai-server. Idempotent.
-#
-# Run as: bash /home/kai/projects/coilysiren/infrastructure/scripts/install-coilysiren-pull-all.sh
+# Install the pull-all unit + timer on kai-server. Idempotent. Run via bash.
 
 set -euo pipefail
 

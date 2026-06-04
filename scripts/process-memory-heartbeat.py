@@ -1,22 +1,6 @@
 #!/usr/bin/env python3
-# process-memory-heartbeat.py - sample per-process RSS on this host, humanize
-# generic interpreter names (python, node, etc.) into something readable, and
-# push the result to VictoriaMetrics single via OTLP/HTTP protobuf.
-#
-# Runs on kai-server every 30s via process-memory-heartbeat.timer.
-#
-# Output:
-#   POST <VMSINGLE_OTLP_URL> (Content-Type: application/x-protobuf) with two gauges:
-#     process_memory_rss_bytes{process,user,host}      # per-process aggregate
-#     system_memory_bytes{state,host}                  # total/available/free/buffers/cached
-#
-# Defaults to the in-cluster vmsingle NodePort at http://localhost:30428.
-# VictoriaMetrics single does NOT accept OTLP/JSON - protobuf only - so this
-# script hand-encodes the small subset of OTLP messages it needs (the proto
-# wire format is stable and trivial). VM lowercases / underscores the metric
-# and attribute names automatically.
-#
-# Stdlib only - matches thermal-heartbeat's no-venv constraint.
+# Sample per-process RSS, humanize interpreter names, and push to VictoriaMetrics
+# single via OTLP/HTTP protobuf. Runs on kai-server every 30s; stdlib only.
 
 import argparse
 import os
@@ -179,9 +163,7 @@ def read_meminfo() -> dict[str, int]:
 
 
 # --- minimal OTLP protobuf encoder ---------------------------------------
-# Wire format reference: https://protobuf.dev/programming-guides/encoding/
-# OTLP metrics schema:
-#   https://github.com/open-telemetry/opentelemetry-proto/blob/main/opentelemetry/proto/metrics/v1/metrics.proto
+# Wire format: https://protobuf.dev/programming-guides/encoding/
 
 
 def _varint(n: int) -> bytes:
@@ -221,11 +203,8 @@ def _key_value(key: str, value: str) -> bytes:
 
 
 def _number_data_point(attrs: list[tuple[str, str]], ts_ns: int, value: int) -> bytes:
-    # NumberDataPoint {
-    #   repeated KeyValue attributes = 7;
-    #   fixed64 time_unix_nano = 3;
-    #   sfixed64 as_int = 6;
-    # }
+    # NumberDataPoint: attributes=7 (repeated KeyValue), time_unix_nano=3
+    # (fixed64), as_int=6 (sfixed64).
     body = b""
     for k, v in attrs:
         body += _len_delim(7, _key_value(k, v))

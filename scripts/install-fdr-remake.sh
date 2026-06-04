@@ -1,24 +1,9 @@
 #!/usr/bin/env bash
-# install-fdr-remake.sh - build and install the fdr-remake binary
-# plus its systemd unit and sudoers fragment on kai-server.
-#
-# fdr-remake is the C++ rewrite of factorio-discord-relay, used as a
-# sidecar to factorio-server.service for Factorio<>Discord chat
-# bridging. Upstream: https://codeberg.org/Jaskowicz/fdr-remake.
-# Tracking issue: coilyco-flight-deck/infrastructure#101. Script issue: #139.
-#
-# Idempotent: re-run to upgrade. Skips clone+build if the binary
-# already exists; pass FORCE=1 to rebuild even when present. Pin the
-# D++ version via DPP_VERSION; the default is the version the bridge
-# was last known to build against, so a rebuild months later still
-# produces a working binary.
-#
-# Does not enable or start fdr-remake.service. SSM creds must land
-# first (see coilysiren/agentic-os-kai SSM.md /factorio/* section). The
-# script prints the exact next commands to run.
-#
-# Run as: bash /home/kai/projects/coilysiren/infrastructure/scripts/install-fdr-remake.sh
-# (sudo is invoked per-step, no need to run the whole script as root.)
+# Build + install the fdr-remake binary (Factorio<>Discord relay sidecar), its systemd
+# unit, and sudoers fragment on kai-server. See infrastructure#101.
+
+# Idempotent (FORCE=1 to rebuild, DPP_VERSION pins D++). Does not enable the service:
+# SSM /factorio/* creds land first, then the printed next commands. Run via bash.
 
 set -euo pipefail
 
@@ -38,9 +23,8 @@ sudo apt-get update
 sudo apt-get install -y cmake build-essential git pkg-config libssl-dev zlib1g-dev wget
 
 echo ">>> checking D++ ${DPP_VERSION}"
-# dpkg-query exits non-zero when the package is missing, which would
-# trip set -e. Wrap in an if-else to make the missing-package branch
-# explicit and survivable.
+# dpkg-query exits non-zero when the package is missing (tripping set -e), so the
+# if-else makes the missing-package branch explicit and survivable.
 if dpkg-query -W -f='${Version}' libdpp 2>/dev/null | grep -q "^${DPP_VERSION}"; then
   echo "    libdpp ${DPP_VERSION} already installed"
 else

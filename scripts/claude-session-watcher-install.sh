@@ -1,30 +1,6 @@
 #!/usr/bin/env bash
-# claude-session-watcher-install.sh - install the Claude session watcher
-# as a systemd unit on a Linux host. The intended target is the WSL side
-# of kai-desktop-tower; it also works on any other systemd Linux box
-# that runs Claude Code sessions.
-#
-# NOT for kai-server itself: prod repo-recall reads kai-server's
-# sessions off local disk directly, so kai-server needs no watcher.
-#
-# Component 1 of the cross-machine session-aggregation pipeline
-# (coilyco-flight-deck/infrastructure#224). Watches ~/.claude/projects and HTTP
-# POSTs each changed session file to the tailnet-only session-sink.
-#
-# Idempotent: re-run to upgrade the script, refresh the venv, or change
-# the machine id.
-#
-# Usage:
-#   bash scripts/claude-session-watcher-install.sh --machine kai-desktop-tower-wsl
-#   bash scripts/claude-session-watcher-install.sh --uninstall
-#
-# SESSION_SINK_URL is resolved from SSM (/coilysiren/session-sink/url) or
-# taken from the SESSION_SINK_URL env var. It embeds a tailnet FQDN (an
-# opaque id) so it is never committed - it lands only in the local env
-# file /etc/claude-session-watcher.env.
-#
-# Prereqs: uv on PATH, aws CLI configured (unless SESSION_SINK_URL is
-# passed explicitly). Run as the `kai` user; sudo is invoked per-step.
+# Install the Claude session watcher as a systemd unit on a Linux host (not
+# kai-server). Run as kai. See docs/claude-session-watcher.md.
 
 set -euo pipefail
 

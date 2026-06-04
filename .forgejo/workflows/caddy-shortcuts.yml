@@ -1,18 +1,10 @@
 name: caddy-shortcuts
 
-# Daily regen of caddy/sites/*.caddy from sibling repos' coily.yaml
-# `tailnet.shortcut` declarations. See coilyco-flight-deck/infrastructure#129
-# for the design.
-#
-# Reload on kai-server is manual today:
-#   cd ~/projects/coilysiren/infrastructure && git pull
-#   sudo caddy reload --config /etc/caddy/Caddyfile
-#
-# Reads sibling repos via the Forgejo API (`forgejo.coilysiren.me`).
-# Auto-injected `GITHUB_TOKEN` is a Forgejo-issued token authenticating
-# against this Forgejo instance; gives rate-limit headroom + read access
-# to private siblings the runner user can see. The commit-back push to
-# Forgejo uses the same token.
+# Daily regen of caddy/sites/*.caddy from siblings' coily.yaml tailnet.shortcut decls.
+# Design in coilyco-flight-deck/infrastructure#129; kai-server reload is still manual.
+
+# Reads siblings via the Forgejo API; the auto-injected GITHUB_TOKEN is a Forgejo token
+# giving rate-limit headroom and read access, and is reused for the commit-back push.
 
 on:
   schedule:
@@ -40,11 +32,8 @@ jobs:
           yq --version
 
       - name: regenerate snippets
-        # No FORGEJO_TOKEN: Forgejo's auto-injected GITHUB_TOKEN is scoped
-        # to the current repo only and cannot read sibling repos. The
-        # script enumerates and reads sibling coily.yaml anonymously
-        # (works for public repos). Private sibling repos with shortcuts
-        # will not render until a broader-scope token is in play.
+        # No FORGEJO_TOKEN: GITHUB_TOKEN is repo-scoped, so the script reads sibling
+        # coily.yaml anonymously (public only). Private siblings need a broader token.
         run: |
           uv run python scripts/generate-caddy-shortcuts.py
 

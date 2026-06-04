@@ -33,12 +33,8 @@ def tf_output_json(name: str) -> dict[str, str]:
 
 
 def set_secret(repo: str, name: str, value: str) -> bool:
-    # This vintage of gh has no --body-file, and stdin doesn't propagate
-    # through the coily passthrough. Pass --body <value> directly: it
-    # lands on argv (subprocess uses execvp, not shell), so there is no
-    # expansion risk. Federated-identity ids and OIDC audiences are
-    # alphanumeric plus `-`, `_`, `.`, `/` - all argv-safe and accepted
-    # by coily's metacharacter gate.
+    # gh here lacks --body-file and stdin doesn't cross the coily passthrough,
+    # so pass --body on argv (execvp, no shell). See docs/tailscale.md.
     print(f"$ gh secret set {name} --repo coilysiren/{repo}  # body redacted")
     result = subprocess.run(
         ["coily", "ops", "gh", "secret", "set", name, "--repo", f"coilysiren/{repo}", "--body", value],

@@ -1,23 +1,6 @@
 #!/usr/bin/env bash
-# coilysiren-tangled-knot-autodeploy.sh - autodeploy the Tangled knot
-# (tangled.coilysiren.me) on kai-server. Picks up new release tags from
-# tangled.org/tangled.org/core and rolls them out behind a safety
-# sandwich: backup, verify, build, atomic symlink swap, restart,
-# healthcheck, auto-rollback on failure.
-#
-# Invoked by coilysiren-tangled-knot-autodeploy.timer daily ~04:00, and
-# on-demand via
-# `coily systemctl start coilysiren-tangled-knot-autodeploy.service`
-# or by running this script directly as root.
-#
-# Why: the knot is currently pinned to whatever tag install-tangled-knot.sh
-# baked in. Upstream ships new alpha tags roughly weekly. This timer keeps
-# the live deploy current without manual intervention, and refuses to leave
-# the box in a broken state when an upgrade misbehaves.
-#
-# The previous Nix store path is retained automatically (no GC root games
-# are needed here), so the rollback in step 9 is a symlink flip plus a
-# service restart. See infrastructure#293.
+# Autodeploy the Tangled knot (tangled.coilysiren.me): pick up new upstream alpha
+# tags behind backup/verify/build/swap/healthcheck/auto-rollback (infrastructure#293).
 
 set -uo pipefail
 
@@ -47,9 +30,8 @@ if [[ -z "$NEW_TAG" ]]; then
 fi
 echo "    newest: $NEW_TAG"
 
-# 2) No-op when the symlink already names the new tag. Nix store paths
-# embed the flake $name (which includes the tag) so a substring match is
-# enough; the build is the costly step and we want to skip it cheaply.
+# 2) No-op when the symlink store path already contains the new tag, skipping
+# the costly build. Nix store paths embed the flake $name (which includes it).
 if [[ ! -L "$KNOT_CURRENT" ]]; then
   echo "ABORT: $KNOT_CURRENT is not a symlink; first install via install-tangled-knot.sh" >&2
   exit 1
@@ -65,9 +47,8 @@ if [[ "$CURRENT_STORE" == *"$NEW_TAG"* ]]; then
 fi
 echo "    current: $CURRENT_STORE"
 
-# 3) Snapshot /var/lib/tangled-knot/ as a tar.gz. Taken with the knot
-# running; this is rollback insurance, not a transaction-consistent
-# restore point. The real recovery path is the previous store symlink.
+# 3) Snapshot /var/lib/tangled-knot/ as a tar.gz (knot running). Rollback
+# insurance, not a consistent restore point; real recovery is the prior symlink.
 ts="$(date -u +%Y%m%dT%H%M%SZ)"
 backup="$KNOT_BACKUP_DIR/tangled-knot-$ts.tar.gz"
 echo ">>> backing up $KNOT_STATE -> $backup"
@@ -92,9 +73,8 @@ if ! tar -tzf "$backup" 2>/dev/null | grep -qE '(^|/)tangled-knot/knotserver\.db
 fi
 echo "    verified: $backup"
 
-# 4b) Rotate. Keep the $KNOT_BACKUP_KEEP newest tar.gz files. #291 will
-# replace this with size-based rotation; keep-last-N is the simplest
-# shape that swaps cleanly when that lands.
+# 4b) Rotate: keep the $KNOT_BACKUP_KEEP newest tar.gz files. #291 will swap this
+# keep-last-N for size-based rotation later.
 echo ">>> rotating backups (keep last $KNOT_BACKUP_KEEP)"
 find "$KNOT_BACKUP_DIR" -maxdepth 1 -type f -name 'tangled-knot-*.tar.gz' \
   -printf '%T@ %p\n' 2>/dev/null \
@@ -117,10 +97,8 @@ if [[ -z "$NEW_STORE" || ! -d "$NEW_STORE" ]]; then
 fi
 echo "    built: $NEW_STORE"
 
-# 6) Atomic symlink swap. `ln -sfn` is not atomic with respect to a
-# reader because it can briefly remove and recreate the link; `mv -Tf`
-# of a freshly-built link rename-replaces the target in one inode-table
-# update. See `man 2 rename`.
+# 6) Atomic symlink swap via `mv -Tf` of a fresh link (one rename), since
+# `ln -sfn` can briefly remove and recreate the link. See `man 2 rename`.
 echo ">>> swapping $KNOT_CURRENT: $CURRENT_STORE -> $NEW_STORE"
 ln -sfn "$NEW_STORE" "$KNOT_CURRENT.new"
 mv -Tf "$KNOT_CURRENT.new" "$KNOT_CURRENT"
@@ -149,9 +127,8 @@ if (( healthy == 1 )); then
   exit 0
 fi
 
-# 9) Rollback. Symlink flip to the previous store path + restart. If the
-# previous store path is itself unhealthy we leave the box for human
-# triage; the backup path is on the last line of the report.
+# 9) Rollback: symlink flip to the previous store path + restart. If that is
+# also unhealthy, leave the box for human triage (backup path in the report).
 echo "FAIL: healthcheck did not return 200 within ${KNOT_HEALTH_TIMEOUT}s; rolling back to $CURRENT_STORE" >&2
 ln -sfn "$CURRENT_STORE" "$KNOT_CURRENT.new"
 mv -Tf "$KNOT_CURRENT.new" "$KNOT_CURRENT"

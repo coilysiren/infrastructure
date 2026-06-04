@@ -1,30 +1,9 @@
 #!/usr/bin/env bash
-# Provision the Forgejo token the tap-writer runner uses to push formula
-# bumps into the coilyco-flight-deck homebrew tap(s).
-#
-# What it does:
-#   1. Mints a Forgejo personal access token (scope: write:repository),
-#      named "tap-bump", for the owning user via the Forgejo API.
-#   2. Stores it at SSM /forgejo/tap-bump-token as a SecureString, without
-#      ever echoing the value.
-#
-# The token is repository-write scoped (not admin). Because the owning user
-# can write every coilyco-flight-deck repo, this single token covers all of
-# the planned taps - the tap-writer runner reads it through a git credential
-# helper (deploy/forgejo-runner-tap-writer.yml), so it never lands in a job
-# environment or a Forgejo Actions secret.
-#
-# Run on a machine that has: Forgejo basic-auth credentials, AWS creds for
-# SSM in us-east-1, and coily on PATH.
-#
-# Usage:
-#   FORGEJO_USER=<user> FORGEJO_PASS=<pass> \
-#     ./scripts/provision-tap-bump-token.sh
-# Omit either var and the script prompts for it (password read silently).
-#
-# Idempotency: the SSM put runs WITHOUT --overwrite, so a re-run fails fast
-# with ParameterAlreadyExists rather than clobbering a live token. To
-# rotate, delete the old token in Forgejo + the SSM param first, then re-run.
+# Mint a write:repository Forgejo token "tap-bump" and store it at SSM
+# /forgejo/tap-bump-token (SecureString, never echoed) for the tap-writer runner.
+
+# Set FORGEJO_USER/FORGEJO_PASS or be prompted. The SSM put omits --overwrite, so a
+# re-run fails fast rather than clobbering. Rotate by deleting old token + param first.
 set -euo pipefail
 
 FORGEJO_BASE_URL="${FORGEJO_BASE_URL:-https://forgejo.coilysiren.me}"
@@ -57,9 +36,8 @@ if [ -z "${token}" ]; then
   exit 1
 fi
 
-# --- store in SSM ----------------------------------------------------------
-# Pipe straight into coily; never print the token. No --overwrite so a stale
-# value is never silently clobbered (infra Safety convention).
+# Store in SSM: pipe straight into coily, never print the token. No --overwrite, so a
+# stale value is never silently clobbered (infra Safety convention).
 echo "Storing at SSM ${SSM_PATH} (SecureString, no overwrite)..."
 coily ops aws ssm put-parameter \
   --name "${SSM_PATH}" \

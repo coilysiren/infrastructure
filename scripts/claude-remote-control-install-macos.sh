@@ -1,30 +1,11 @@
 #!/usr/bin/env bash
-# claude-remote-control-install-macos.sh - install the Claude Code
-# remote-control daemon as a user LaunchAgent on kais-macbook-pro.
-# Idempotent: re-run after changing args; it rewrites the plist and
-# re-bootstraps.
-#
-# Why launchd LaunchAgent (user-scoped) and not a LaunchDaemon (root):
-# the daemon needs Kai's login keychain, PATH, SSH/git creds and the
-# workspace under /Users/kai - none of which a root LaunchDaemon sees.
-#
-# Prereqs:
-#   - `claude` on PATH (standalone or npm install).
-#   - `claude login` already run as this user against the active claude.ai
-#     subscription (Pro/Max/Team/Enterprise; API keys not supported).
-#   - `claude remote-control --help` lists the subcommand (recent CLI).
-#
-# Laptop caveat: a LaunchAgent only runs while logged in and awake. Closed
-# lid -> the claude.ai/code dropdown entry goes offline. Unlike always-on
-# kai-server, this host is best-effort.
-#
-# Run as the target user (no sudo) from the repo checkout.
+# Install the remote-control daemon as a user LaunchAgent on kais-macbook-pro.
+# Idempotent; run as target user (no sudo). See docs/claude-remote-control.md.
 
 set -euo pipefail
 
-# NAME and WORKDIR are overridable for additional macOS hosts (each host
-# needs a distinct --name or the claude.ai/code dropdown rows collide).
-# Defaults target kais-macbook-pro; kai-mac-kapwing sets both via env.
+# NAME and WORKDIR are env-overridable per host (distinct --name avoids dropdown
+# row collisions). Defaults target kais-macbook-pro. See docs/claude-remote-control.md.
 NAME="${CLAUDE_RC_NAME:-kais-macbook-pro}"
 WORKDIR="${CLAUDE_RC_WORKDIR:-${HOME}/projects/coilysiren}"
 LABEL="me.coilysiren.claude-remote-control"
@@ -53,9 +34,8 @@ jq --arg wd "${WORKDIR}" '
 ' "${CLAUDE_JSON}" > "${tmp}"
 mv "${tmp}" "${CLAUDE_JSON}"
 
-# PATH for spawned sessions: dirname(claude) + homebrew + system. launchd
-# hands agents a sparse PATH, so the spawned `coily` / `git` / `node` need
-# this set explicitly or they won't resolve.
+# PATH for spawned sessions: dirname(claude) + homebrew + system. launchd hands
+# agents a sparse PATH, so coily/git/node need this set explicitly to resolve.
 CLAUDE_DIR="$(cd "$(dirname "${CLAUDE_BIN}")" && pwd)"
 BREW_BIN="$(/opt/homebrew/bin/brew --prefix 2>/dev/null || echo /opt/homebrew)/bin"
 AGENT_PATH="${CLAUDE_DIR}:${BREW_BIN}:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin"

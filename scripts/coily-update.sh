@@ -1,29 +1,16 @@
 #!/usr/bin/env bash
-# coily-update.sh - brew-upgrade coily plus every other formula, then
-# re-baseline coily's setup.
-#
-# Invoked by coily-update.timer weekly, and on-demand via
-# `coily systemctl start coily-update.service` after a tap push so the new
-# version lands without waiting for the next timer fire.
-#
-# Failure mode: any non-zero exit lights up `systemctl status` with the
-# usual "Failed" line; check `journalctl -u coily-update.service` for the
-# full output. brew-upgrade failure leaves the previously installed binary
-# in place.
+# Brew-upgrade coily plus every other formula, then re-baseline `coily setup`.
+# Run weekly by coily-update.timer, or on-demand after a tap push.
 
 set -euo pipefail
 
-# Non-interactive shells skip ~/.bashrc, so brew is not on PATH by
-# default. Source shellenv explicitly.
+# Non-interactive shells skip ~/.bashrc, so source brew shellenv explicitly.
 if [ -x /home/linuxbrew/.linuxbrew/bin/brew ]; then
   eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
 fi
 
-# brew update can race the global brew lock on boot when multiple
-# *-update.service units fire near-simultaneously after reboot
-# (coilyco-bridge/coily#240). Retry with linear backoff; six attempts at
-# 10s spacing covers the 1-min window the racing units typically
-# share without unbounded waiting.
+# brew update can race the global brew lock on boot (coilyco-bridge/coily#240).
+# Retry six times at 10s spacing to cover the ~1-min contention window.
 echo "==> brew update"
 for attempt in 1 2 3 4 5 6; do
   if brew update; then
@@ -41,9 +28,8 @@ echo "==> brew tap + upgrade coilyco-bridge/coily/coily"
 brew tap coilyco-bridge/coily https://github.com/coilyco-bridge/coily
 brew upgrade coilyco-bridge/coily/coily
 
-# Keep every other Linuxbrew formula on kai-server current too, not just
-# coily. Runs after the targeted coily upgrade so coily still lands even
-# if a later formula's upgrade fails and trips set -e.
+# Upgrade all other Linuxbrew formulae too, after the targeted coily upgrade so
+# coily still lands even if a later formula's upgrade trips set -e.
 echo "==> brew upgrade (all formulae)"
 brew upgrade
 

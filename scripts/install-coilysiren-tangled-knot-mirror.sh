@@ -1,27 +1,9 @@
 #!/usr/bin/env bash
-# install-coilysiren-tangled-knot-mirror.sh - install the tangled-knot
-# mirror unit + timer on kai-server. Idempotent.
-#
-# Run as: bash /home/kai/projects/coilysiren/infrastructure/scripts/install-coilysiren-tangled-knot-mirror.sh
-#
-# What this installs:
-#   - /etc/systemd/system/coilysiren-tangled-knot-mirror.service
-#   - /etc/systemd/system/coilysiren-tangled-knot-mirror.timer
-#   - /home/kai/.ssh/tangled-knot-mirror_ed25519{,.pub} (mode 600 / 644)
-#
-# Manual step required after first install: the public half of the
-# generated keypair must be registered against Kai's knot-owner DID
-# (KNOT_SERVER_OWNER in /etc/tangled-knot/knot.env) through the
-# appview at https://tangled.org. Without that registration, the
-# AuthorizedKeysCommand at /etc/ssh/tangled-knot-keyfetch will not
-# return this key to sshd and every push will fail. The script prints
-# the public key at the end so it can be pasted into the appview.
-#
-# Mirror also depends on the knot being installed (install-tangled-
-# knot.sh) and on the GitHub user having a working SSH key for
-# git@github.com:coilysiren/* clones (kai-server's existing key).
-#
-# See infrastructure#294.
+# Install the tangled-knot mirror unit + timer on kai-server (plus a dedicated SSH
+# keypair). Idempotent. Run via bash. Needs install-tangled-knot.sh first.
+
+# Manual step after first install: register the printed public key against the
+# knot-owner DID via https://tangled.org, else every push fails. See infrastructure#294.
 
 set -euo pipefail
 

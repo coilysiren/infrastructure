@@ -1,11 +1,5 @@
-# Helm values for the kai-server deployment of lunch-money-k8s.
-#
-# Chart source: https://github.com/coilyco-flight-deck/lunch-money-k8s (chart/).
-# This is the real deployment - the chart repo's examples/ holds a generic one.
-#
-# Deploy (see README.md):
-#   helm install lunch-money <lunch-money-k8s-checkout>/chart \
-#     -n lunch-money -f deploy/lunch-money/values.yaml
+# Real kai-server Helm values for lunch-money-k8s (chart source: coilyco-flight-deck/
+# lunch-money-k8s). Deploy steps in README.md. See docs/k3s-deploy-notes.md.
 
 image:
   repository: docker.io/coilysiren/lunch-money-k8s

@@ -1,15 +1,9 @@
 #!/usr/bin/env bash
-# setup-git-lfs.sh - wire Git LFS for the current user and re-smudge
-# any already-degraded LFS files in the coilysiren checkouts.
-#
-# coilysiren-pull-all.sh wires `git lfs install` on every run so future
-# pulls fetch real content. This script is the one-shot repair for a
-# checkout that was pulled before the filters existed and now holds
-# pointer text instead of binary assets. See
-# coilyco-flight-deck/infrastructure#286.
-#
-# Idempotent: `git lfs install --skip-repo` just rewrites the global
-# filter config, and `git lfs pull` is a no-op once content is real.
+# Wire Git LFS for the current user and re-smudge any already-degraded LFS files in the
+# coilysiren checkouts (one-shot repair for checkouts pulled before the filters existed).
+
+# Idempotent: install --skip-repo just rewrites global filter config, lfs pull is a
+# no-op once content is real. See infrastructure#286.
 
 set -euo pipefail
 

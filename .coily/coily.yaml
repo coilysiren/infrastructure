@@ -1,14 +1,5 @@
-# Per-repo command allowlist for infrastructure. Loaded by pkg/repocfg when
-# coily is invoked inside this checkout.
-#
-# Scope: dev verbs that run locally against the cluster via kubectl, helm,
-# and terraform, plus the llama deploy bootstrap. Systemd-unit ops live in
-# coily core (coily ssh systemctl, coily gaming eco / coily gaming
-# core-keeper / coily gaming icarus). The *-pre.sh / *-start.sh scripts
-# are invoked by systemd on kai-server and aren't runnable from a
-# workstation, so they stay out.
-#
-# Each verb below delegates to a Make target.
+# Per-repo command allowlist for infrastructure, loaded by pkg/repocfg in this checkout.
+# Local kubectl/helm/terraform dev verbs (via Make). systemd ops live in coily core.
 
 commands:
   k3s-list-dns:
@@ -81,11 +72,8 @@ commands:
     run: make ansible-mac-seed
     description: Seed ansible/group_vars/mac.yml from this machine's live brew leaves/casks/taps.
 
-# Free-form ssh-passthrough target list. Schema: coilyco-bridge/coily#187 phase 2.
-# `coily ssh <alias> -- <coily args>` resolves <alias> here, ssh's into the
-# target, and runs the supplied coily subcommand. Remote coily's lockdown is
-# the security boundary, not this client side. working_dir is a git toplevel
-# so the remote audit row binds to a real commit scope.
+# ssh-passthrough targets (coilyco-bridge/coily#187 ph2): `coily ssh <alias> -- <args>`.
+# Remote coily's lockdown is the boundary. working_dir is a git toplevel for audit scope.
 ssh:
   targets:
     kai-server:

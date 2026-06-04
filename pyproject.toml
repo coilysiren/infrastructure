@@ -42,16 +42,7 @@ excludes = [
 ]
 
 [tool.agentic-os.code-comments]
-# code-comments first enabled here at agentic-os v0.14.0 (#217), which also
-# extended the rule to YAML. The active ansible/** surface (YAML + its Python
-# modules) is held to the rule. Everything else is pre-existing comment debt
-# surfacing on first run - the deploy/terraform/workflow YAML and the
-# operational scripts/** shell+Python headers - grandfathered and retired
-# incrementally in #218.
-excludes = [
-    "deploy/**",
-    "terraform/**",
-    "scripts/**",
-    ".coily/coily.yaml",
-    ".forgejo/workflows/**",
-]
+# Enabled at agentic-os v0.14.0 (#217). The deploy/terraform/workflow YAML and
+# scripts/** shell+Python comment debt grandfathered there is now retired (#125),
+# so the whole tree is held to the rule with no excludes.
+excludes = []

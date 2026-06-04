@@ -1,14 +1,9 @@
 #!/usr/bin/env bash
-# install-tangled-knot.sh - install the Tangled knot as a host systemd
-# service on kai-server. Idempotent. Builds the knot via nix, pins the
-# /opt/tangled-knot/current symlink, wires the systemd unit, env, the
-# git user, and the sshd AuthorizedKeysCommand integration.
-#
-# Run as: bash /home/kai/projects/coilysiren/infrastructure/scripts/install-tangled-knot.sh
-#
-# Caddy (caddy/Caddyfile has the tangled.coilysiren.me block) and the
-# Route 53 A record are handled separately. The auto-deploy timer is a
-# follow-up. See infrastructure#280.
+# Install the Tangled knot as a host systemd service on kai-server. Idempotent: nix-builds
+# the knot, pins /opt/tangled-knot/current, wires the unit, env, git user, and sshd.
+
+# Run via bash. Caddy, the Route 53 A record, and the auto-deploy timer are separate
+# follow-ups. See infrastructure#280.
 
 set -euo pipefail
 

@@ -1,46 +1,6 @@
 #!/usr/bin/env bash
-# coilysiren-tangled-knot-mirror.sh - mirror every coilysiren GitHub repo
-# pushed in the last 48h to the self-hosted Tangled knot at
-# tangled.coilysiren.me.
-#
-# Invoked by coilysiren-tangled-knot-mirror.timer daily ~04:15, and on-
-# demand via
-# `coily systemctl start coilysiren-tangled-knot-mirror.service` or by
-# running this script directly.
-#
-# Why: same gap the Forgejo mirror closes for Forgejo. Code that reaches
-# GitHub from any host other than Kai's Mac (web edits, kai-server,
-# dispatch sessions, CI, other workstations) never lands on the knot.
-# This sweep closes that gap. The 48h window (not 24h) gives one full
-# day of overlap, so a single failed run self-heals the next night.
-#
-# Per repo: clone --mirror from GitHub, push --mirror to the knot at
-# git@localhost, delete. One at a time. A single-repo failure does not
-# abort the sweep.
-#
-# Auth: the knot is SSH-only for git write (no HTTPS API path). Push
-# via loopback SSH so we hit the same sshd that the knot's
-# AuthorizedKeysCommand (/etc/ssh/tangled-knot-keyfetch) gates. The
-# keyfetch wrapper resolves atproto-registered keys via the running
-# knot, so the SSH keypair we use here must be registered against
-# Kai's knot-owner DID through the appview at https://tangled.org. A
-# dedicated ed25519 keypair lives at TANGLED_MIRROR_KEY (default
-# /home/kai/.ssh/tangled-knot-mirror_ed25519); see the install script
-# header for the generation + DID-registration steps. See
-# infrastructure#294.
-#
-# URL shape: ssh://git@localhost/<KNOT_SERVER_OWNER>/<repo>. Two-
-# component owner/repo form per upstream knot's SSH Guard - confirmed
-# from tangled.org/core knotserver/internal.go. KNOT_SERVER_OWNER is
-# Kai's DID, sourced from /etc/tangled-knot/knot.env so a single edit
-# there flows to both the knot and this mirror.
-#
-# Create-if-missing: skipped (infrastructure#294 option 1). Repos must
-# be pre-registered via the appview before the mirror can push to them.
-# A push to an unregistered repo fails and the script logs FAIL and
-# moves on. Follow-up to lift the manual step lives at
-# infrastructure#294's "appview registration RPC" comment - file a
-# separate issue when that work starts.
+# Mirror coilysiren GitHub repos pushed in the last 48h to the Tangled knot over
+# loopback SSH. Repos must be pre-registered; failures don't abort (infrastructure#294).
 
 set -uo pipefail
 
@@ -66,9 +26,8 @@ if [[ ! -r "$SSH_KEY" ]]; then
   exit 1
 fi
 
-# Pin git's SSH to the dedicated key. IdentitiesOnly stops it falling
-# back to other agent keys; accept-new auto-trusts the loopback host
-# key on first run (low risk, sshd is on the same box).
+# Pin git's SSH to the dedicated key (IdentitiesOnly blocks agent-key fallback;
+# accept-new auto-trusts the loopback host key, low risk on the same box).
 export GIT_SSH_COMMAND="ssh -i $SSH_KEY -o IdentitiesOnly=yes -o StrictHostKeyChecking=accept-new"
 
 # coilysiren repos with a push in the window. GitHub REST, sorted by

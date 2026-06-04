@@ -1,13 +1,5 @@
-# Helm values for the victoria-metrics-agent chart.
-# https://github.com/VictoriaMetrics/helm-charts/tree/master/charts/victoria-metrics-agent
-#
-# Standalone scraper. Discovers node-exporter pods in the observability
-# namespace via the kubernetes_sd_configs role=endpoints, scrapes :9100,
-# remote-writes to vmsingle in the same namespace.
-#
-# The instance-relabel rule rewrites `instance: <KAI_SERVER_TAILNET_IP>:9100`
-# (which would leak the tailnet IP onto Grafana graphs) to the k8s node
-# name like `kai-server`.
+# Helm values for victoria-metrics-agent: scrapes node-exporter :9100, remote-writes
+# to vmsingle. Relabel rule keeps the tailnet IP off graphs. See docs/k3s-deploy-notes.md.
 
 # Pin to kai-server alongside the rest of the stack.
 nodeSelector:

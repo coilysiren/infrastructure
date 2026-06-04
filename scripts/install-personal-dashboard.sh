@@ -1,11 +1,6 @@
 #!/usr/bin/env bash
-# install-personal-dashboard.sh - install personal-dashboard from the
-# coilysiren tap and wire it up as a systemd service on kai-server.
-#
-# Idempotent: re-run to upgrade.
-#
-# Run as: bash /home/kai/projects/coilysiren/infrastructure/scripts/install-personal-dashboard.sh
-# (sudo is invoked per-step, no need to run the whole script as root.)
+# Install personal-dashboard from the coilysiren tap and wire it as a systemd service
+# on kai-server. Idempotent. Run via bash (sudo invoked per-step).
 
 set -euo pipefail
 

@@ -1,21 +1,6 @@
 #!/usr/bin/env bash
-# claude-remote-control-restart-precheck.sh - ExecCondition gate for the
-# daily claude-remote-control restart.
-#
-# Verifies the most recent coilysiren-pull-all.service run succeeded and
-# is not still running. If either check fails, skip the restart so the
-# daemon keeps running on yesterday's tree instead of restarting into a
-# bad / mid-pull state.
-#
-# Exit codes (per systemd ExecCondition semantics):
-#   0       proceed with the unit's ExecStart
-#   1-254   skip the unit silently, log the journal entry
-#   255     hard fail the unit
-#
-# Returns 1 (skip) on any not-success condition. The journal line is the
-# operator's signal to look at why pull-all is unhappy.
-#
-# See coilyco-flight-deck/infrastructure#211, coilyco-bridge/agentic-os-kai#612.
+# ExecCondition gate for the daily restart: skip (exit 1) unless the last
+# coilysiren-pull-all run succeeded and finished. See docs/claude-remote-control.md.
 
 set -uo pipefail
 
@@ -31,12 +16,8 @@ if [[ "$result" != "success" ]]; then
   exit 1
 fi
 
-# Second gate: verify `claude` resolves the SAME way the daemon's non-login
-# ExecStart will (`source nvm.sh && exec claude`). A floating nvm default
-# (lts/*) can orphan the global on a node bump, and restarting into that
-# state is exactly what dropped kai-server out of the Remote Control
-# dropdown. Refuse the restart so the currently-running daemon keeps serving
-# until kai-server-node-tooling-ensure.service has reinstalled the global.
+# Second gate: verify `claude` resolves via `source nvm.sh` as the daemon will.
+# A floating nvm default can orphan the global. See docs/claude-remote-control.md.
 NVM_DIR="${NVM_DIR:-/home/kai/.nvm}"
 if ! /bin/bash -c 'source "'"$NVM_DIR"'/nvm.sh" >/dev/null 2>&1 && command -v claude >/dev/null 2>&1'; then
   echo "claude not resolvable via 'source nvm.sh'; skipping restart to keep the live daemon up"

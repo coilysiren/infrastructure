@@ -1,23 +1,5 @@
-# In-cluster OCI registry for homelab deploys. Replaces the GitHub-Actions
-# "docker save | tailscale ssh | ctr import" path: GitHub no longer joins
-# the tailnet for any repo. The Forgejo runner (kai-desktop-tower-wsl node)
-# builds an image and pushes here; kai-server's containerd pulls from here.
-#
-# Reachability model (no DNS, no TLS, no GitHub):
-#   * Service is NodePort 30500 -> registry pod :5000.
-#   * Both the runner's DinD and kai-server's containerd address the
-#     registry at the kai-server LAN IP 192.168.0.194:30500 (RFC1918,
-#     stable, already in the k3s API cert SANs - safe to hardcode per
-#     the SSM opaque-vs-meaningful bright line).
-#   * Insecure (plain http). containerd is told to treat it as insecure
-#     via /etc/rancher/k3s/registries.yaml on kai-server (see the runbook
-#     in docs/k3s-deploy-notes.md §11). The runner's DinD is told via
-#     --insecure-registry in deploy/forgejo-runner.yml.
-#
-# Image ref scheme baked into each repo's deploy manifest:
-#   192.168.0.194:30500/<name-dashed>:<git-sha>
-#
-# Apply: sudo k3s kubectl apply -f deploy/registry.yml
+# In-cluster OCI registry (NodePort 30500, insecure http) for homelab deploys.
+# Ref scheme 192.168.0.194:30500/<name>:<sha>. Details: docs/k3s-deploy-notes.md §11.
 ---
 apiVersion: v1
 kind: Namespace
