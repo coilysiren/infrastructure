@@ -8,11 +8,11 @@ kai-server roles.
 
 ```
 ansible/
-├── ansible.cfg          # repo-local config (inventory, roles, yaml output)
-├── inventory/hosts.yml  # `mac` group -> localhost over a local connection
-├── group_vars/mac.yml   # declared taps / formulae / casks (seeded from live)
-├── playbooks/mac.yml    # converge a Mac
-└── roles/homebrew/      # taps + formulae + casks via community.general
+├── ansible.cfg                     # repo-local config (inventory, roles, yaml output)
+├── inventory/hosts.yml             # `mac` group -> localhost over a local connection
+├── inventory/group_vars/mac.yml    # declared taps / formulae / casks (seeded from live)
+├── playbooks/mac.yml               # converge a Mac
+└── roles/homebrew/                 # taps + formulae + casks via community.general
 ```
 
 ## Usage

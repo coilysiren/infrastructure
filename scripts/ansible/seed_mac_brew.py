@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Seed ansible/group_vars/mac.yml from this machine's live Homebrew state.
+"""Seed ansible/inventory/group_vars/mac.yml from this machine's live Homebrew state.
 
 Captures top-level formulae (`brew leaves`), casks, and third-party taps, then
 rewrites the group_vars so a subsequent `coily ansible-mac` check run is a
@@ -15,7 +15,7 @@ import sys
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[2]
-GROUP_VARS = REPO / "ansible" / "group_vars" / "mac.yml"
+GROUP_VARS = REPO / "ansible" / "inventory" / "group_vars" / "mac.yml"
 
 # Core taps that ship with Homebrew and never need declaring.
 SKIP_TAPS = {"homebrew/core", "homebrew/cask"}
