@@ -1,5 +1,5 @@
-# group_vars for the `mac` inventory group. Seeded from the live machine by
-# `coily ansible-mac-seed` (scripts/ansible/seed_mac_brew.py).
+# group_vars for the `mac` inventory group. Seeded from the live
+# machine by `coily ansible-mac-seed` (scripts/ansible/seed_mac_brew.py).
 # Additive: ansible ensures these are present, never uninstalls.
 # Curate by hand after seeding - this is the fleet's declared baseline.
 
@@ -17,7 +17,98 @@ homebrew_taps:
   - steipete/tap
 
 # Top-level formulae (brew leaves), not their dependencies.
-homebrew_installed_packages: []
+homebrew_installed_packages:
+  - asdf
+  - ast-grep
+  - atuin
+  - awscli
+  - bat
+  - bottom
+  - coilyco-flight-deck/ward/ward
+  - coilysiren/agent-guard/agent-guard
+  - coilysiren/coily/coily
+  - coilysiren/o2r/o2r
+  - coilysiren/repo-recall/repo-recall
+  - coilysiren/session-lattice/session-lattice-puller
+  - cryptography
+  - diff-pdf
+  - direnv
+  - dive
+  - docker
+  - docker-completion
+  - doggo
+  - duf
+  - dust
+  - duti
+  - erdtree
+  - eza
+  - fd
+  - flyctl
+  - fping
+  - gh
+  - git-delta
+  - git-filter-repo
+  - git-lfs
+  - glow
+  - golangci-lint
+  - googleworkspace-cli
+  - gradle
+  - gradle@7
+  - grpcurl
+  - grype
+  - helm
+  - httpie
+  - imagemagick
+  - jq
+  - json2tsv
+  - librsvg
+  - lima
+  - maven
+  - mcp-grafana
+  - micro
+  - mise
+  - mkcert
+  - mtr
+  - navi
+  - nethogs
+  - nmap
+  - nuget
+  - oath-toolkit
+  - openhue/cli/openhue-cli
+  - openjdk@11
+  - ouch
+  - pinentry-mac
+  - pipx
+  - powershell
+  - procs
+  - pyenv
+  - python@3.12
+  - ruby
+  - ruff
+  - rust
+  - scrcpy
+  - sd
+  - starship
+  - steipete/tap/mcporter
+  - stern
+  - tailscale
+  - tailwindcss
+  - tfenv
+  - tflint
+  - tokei
+  - tree
+  - trippy
+  - trufflehog
+  - uutils-coreutils
+  - uutils-diffutils
+  - uutils-findutils
+  - uv
+  - watch
+  - watchexec
+  - wget
+  - yq
+  - zlib
+  - zoxide
 
 # GUI apps + tools installed as casks.
 homebrew_cask_apps:
