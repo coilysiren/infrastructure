@@ -1,0 +1,13 @@
+[Unit]
+Description=Daily tick for coilysiren-github-mirror.service
+Requires=coilysiren-github-mirror.service
+
+[Timer]
+# 04:15 local daily, after coilysiren-forgejo-mirror (03:45) so GitHub trails
+# the now-canonical Forgejo rather than racing it.
+OnCalendar=*-*-* 04:15:00
+RandomizedDelaySec=600
+Persistent=true
+
+[Install]
+WantedBy=timers.target

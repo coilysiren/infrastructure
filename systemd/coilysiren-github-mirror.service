@@ -1,0 +1,13 @@
+[Unit]
+Description=Mirror recently-updated Forgejo repos to GitHub
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=kai
+WorkingDirectory=/home/kai
+ExecStart=/home/kai/projects/coilysiren/infrastructure/scripts/coilysiren-github-mirror.sh
+
+[Install]
+WantedBy=multi-user.target
