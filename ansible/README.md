@@ -1,27 +1,31 @@
 # ansible
 
-First-class Ansible for the coilysiren fleet. Today it converges macOS
-workstation Homebrew state; the layout is built to grow into Linux hosts and
-kai-server roles.
+First-class Ansible for the coilysiren fleet. `coily ansible-freshen` brings a
+host up to date: Homebrew state, the agent-compose context config, and a
+reconcile of local clones against the live repo layout. The Ansible port of
+`agentic-os-kai/scripts/up-to-date.py`; built to grow into Linux / kai-server.
 
 ## Layout
 
 ```
 ansible/
-├── ansible.cfg                     # repo-local config (inventory, roles, yaml output)
+├── ansible.cfg                     # repo-local config (inventory, roles, library, yaml output)
 ├── inventory/hosts.yml             # `mac` group -> localhost over a local connection
 ├── inventory/group_vars/mac.yml    # declared taps / formulae / casks + agent_compose_scopes
-├── playbooks/mac.yml               # converge a Mac (homebrew + agent-compose)
+├── inventory/group_vars/all.yml    # fleet-wide repos role vars (owner, forgejo, ssm path)
+├── library/repo_registry.py        # read-only repo-layout discovery module
+├── playbooks/freshen.yml           # freshen a host (homebrew + agent-compose + repos)
 ├── roles/homebrew/                 # taps + formulae + casks via community.general
-└── roles/agent-compose/            # render ~/.config/agent-compose + converge harness symlinks
+├── roles/agent-compose/            # render ~/.config/agent-compose + converge harness symlinks
+└── roles/repos/                    # reconcile local clones against the live repo layout
 ```
 
 ## Usage
 
 ```bash
 coily ansible-mac-seed              # capture this Mac's brew state into group_vars/mac.yml
-coily ansible-mac                   # dry run (--check --diff), mutates nothing
-coily ansible-mac action=apply      # converge for real
+coily ansible-freshen               # dry run (--check --diff), mutates nothing
+coily ansible-freshen action=apply  # converge for real
 ```
 
 Ansible ships as the `ansible` dependency in the repo's `pyproject.toml`

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Run ansible/playbooks/mac.yml against this macOS workstation.
+"""Run ansible/playbooks/freshen.yml to bring this host up to date.
 
 action (argv[1], default `check`):
   check  - dry run with --check --diff, mutates nothing, shows the plan
@@ -29,7 +29,7 @@ def main():
     env["ANSIBLE_CONFIG"] = str(REPO / "ansible" / "ansible.cfg")
 
     flags = " --check --diff" if action == "check" else ""
-    run(f"ansible-playbook ansible/playbooks/mac.yml{flags}", env=env)
+    run(f"ansible-playbook ansible/playbooks/freshen.yml{flags}", env=env)
     return 0
 
 

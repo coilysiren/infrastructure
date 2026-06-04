@@ -40,7 +40,9 @@ Baseline of `coilysiren/infrastructure`. Update when scope changes.
 ## Workstation and host convergence (Ansible)
 
 - **First-class Ansible subsystem** - `ansible/` converges workstation/host state, shipped as a uv-managed dependency (`community.general` bundled) and driven by coily verbs in the repo's k8s/terraform pattern. Full walkthrough in `docs/ansible.md`.
-- **macOS Homebrew convergence** - The `mac` inventory group ensures declared taps, formulae, and casks are present (additive, never uninstalls). `coily ansible-mac` dry-runs (`--check --diff`); `coily ansible-mac action=apply` converges. `coily ansible-mac-seed` captures the live machine's `brew leaves`/casks/taps into the baseline.
+- **Host freshen** - `coily ansible-freshen` brings a host up to date across the coilysiren surface via `playbooks/freshen.yml` (Homebrew + agent-compose + repo-layout reconcile). Dry-runs by default (`--check --diff`); `action=apply` converges. The Ansible port of `agentic-os-kai/scripts/up-to-date.py`.
+- **macOS Homebrew convergence** - The `homebrew` role ensures declared taps, formulae, and casks are present (additive, never uninstalls). `coily ansible-mac-seed` captures the live machine's `brew leaves`/casks/taps into the baseline.
+- **Repo-layout reconcile** - The `repos` role discovers owned repos recently active on GitHub/Forgejo but absent locally (read-only `repo_registry` module, Forgejo PAT from SSM pinned to the canonical host) and clones the missing ones. Repos are data looped over the host; the inventory stays machines.
 - **agent-compose convergence** - The `agent-compose` role renders `~/.config/agent-compose/agent-compose.yaml` from per-host scopes and composes `COMPOSED.md`, symlinking each harness global load point (`~/.claude/CLAUDE.md`, `~/.codex/AGENTS.md`) at it. Idempotent, opt-in, backs up real files to `<name>.bak`.
 
 ## Cross-machine session aggregation

@@ -1,0 +1,37 @@
+# Reconcile local clones against the live repo layout. Discovery is read-only
+# (repo_registry module); cloning is the convergence step. Repos are data here,
+# looped over on the host - the inventory stays machines, not repos.
+- name: Discover the live repo layout (GitHub + Forgejo)
+  repo_registry:
+    owner: "{{ repos_owner }}"
+    root: "{{ repos_root }}"
+    known_orgs: "{{ repos_known_orgs }}"
+    forgejo_api: "{{ repos_forgejo_api }}"
+    forgejo_token_ssm: "{{ repos_forgejo_token_ssm }}"
+    recent_days: "{{ repos_recent_days }}"
+    forgejo_only: "{{ repos_forgejo_only }}"
+  register: repo_layout
+
+- name: Report discovery
+  ansible.builtin.debug:
+    msg: >-
+      present={{ repo_layout.present | length }}
+      missing={{ repo_layout.missing | length }}
+      (gh={{ repo_layout.github_count }}, forgejo={{ repo_layout.forgejo_count }})
+
+- name: Flag repos recent on Forgejo only (no GitHub mirror to clone from)
+  ansible.builtin.debug:
+    msg: "{{ item.name }}: recent on forgejo only; clone manually"
+  loop: "{{ repo_layout.missing | selectattr('source', 'ne', 'github') | list }}"
+  loop_control:
+    label: "{{ item.name }}"
+
+- name: Clone missing repos from GitHub
+  ansible.builtin.git:
+    repo: "git@github.com:{{ repos_owner }}/{{ item.name }}.git"
+    dest: "{{ repos_clone_root }}/{{ item.name }}"
+    version: HEAD
+    update: false
+  loop: "{{ repo_layout.missing | selectattr('source', 'eq', 'github') | list }}"
+  loop_control:
+    label: "{{ item.name }}"

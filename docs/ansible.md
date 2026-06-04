@@ -17,9 +17,11 @@ to `ansible/ansible.cfg` so playbooks run from the repo root.
 
 ## Verbs
 
-- **`coily ansible-mac`** - converge this Mac. Defaults to **check mode**
-  (`--check --diff`): mutates nothing, prints the plan. `action=apply` converges
-  for real. (Backed by `scripts/ansible/mac.py`.)
+- **`coily ansible-freshen`** - freshen this host: Homebrew + agent-compose +
+  repo-layout reconcile. Defaults to **check mode** (`--check --diff`): mutates
+  nothing, prints the plan. `action=apply` converges for real. Scope to one unit
+  with `--tags` (e.g. `--tags repos`). (Backed by `scripts/ansible/freshen.py`;
+  the Ansible port of `agentic-os-kai/scripts/up-to-date.py`.)
 - **`coily ansible-mac-seed`** - capture the live machine's `brew leaves`, casks,
   and third-party taps into `inventory/group_vars/mac.yml`, so a subsequent check
   run is a near no-op. Re-run when the machine drifts ahead of the declared state,
@@ -38,11 +40,17 @@ to `ansible/ansible.cfg` so playbooks run from the repo root.
   `homebrew_taps`, `homebrew_installed_packages`, `homebrew_cask_apps`, and
   `agent_compose_scopes`. Auto-loaded because it sits next to the inventory (the
   reason it lives under `inventory/`, not `ansible/`).
-- **`playbooks/mac.yml`** - the Mac convergence play. Runs the `homebrew` role
-  then the `agent-compose` role, each tagged so you can run one in isolation
-  (e.g. `--tags homebrew`).
-- **`roles/homebrew/`** + **`roles/agent-compose/`** - the two units of work,
-  detailed below.
+- **`inventory/group_vars/all.yml`** - fleet-wide vars for the `repos` role
+  (`repos_owner`, `repos_forgejo_api`, `repos_forgejo_token_ssm`,
+  `repos_recent_days`, `repos_forgejo_only`, `repos_known_orgs`, `repos_root`).
+  All meaningful names; the Forgejo PAT is resolved from SSM at runtime.
+- **`playbooks/freshen.yml`** - the host-freshen play. Runs the `homebrew`,
+  `agent-compose`, and `repos` roles, each tagged so you can run one in isolation
+  (e.g. `--tags repos`).
+- **`library/repo_registry.py`** - the read-only discovery module the `repos`
+  role calls (local custom module, found via `library = library` in ansible.cfg).
+- **`roles/homebrew/`**, **`roles/agent-compose/`**, **`roles/repos/`** - the
+  units of work, detailed below.
 
 ## The homebrew role
 
@@ -77,6 +85,24 @@ A source composes onto a host iff its declared scopes intersect the host's
 `agent_compose_scopes`, so one source set is correct fleet-wide. Personal Macs
 run `[kai-private]` today; a work Mac would want `[work, kai-public]` in its own
 group/host_vars, never private.
+
+## The repos role
+
+Reconciles local clones against the live repo layout. The `repo_registry`
+module lists owned repos on GitHub (`gh repo list`) and Forgejo (REST API),
+skips forks and archived repos, and returns those pushed-to within
+`repos_recent_days` that are absent across every `repos_known_orgs` checkout dir.
+The role then clones each missing GitHub repo (`ansible.builtin.git`,
+check-mode aware); repos recent on Forgejo only are flagged for manual clone.
+Repos are **data looped over the host**, not inventory hosts - the inventory
+stays machines, so this composes with the other roles in one play.
+
+The Forgejo PAT is fetched from SSM (`repos_forgejo_token_ssm`) at runtime and
+sent only to the canonical Forgejo host, pinned in the module code rather than
+config so a tampered var set cannot exfiltrate it (coilysiren/inbox#36). This is
+the first slice of the `up-to-date.py` port; git remote-sync (with github<->
+forgejo mirror-drift), org-aware layout reconcile, and the catalog deptree check
+land as further roles.
 
 ## Safety model
 

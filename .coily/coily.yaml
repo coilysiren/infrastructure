@@ -74,9 +74,9 @@ commands:
   claude-remote-control-install:
     run: make claude-remote-control-install
     description: (Re)install the kai-server remote-control daemon, node-tooling-ensure units, and self-heal settings. Idempotent; recovers a latched daemon. Run on kai-server.
-  ansible-mac:
-    run: make ansible-mac
-    description: Converge this Mac's Homebrew state via ansible/playbooks/mac.yml. Args - action=check|apply (default check).
+  ansible-freshen:
+    run: make ansible-freshen
+    description: Freshen this host - homebrew + agent-compose + repo-layout reconcile - via ansible/playbooks/freshen.yml. Args - action=check|apply (default check).
   ansible-mac-seed:
     run: make ansible-mac-seed
     description: Seed ansible/group_vars/mac.yml from this machine's live brew leaves/casks/taps.

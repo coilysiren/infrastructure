@@ -1,0 +1,4 @@
+# Where freshly discovered repos are cloned. The org-aware relocation that
+# moves a clone to <parent>/<origin-org>/ is the `reconcile` role's job (a
+# later step of the up-to-date.py port); first clone lands under the owner root.
+repos_clone_root: "{{ repos_root }}"

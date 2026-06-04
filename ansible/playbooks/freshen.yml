@@ -1,0 +1,26 @@
+# Freshen a host: bring it up to date across the coilysiren surface. Today:
+# Homebrew state, the agent-compose cross-harness context config, and the
+# local-clone reconcile against the live repo layout (GitHub + Forgejo).
+#
+# Idempotent and additive. homebrew ensures declared packages are present and
+# uninstalls nothing; group_vars/mac.yml is seeded by `coily ansible-mac-seed`.
+# agent-compose renders COMPOSED.md + the harness load-point symlinks. repos
+# clones any owned repo that is recently active on a remote but absent locally.
+#
+# Check first:  coily ansible-freshen            (action=check)
+# Apply:        coily ansible-freshen action=apply
+#
+# This is the Ansible port of agentic-os-kai/scripts/up-to-date.py. The git
+# remote-sync, layout-reconcile, and catalog-deptree steps land as further
+# roles (git / reconcile / deptree).
+- name: Freshen host
+  hosts: mac
+  gather_facts: true
+  become: false
+  roles:
+    - role: homebrew
+      tags: [homebrew, tooling]
+    - role: agent-compose
+      tags: [agent-compose]
+    - role: repos
+      tags: [repos]
