@@ -95,14 +95,14 @@ def _write(path: Path, settings: dict) -> None:
 
 def main() -> None:
     module = AnsibleModule(
-        argument_spec=dict(
-            path=dict(type="path", default="~/.claude/settings.json"),
-            event=dict(type="str", required=True),
-            matcher=dict(type="str", default=""),
-            command=dict(type="str", required=True),
-            marker=dict(type="str", required=True),
-            state=dict(type="str", default="present", choices=["present", "absent"]),
-        ),
+        argument_spec={
+            "path": {"type": "path", "default": "~/.claude/settings.json"},
+            "event": {"type": "str", "required": True},
+            "matcher": {"type": "str", "default": ""},
+            "command": {"type": "str", "required": True},
+            "marker": {"type": "str", "required": True},
+            "state": {"type": "str", "default": "present", "choices": ["present", "absent"]},
+        },
         supports_check_mode=True,
     )
     path = Path(os.path.expanduser(module.params["path"]))

@@ -1,6 +1,5 @@
 # Host-freshen play: homebrew, agent-compose, claude-hooks, repos, reconcile,
-# git, deptree in order, each tagged to run alone. Port of up-to-date.py; detail
-# in docs/ansible.md.
+# git, deptree in order, each tagged to run alone. Detail in docs/ansible.md.
 - name: Freshen host
   hosts: mac
   gather_facts: true

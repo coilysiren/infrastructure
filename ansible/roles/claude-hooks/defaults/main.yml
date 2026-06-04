@@ -5,8 +5,7 @@ o2r_nudge_dir: "{{ ansible_env.HOME }}/.cache/agentic-os/hooks"
 o2r_nudge_script: "{{ o2r_nudge_dir }}/o2r-nudge.sh"
 
 # Fleet short names that count as "another node" for the cross-node nudge.
-# Meaningful names, not opaque ids, so they hardcode fine per the SSM bright
-# line. Mirrors terraform/tailscale/devices.yaml; keep the two in sync.
+# Mirrors terraform/tailscale/devices.yaml; keep the two in sync.
 o2r_nudge_fleet_hosts:
   - kai-server
   - kai-desktop-tower
