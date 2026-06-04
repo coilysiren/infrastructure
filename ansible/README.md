@@ -15,11 +15,15 @@ ansible/
 ├── inventory/group_vars/all.yml    # fleet-wide repos role vars (owner, forgejo, ssm path)
 ├── library/repo_registry.py        # read-only repo-layout discovery module
 ├── library/repo_status.py          # per-repo git sweep module (fetch/status/drift; pull on apply)
-├── playbooks/freshen.yml           # freshen a host (homebrew + agent-compose + repos + git)
+├── library/repo_reconcile.py       # move/remove drifted checkouts to match origin org (check-aware)
+├── library/repo_deptree.py         # read-only cross-org dep-tree validator
+├── playbooks/freshen.yml           # freshen a host (homebrew + agent-compose + repos + reconcile + git + deptree)
 ├── roles/homebrew/                 # taps + formulae + casks via community.general
 ├── roles/agent-compose/            # render ~/.config/agent-compose + converge harness symlinks
-├── roles/repos/                    # reconcile local clones against the live repo layout
-└── roles/git/                      # git remote-sync + github<->forgejo mirror-drift sweep
+├── roles/repos/                    # discover + clone repos absent from the local layout
+├── roles/reconcile/               # move/remove drifted checkouts to match origin org
+├── roles/git/                      # git remote-sync + github<->forgejo mirror-drift sweep
+└── roles/deptree/                  # validate the cross-org repo dependency tree
 ```
 
 ## Usage

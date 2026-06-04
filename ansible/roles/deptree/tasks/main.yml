@@ -1,0 +1,18 @@
+# Validate the cross-org repo dependency tree: FAIL on any flight-deck -> bridge
+# dependsOn edge. Read-only, so it runs the same in check and apply mode. Absent
+# data files degrade to a skip, not a failure. See docs/ansible.md.
+- name: Validate the cross-org repo dependency tree
+  repo_deptree:
+    catalog_graph: "{{ deptree_catalog_graph }}"
+    split_decisions: "{{ deptree_split_decisions }}"
+  register: repo_deptree
+  check_mode: false
+
+- name: Report dependency-tree result
+  ansible.builtin.debug:
+    msg: "{{ repo_deptree.summary }}"
+
+- name: Fail on a cross-org violation
+  ansible.builtin.fail:
+    msg: "cross-org dep violations: {{ repo_deptree.violations | join('; ') }}"
+  when: repo_deptree.violations | default([]) | length > 0

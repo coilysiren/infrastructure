@@ -1,0 +1,19 @@
+# Reconcile the local checkout layout against origin remotes: move/remove each
+# drifted clone to match its origin org. Runs before git so the sweep sees the
+# corrected layout. Check mode reports the plan. See docs/ansible.md.
+- name: Reconcile local checkout layout against origin remotes
+  repo_reconcile:
+    root: "{{ repos_root }}"
+    known_orgs: "{{ repos_known_orgs }}"
+  register: repo_reconcile
+
+- name: Report layout moves and removes
+  ansible.builtin.debug:
+    msg: "{{ repo_reconcile.summaries | default([]) }}"
+
+- name: Report checkouts needing manual relocation
+  ansible.builtin.debug:
+    msg: >-
+      {{ repo_reconcile.action_required | length }} checkout(s) need manual action:
+      {{ repo_reconcile.action_required | join(', ') }}
+  when: repo_reconcile.action_required | length > 0

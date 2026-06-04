@@ -18,11 +18,12 @@ to `ansible/ansible.cfg` so playbooks run from the repo root.
 ## Verbs
 
 - **`coily ansible-freshen`** - freshen this host: Homebrew + agent-compose +
-  repo-layout reconcile + git remote-sync sweep. Defaults to **check mode**
-  (`--check --diff`): mutates nothing, prints the plan. `action=apply` converges
-  for real. Scope to one role with `tags=<csv>` (e.g. `tags=git`), which the verb
-  forwards to `ansible-playbook --tags`. (Backed by `scripts/ansible/freshen.py`;
-  the Ansible port of `agentic-os-kai/scripts/up-to-date.py`.)
+  repo clone + layout reconcile + git remote-sync sweep + cross-org dep-tree
+  check. Defaults to **check mode** (`--check --diff`): mutates nothing, prints
+  the plan. `action=apply` converges for real. Scope to one role with
+  `tags=<csv>` (e.g. `tags=git`), which the verb forwards to
+  `ansible-playbook --tags`. (Backed by `scripts/ansible/freshen.py`; the
+  Ansible port of `agentic-os-kai/scripts/up-to-date.py`.)
 - **`coily ansible-mac-seed`** - capture the live machine's `brew leaves`, casks,
   and third-party taps into `inventory/group_vars/mac.yml`, so a subsequent check
   run is a near no-op. Re-run when the machine drifts ahead of the declared state,
@@ -46,14 +47,19 @@ to `ansible/ansible.cfg` so playbooks run from the repo root.
   `repos_recent_days`, `repos_forgejo_only`, `repos_known_orgs`, `repos_root`).
   All meaningful names; the Forgejo PAT is resolved from SSM at runtime.
 - **`playbooks/freshen.yml`** - the host-freshen play. Runs the `homebrew`,
-  `agent-compose`, `repos`, and `git` roles in order, each tagged so you can run
-  one in isolation (e.g. `tags=git`).
+  `agent-compose`, `repos`, `reconcile`, `git`, and `deptree` roles in order,
+  each tagged so you can run one in isolation (e.g. `tags=git`).
 - **`library/repo_registry.py`** - the read-only discovery module the `repos`
   role calls (local custom module, found via `library = library` in ansible.cfg).
 - **`library/repo_status.py`** - the per-repo git sweep module the `git` role
   calls (fetch + status + drift; pull + remote-topology wiring on apply).
+- **`library/repo_reconcile.py`** - the layout-reconcile module the `reconcile`
+  role calls (move/remove drifted checkouts to match origin org; check-aware).
+- **`library/repo_deptree.py`** - the read-only dep-tree validator the `deptree`
+  role calls (FAIL on flight-deck -> bridge `dependsOn` edges).
 - **`roles/homebrew/`**, **`roles/agent-compose/`**, **`roles/repos/`**,
-  **`roles/git/`** - the units of work, detailed below.
+  **`roles/reconcile/`**, **`roles/git/`**, **`roles/deptree/`** - the units of
+  work, detailed below.
 
 ## The homebrew role
 
@@ -103,7 +109,8 @@ stays machines, so this composes with the other roles in one play.
 The Forgejo PAT is fetched from SSM (`repos_forgejo_token_ssm`) at runtime and
 sent only to the canonical Forgejo host, pinned in the module code rather than
 config so a tampered var set cannot exfiltrate it (coilysiren/inbox#36). The
-org-aware layout reconcile and the catalog deptree check land as further roles.
+org-aware layout reconcile and the dep-tree check are the `reconcile` and
+`deptree` roles, below.
 
 ## The git role
 
@@ -137,6 +144,37 @@ A repo flagged in `action_required` (dirty tree, in-progress op, detached HEAD,
 mirror-drift, or a blocked pull) needs a human - the sweep surfaces it, never
 touches it. Because it runs after `repos`, a repo cloned in the same pass is
 swept too.
+
+## The reconcile role
+
+Makes the local `~/projects/<org>/` tree reflect the remotes. The
+`repo_reconcile` module walks every checkout across `repos_known_orgs`; for each
+whose parent dir is not its origin remote's org it either **moves** it to
+`<parent>/<origin-org>/<name>` (when no correct-location copy exists yet) or
+**removes** it (when a canonical copy already lives there and the drifted one is
+a clean, fully-pushed duplicate). It runs **before** the `git` role so the sweep
+operates on the corrected layout. Repos are data looped inside the module, not
+inventory hosts.
+
+It is conservative by construction. Any local state - uncommitted changes,
+stash, in-progress op, detached HEAD, worktrees, and (for removes) unpushed
+commits - FAIL-flags the checkout and leaves it untouched; the remove path
+fetches first so the unpushed check sees current remote refs. The harness anchor
+(`agentic-os-kai`, the `~/.claude/CLAUDE.md` import + `setup.sh` symlink source)
+is pinned and never moved - relocating it is a `setup.sh` migration. In check
+mode the module reports the would-move / would-remove plan and changes nothing.
+
+## The deptree role
+
+Validates the cross-org dependency tree, read-only. The `repo_deptree` module
+walks the `dependsOn` edges of `catalog-graph.json`, maps each endpoint to its
+bucket (`bridge` / `flight-deck` / `stay` / `archive`) from the `decisions:`
+block of `repo-split-decisions.yaml`, and **fails the play on any
+flight-deck -> bridge edge** - an external-facing repo must not depend on one of
+Kai's private tools. Both data files ship in `agentic-os-kai/data/`
+(`deptree_kai_root` points at the checkout; override per host). Absent or
+unparseable data degrades to a skip with a note, never a hard failure, and the
+module runs identically in check and apply mode.
 
 ## Safety model
 

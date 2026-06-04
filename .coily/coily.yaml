@@ -76,7 +76,7 @@ commands:
     description: (Re)install the kai-server remote-control daemon, node-tooling-ensure units, and self-heal settings. Idempotent; recovers a latched daemon. Run on kai-server.
   ansible-freshen:
     run: make ansible-freshen
-    description: Freshen this host - homebrew + agent-compose + repo-layout reconcile + git remote-sync/mirror-drift sweep - via ansible/playbooks/freshen.yml. Args - action=check|apply (default check), tags=<csv> to scope (e.g. tags=git).
+    description: Freshen this host - homebrew + agent-compose + repo clone + layout reconcile + git remote-sync/mirror-drift sweep + cross-org dep-tree check - via ansible/playbooks/freshen.yml. Args - action=check|apply (default check), tags=<csv> to scope (e.g. tags=git).
   ansible-mac-seed:
     run: make ansible-mac-seed
     description: Seed ansible/group_vars/mac.yml from this machine's live brew leaves/casks/taps.
