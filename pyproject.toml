@@ -20,7 +20,7 @@ dev = [
 # Per-module READMEs are real, co-located docs (Terraform stacks, deploy
 # manifests). Keep them beside their module rather than flattening into docs/.
 # Oversized docs/*.md and skill SKILL.md entries below are pre-existing runbook
-# debt grandfathered when the v0.11.1 hook block landed (coilysiren/infrastructure#181);
+# debt grandfathered when the v0.11.1 hook block landed (coilyco-flight-deck/infrastructure#181);
 # splitting them under the 80-line / 4000-char cap is tracked as follow-up.
 excludes = [
     "ansible/README.md",

@@ -29,7 +29,7 @@ fi
 # RCON is for the fdr-remake Discord bridge sidecar. Soft-fail if the
 # password isn't in SSM yet (e.g. first boot after install, or AWS
 # creds rotated): factorio still starts, the bridge just won't connect
-# until the next restart picks up the password. coilysiren/infrastructure#101.
+# until the next restart picks up the password. coilyco-flight-deck/infrastructure#101.
 RCON_ARGS=()
 if rcon_password=$(aws ssm get-parameter --name /factorio/rcon-password --with-decryption --query Parameter.Value --output text 2>/dev/null); then
   RCON_ARGS=(--rcon-port "${RCON_PORT}" --rcon-password "${rcon_password}")

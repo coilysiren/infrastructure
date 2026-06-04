@@ -15,7 +15,7 @@
 # Returns 1 (skip) on any not-success condition. The journal line is the
 # operator's signal to look at why pull-all is unhappy.
 #
-# See coilysiren/infrastructure#211, coilysiren/agentic-os-kai#612.
+# See coilyco-flight-deck/infrastructure#211, coilyco-bridge/agentic-os-kai#612.
 
 set -uo pipefail
 

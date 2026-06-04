@@ -4,8 +4,8 @@ Brute-force throttling for kai-server's public sshd listener. Bans a
 source IP after repeated failed-auth attempts. No sshd binding, firewall
 topology, or exposure change.
 
-Tracker: [coilysiren/infrastructure#104](https://forgejo.coilysiren.me/coilyco-flight-deck/infrastructure/issues/104).
-Parent audit: [coilysiren/infrastructure#103](https://forgejo.coilysiren.me/coilysiren/infrastructure/issues/103).
+Tracker: [coilyco-flight-deck/infrastructure#104](https://forgejo.coilysiren.me/coilyco-flight-deck/infrastructure/issues/104).
+Parent audit: [coilyco-flight-deck/infrastructure#103](https://forgejo.coilysiren.me/coilyco-flight-deck/infrastructure/issues/103).
 
 ## Why
 

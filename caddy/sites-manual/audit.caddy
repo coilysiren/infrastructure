@@ -1,6 +1,6 @@
 # hand-written: coily audit dashboard. static file served from
 # /var/lib/coily/dashboard.html, regenerated every 5 min by
-# coily-audit-dashboard.timer (see coilysiren/infrastructure#127).
+# coily-audit-dashboard.timer (see coilyco-flight-deck/infrastructure#127).
 #
 # The handle_path strip leaves us at "/", which file_server then resolves
 # to dashboard.html via the try_files directive. Direct hits to other

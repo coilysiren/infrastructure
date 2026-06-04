@@ -100,7 +100,7 @@ kubectl delete namespace observability
 
 ## Thermal heartbeat (host-side)
 
-Tracked in [coilysiren/infrastructure#85](https://github.com/coilysiren/infrastructure/issues/85). Dual-push: VM/Grafana via the textfile collector, Sentry via cron monitor + threshold-breach events.
+Tracked in [coilyco-flight-deck/infrastructure#85](https://github.com/coilyco-flight-deck/infrastructure/issues/85). Dual-push: VM/Grafana via the textfile collector, Sentry via cron monitor + threshold-breach events.
 
 Wired components:
 

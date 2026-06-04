@@ -6,7 +6,7 @@
 
 .DESCRIPTION
   Component 1 of the cross-machine session-aggregation pipeline
-  (coilysiren/infrastructure#224). Watches %USERPROFILE%\.claude\projects
+  (coilyco-flight-deck/infrastructure#224). Watches %USERPROFILE%\.claude\projects
   for session-file changes and HTTP POSTs each one to the tailnet-only
   session-sink on kai-server.
 

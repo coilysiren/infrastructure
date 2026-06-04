@@ -14,7 +14,7 @@
 # vmsingle pod without ever touching tailscale0. The tailscale
 # ClusterIP service stays in place for off-host peers.
 #
-# Tracked in coilysiren/infrastructure#71. See §7 of
+# Tracked in coilyco-flight-deck/infrastructure#71. See §7 of
 # docs/k3s-deploy-notes.md for the full pitfall write-up.
 #
 # Apply alongside the helm chart and the tailscale service:

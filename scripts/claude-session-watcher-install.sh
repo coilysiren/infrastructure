@@ -8,7 +8,7 @@
 # sessions off local disk directly, so kai-server needs no watcher.
 #
 # Component 1 of the cross-machine session-aggregation pipeline
-# (coilysiren/infrastructure#224). Watches ~/.claude/projects and HTTP
+# (coilyco-flight-deck/infrastructure#224). Watches ~/.claude/projects and HTTP
 # POSTs each changed session file to the tailnet-only session-sink.
 #
 # Idempotent: re-run to upgrade the script, refresh the venv, or change

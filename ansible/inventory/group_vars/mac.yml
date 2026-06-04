@@ -15,8 +15,8 @@ homebrew_taps:
     url: https://forgejo.coilysiren.me/coilyco-flight-deck/session-lattice
   - name: coilyco-flight-deck/ward
     url: https://forgejo.coilysiren.me/coilyco-flight-deck/ward
-  - name: coilysiren/coily
-    url: https://forgejo.coilysiren.me/coilysiren/coily
+  - name: coilyco-bridge/coily
+    url: https://forgejo.coilysiren.me/coilyco-bridge/coily
   - name: getsentry/tools
   # homebrew/services dropped: tap deprecated and emptied (merged into core), so
   # tapping errors. `brew services` still works tap-free.
@@ -41,7 +41,7 @@ homebrew_installed_packages:
   - coilyco-flight-deck/ward/ward
   # agent-guard/agent-guard dropped: orphaned keg, tap renamed it to `ward`
   # (#197). `brew uninstall coilysiren/agent-guard/agent-guard` to clear it.
-  - coilysiren/coily/coily
+  - coilyco-bridge/coily/coily
   - cryptography
   - diff-pdf
   - direnv

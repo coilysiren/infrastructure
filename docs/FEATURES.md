@@ -20,7 +20,7 @@ Baseline of `coilysiren/infrastructure`. Update when scope changes.
 - **Eco** - `eco-server.service` with API token from SSM. Mods pushed via `coily gaming eco mod push`. Service ops `coily gaming eco {status,tail,start,stop,restart}`.
 - **Eco config-as-code** - Configs sync from `coilysiren/eco-configs`. World + config rewrites live in `eco-cycle-prep`.
 - **Core Keeper, Icarus, Factorio** - Parallel systemd units. `coily gaming <name> ...`. Factorio adds a backup timer.
-- **Factorio Discord chat bridge** - `fdr-remake` sidecar pinned to `factorio-server.service`. Reads `--console-log`, writes via localhost RCON. SSM keys at `/factorio/fdr/*`. Bringup: `bash scripts/install-fdr-remake.sh`. Reference: `coilysiren/infrastructure#101`, `#139`.
+- **Factorio Discord chat bridge** - `fdr-remake` sidecar pinned to `factorio-server.service`. Reads `--console-log`, writes via localhost RCON. SSM keys at `/factorio/fdr/*`. Bringup: `bash scripts/install-fdr-remake.sh`. Reference: `coilyco-flight-deck/infrastructure#101`, `#139`.
 
 ## Observability
 
@@ -52,12 +52,12 @@ Baseline of `coilysiren/infrastructure`. Update when scope changes.
 
 ## Cross-machine session aggregation
 
-- **Claude session watcher** - Per-machine `watchdog`-driven process that ships `~/.claude/projects` session files to a tailnet-only sink so every machine's Claude sessions are queryable from one place. Runs on the 4 non-kai-server environments (Mac desktop/laptop, Windows native, WSL) via launchd / Scheduled Task / systemd. Component 1 of the pipeline in `coilysiren/infrastructure#224`. See `docs/claude-session-watcher.md`.
+- **Claude session watcher** - Per-machine `watchdog`-driven process that ships `~/.claude/projects` session files to a tailnet-only sink so every machine's Claude sessions are queryable from one place. Runs on the 4 non-kai-server environments (Mac desktop/laptop, Windows native, WSL) via launchd / Scheduled Task / systemd. Component 1 of the pipeline in `coilyco-flight-deck/infrastructure#224`. See `docs/claude-session-watcher.md`.
 
 ## Network and access
 
 - **DNS and routing** - `coilysiren.me` Route 53 zone. Service A records point to the WAN, NAT'd to the LAN side of the homelab. Tailnet kubeconfig uses the `kai-server` MagicDNS name. Concrete addresses live in the vault.
-- **fail2ban sshd jail** - Brute-force throttling on the public sshd listener (`0.0.0.0:22`). `fail2ban/jail.local` enables the `sshd` jail with the systemd-journal backend, 1h ban after 5 failures in 10m, `ignoreip` over loopback + RFC1918 so LAN/tailscale keys never self-lock. Idempotent bringup: `bash scripts/fail2ban-install.sh`. No sshd binding or exposure change. See `docs/fail2ban.md`, `coilysiren/infrastructure#104`.
+- **fail2ban sshd jail** - Brute-force throttling on the public sshd listener (`0.0.0.0:22`). `fail2ban/jail.local` enables the `sshd` jail with the systemd-journal backend, 1h ban after 5 failures in 10m, `ignoreip` over loopback + RFC1918 so LAN/tailscale keys never self-lock. Idempotent bringup: `bash scripts/fail2ban-install.sh`. No sshd binding or exposure change. See `docs/fail2ban.md`, `coilyco-flight-deck/infrastructure#104`.
 - **Host Caddy on kai-server** - Tailnet-only front door. `caddy/sites/*.caddy` shortcuts to cluster Ingresses, `:8082` for the coily audit dashboard. `/etc/caddy/Caddyfile` auto-deploys from the repo via `systemd/caddy-config-deploy.{path,service}`. ACME pinned to LE prod.
 
 ## Tooling and policy

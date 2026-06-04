@@ -9,7 +9,7 @@ Type=oneshot
 # yesterday's tree rather than restarting into a stale-or-broken state.
 # Recovery: investigate why pull-all is unhappy, then `systemctl start
 # claude-remote-control-restart.service` once it's green.
-# See coilysiren/infrastructure#211, coilysiren/agentic-os-kai#612.
+# See coilyco-flight-deck/infrastructure#211, coilyco-bridge/agentic-os-kai#612.
 ExecCondition=/home/kai/projects/coilysiren/infrastructure/scripts/claude-remote-control-restart-precheck.sh
 ExecStart=/usr/bin/systemctl restart claude-remote-control.service
 

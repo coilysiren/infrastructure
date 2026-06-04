@@ -21,7 +21,7 @@ fi
 
 # brew update can race the global brew lock on boot when multiple
 # *-update.service units fire near-simultaneously after reboot
-# (coilysiren/coily#240). Retry with linear backoff; six attempts at
+# (coilyco-bridge/coily#240). Retry with linear backoff; six attempts at
 # 10s spacing covers the 1-min window the racing units typically
 # share without unbounded waiting.
 echo "==> brew update"
@@ -37,9 +37,9 @@ for attempt in 1 2 3 4 5 6; do
   sleep 10
 done
 
-echo "==> brew tap + upgrade coilysiren/coily/coily"
-brew tap coilysiren/coily https://github.com/coilysiren/coily
-brew upgrade coilysiren/coily/coily
+echo "==> brew tap + upgrade coilyco-bridge/coily/coily"
+brew tap coilyco-bridge/coily https://github.com/coilyco-bridge/coily
+brew upgrade coilyco-bridge/coily/coily
 
 # Keep every other Linuxbrew formula on kai-server current too, not just
 # coily. Runs after the targeted coily upgrade so coily still lands even

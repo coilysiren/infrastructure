@@ -20,7 +20,7 @@
 # races k3s kube-proxy iptables sync. On kai-server that knocked out
 # host TCP listeners (sshd:22, apiserver:6443, tailscaled). Worker
 # node has no comparable host-namespace exposure. See
-# forgejo.coilysiren.me/coilysiren/infrastructure/issues/151.
+# forgejo.coilysiren.me/coilyco-flight-deck/infrastructure/issues/151.
 #
 # Apply: sudo k3s kubectl apply -f deploy/forgejo-runner.yml
 ---

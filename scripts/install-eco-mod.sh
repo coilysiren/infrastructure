@@ -3,7 +3,7 @@
 # them into the EcoServer Mods tree. Generalizes the old install-eco-
 # telemetry.sh: takes the mod NAME as the only positional arg.
 #
-# For each repo in {coilysiren/eco-mods, coilysiren/eco-mods-public,
+# For each repo in {coilyco-bridge/eco-mods, coilyco-flight-deck/eco-mods-public,
 # coilysiren/NAME} (whichever exist and have releases), look at the
 # latest release for assets matching NAME-*.zip, download every match,
 # and unzip -o each one into $SERVER_DIR. unzip -o handles the merge
@@ -61,7 +61,7 @@ trap 'rm -rf "$tmp"' EXIT
 # older repos (EcoJobsTracker) use the PascalCase form. The seen map
 # below dedups when they collapse to the same string.
 NAME_KEBAB="$(printf '%s' "$NAME" | sed -E 's/([a-z0-9])([A-Z])/\1-\2/g' | tr '[:upper:]' '[:lower:]')"
-REPOS=("coilysiren/eco-mods" "coilysiren/eco-mods-public" "coilysiren/$NAME" "coilysiren/$NAME_KEBAB")
+REPOS=("coilyco-bridge/eco-mods" "coilyco-flight-deck/eco-mods-public" "coilysiren/$NAME" "coilysiren/$NAME_KEBAB")
 
 found_any=0
 declare -A seen=()
@@ -114,7 +114,7 @@ fi
 # from the process CWD ($SERVER_DIR for the eco-server unit) and dumps
 # exporter / SDK errors to LogDirectory. Without this we have no surface
 # for OTLP export failures, since the SDK swallows them by default.
-# Tracked in coilysiren/eco-telemetry#5 (metrics not reaching vmsingle).
+# Tracked in coilyco-flight-deck/eco-telemetry#5 (metrics not reaching vmsingle).
 if [[ "$NAME" == "EcoTelemetry" ]]; then
   diag="$SERVER_DIR/OTEL_DIAGNOSTICS.json"
   log_dir="$SERVER_DIR/Logs/EcoTelemetry"

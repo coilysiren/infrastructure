@@ -17,7 +17,7 @@
 #     'sudo k3s ctr images import -'` and `ssh deploy 'sudo k3s kubectl
 #     set image ...'` complete without an interactive password prompt.
 #     Scope is the whole k3s binary rather than per-argv because strict
-#     argv matching has burned the rig before (coilysiren/coily#244).
+#     argv matching has burned the rig before (coilyco-bridge/coily#244).
 #     The actual gate is tailnet OIDC + the tag:ci ACL, not sudoers.
 #
 # Prereqs:
@@ -26,7 +26,7 @@
 #   - Tailscale SSH ACL grants tag:ci → user:deploy. Managed in
 #     terraform/tailscale-oidc/ or the global tailnet policy.
 #
-# Cross-link: coilysiren/infrastructure#191 (the finding that motivated
+# Cross-link: coilyco-flight-deck/infrastructure#191 (the finding that motivated
 # this script).
 
 set -euo pipefail

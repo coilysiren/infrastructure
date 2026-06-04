@@ -32,7 +32,7 @@ Confirm before kubectl writes and any cloud write that can clobber state (SSM `p
 
 ## Release
 
-A commit to `main` is not a deploy. `origin` is `forgejo.coilysiren.me/coilysiren/infrastructure` and fans out push to both Forgejo and GitHub. Changes reach kai-server only when a coily verb applies the manifest or a systemd unit restarts. After pushing to `main`, schedule a wake-up ~300s later to verify CI passed via the Forgejo Actions API (`/forgejo/api-token` SSM secret); re-check once at +180s if still running. On failure, surface the run URL and stop - infra CI failures are usually real. Skip for docs-only pushes.
+A commit to `main` is not a deploy. `origin` is `forgejo.coilysiren.me/coilyco-flight-deck/infrastructure` and fans out push to both Forgejo and GitHub. Changes reach kai-server only when a coily verb applies the manifest or a systemd unit restarts. After pushing to `main`, schedule a wake-up ~300s later to verify CI passed via the Forgejo Actions API (`/forgejo/api-token` SSM secret); re-check once at +180s if still running. On failure, surface the run URL and stop - infra CI failures are usually real. Skip for docs-only pushes.
 
 ## Agent rules
 

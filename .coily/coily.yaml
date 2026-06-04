@@ -81,7 +81,7 @@ commands:
     run: make ansible-mac-seed
     description: Seed ansible/group_vars/mac.yml from this machine's live brew leaves/casks/taps.
 
-# Free-form ssh-passthrough target list. Schema: coilysiren/coily#187 phase 2.
+# Free-form ssh-passthrough target list. Schema: coilyco-bridge/coily#187 phase 2.
 # `coily ssh <alias> -- <coily args>` resolves <alias> here, ssh's into the
 # target, and runs the supplied coily subcommand. Remote coily's lockdown is
 # the security boundary, not this client side. working_dir is a git toplevel
@@ -94,7 +94,7 @@ ssh:
       working_dir: /home/kai/projects/coilysiren/infrastructure
 
 # Catalog metadata for the cross-repo knowledge graph.
-# Schema: coilysiren/agentic-os-kai#420 (tracker).
+# Schema: coilyco-bridge/agentic-os-kai#420 (tracker).
 catalog:
   kind: Component
   type: configuration

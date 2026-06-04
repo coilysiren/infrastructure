@@ -5,7 +5,7 @@
 # fdr-remake is the C++ rewrite of factorio-discord-relay, used as a
 # sidecar to factorio-server.service for Factorio<>Discord chat
 # bridging. Upstream: https://codeberg.org/Jaskowicz/fdr-remake.
-# Tracking issue: coilysiren/infrastructure#101. Script issue: #139.
+# Tracking issue: coilyco-flight-deck/infrastructure#101. Script issue: #139.
 #
 # Idempotent: re-run to upgrade. Skips clone+build if the binary
 # already exists; pass FORCE=1 to rebuild even when present. Pin the

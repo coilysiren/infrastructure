@@ -11,7 +11,7 @@
 # encrypts the SQLite TOTP DB is in SSM at /coilysiren/2fauth/app-key.
 #
 # Apply: sudo k3s kubectl apply -f deploy/2fauth.yml
-# Tracker: coilysiren/infrastructure#266
+# Tracker: coilyco-flight-deck/infrastructure#266
 ---
 apiVersion: v1
 kind: Namespace

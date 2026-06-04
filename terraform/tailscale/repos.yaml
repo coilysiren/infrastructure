@@ -2,9 +2,9 @@
 # Add entries here as repos migrate off the long-lived /tailscale/oauth-* SSM pair.
 # Flat list of "coilysiren/<name>". Branch is hardcoded to main in main.tf.
 repos:
-  - "coilysiren/backend"
-  - "coilysiren/eco-jobs-tracker"
+  - "coilyco-flight-deck/backend"
+  - "coilyco-flight-deck/eco-jobs-tracker"
   - "coilysiren/eco-mcp"
-  - "coilysiren/galaxy-gen"
+  - "coilyco-flight-deck/galaxy-gen"
   - "coilysiren/personal-dashboard"
-  - "coilysiren/repo-recall"
+  - "coilyco-flight-deck/repo-recall"

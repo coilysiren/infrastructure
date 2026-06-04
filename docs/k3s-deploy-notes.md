@@ -9,13 +9,13 @@ we've hit a different flavour of the same-looking deploy mess four
 times across four repos.
 
 Authoritative reference stack (what works today):
-[coilysiren/backend](https://github.com/coilysiren/backend) set the
-shape; [coilysiren/eco-jobs-tracker](https://github.com/coilysiren/eco-jobs-tracker)
+[coilyco-flight-deck/backend](https://github.com/coilyco-flight-deck/backend) set the
+shape; [coilyco-flight-deck/eco-jobs-tracker](https://github.com/coilyco-flight-deck/eco-jobs-tracker)
 is the cleanest modern instance (see `49f99e4 CI: revert to
 backend-shape direct kubectl deploy`);
-[coilysiren/eco-mcp-app](https://github.com/coilysiren/eco-mcp-app)
+[coilyco-flight-deck/eco-mcp-app](https://github.com/coilyco-flight-deck/eco-mcp-app)
 adds the declarative GHCR pull-secret pattern;
-[coilysiren/galaxy-gen](https://github.com/coilysiren/galaxy-gen)
+[coilyco-flight-deck/galaxy-gen](https://github.com/coilyco-flight-deck/galaxy-gen)
 `bddec18 workflow: match eco-spec-tracker byte-for-byte` codifies that
 alignment.
 
@@ -627,7 +627,7 @@ One line per trap. Every fix here has a commit in some repo's history.
   iptables for NodePorts so traffic never touches `tailscale0`. The
   ts-proxy stays in place for off-host access. Reference manifest:
   `deploy/observability/vmsingle-nodeport-service.yml`.
-  (coilysiren/infrastructure#71, eco-telemetry#5)
+  (coilyco-flight-deck/infrastructure#71, eco-telemetry#5)
 - **`ExternalSecret` in an app namespace stuck on `SecretSyncedError:
   aws-credentials not found`** → the `ClusterSecretStore`'s auth
   `secretRef` must pin `namespace: external-secrets` on both
@@ -649,7 +649,7 @@ One line per trap. Every fix here has a commit in some repo's history.
   every run. Repair an already-degraded checkout with
   `coily exec setup-git-lfs` - it wires the filters and re-smudges
   every LFS checkout under `~/projects/coilysiren`.
-  (coilysiren/infrastructure#286)
+  (coilyco-flight-deck/infrastructure#286)
 - **Caddy fails to come back after a restart with `permission denied`
   on `/etc/caddy/Caddyfile`** → the file is a symlink into `/home/kai/`,
   which is mode 750. The caddy service user cannot traverse it, so any
@@ -660,7 +660,7 @@ One line per trap. Every fix here has a commit in some repo's history.
   installs the repo Caddyfile to `/etc/caddy/Caddyfile` as a real file
   on every change. Bootstrap once via
   `sudo bash scripts/install-caddy-config-deploy.sh`.
-  (coilysiren/infrastructure#292)
+  (coilyco-flight-deck/infrastructure#292)
 - **Host Caddy logs show `acme-staging-v02.api.letsencrypt.org`** →
   Caddy default was overridden to LE staging at some point and the
   global block was lost. Browser-untrusted certs result. Fix: ensure
@@ -668,7 +668,7 @@ One line per trap. Every fix here has a commit in some repo's history.
   `acme_ca https://acme-v02.api.letsencrypt.org/directory`. Reload
   caddy. Verify storage at
   `/var/lib/caddy/.local/share/caddy/certificates/acme-v02.api.letsencrypt.org-directory/`.
-  (coilysiren/infrastructure#292)
+  (coilyco-flight-deck/infrastructure#292)
 - **Repo Caddyfile updated by `git pull` but `/etc/caddy/Caddyfile`
   still has stale blocks (e.g. cert spin on a deprovisioned subdomain)**
   → the deploy hop from repo → /etc/caddy is missing. The
@@ -677,7 +677,7 @@ One line per trap. Every fix here has a commit in some repo's history.
   disabled path unit is the root cause. Check
   `systemctl status caddy-config-deploy.path`. Bootstrap with
   `sudo bash scripts/install-caddy-config-deploy.sh` if the unit
-  isn't present. (coilysiren/infrastructure#292)
+  isn't present. (coilyco-flight-deck/infrastructure#292)
 - **Host TCP listeners on kai-server (sshd:22, apiserver:6443,
   tailscaled PeerAPI) flap during forgejo-runner workflow runs while
   pod-network ingress (caddy 80/443) keeps serving** → privileged DinD
@@ -689,7 +689,7 @@ One line per trap. Every fix here has a commit in some repo's history.
   the runner StatefulSet to a worker node (`kai-desktop-tower-wsl`)
   via `nodeSelector` so the bridge churn doesn't share a netns with
   load-bearing host services. Don't try `dockerd --iptables=false`,
-  that's a trap. (coilysiren/infrastructure#151)
+  that's a trap. (coilyco-flight-deck/infrastructure#151)
 - **`systemctl restart k3s` blocks forever, unit stuck in
   `activating`, k3s itself healthy (node Ready, workloads running)** →
   the `Type=notify` unit ran k3s as a non-`exec` child of the bash
@@ -702,7 +702,7 @@ One line per trap. Every fix here has a commit in some repo's history.
   (`exec` discards the wrapper's SIGTERM trap, but `ExecStop` already
   does the same `pkill -9 containerd-shim/containerd/k3s`.) The
   alternative, `NotifyAccess=all`, would also work but is unneeded once
-  the notifier is the Main PID. (coilysiren/infrastructure#170)
+  the notifier is the Main PID. (coilyco-flight-deck/infrastructure#170)
 - **#151 runner repin to `kai-desktop-tower-wsl` schedules the pods but
   never serves CI; runner sticks at `Init:CrashLoopBackOff` and jobs
   pile up `waiting`** → two compounding faults on top of the
@@ -730,7 +730,7 @@ One line per trap. Every fix here has a commit in some repo's history.
   `--node-ip` / `--flannel-iface` to the tailnet interface, kai-server
   included), then re-test cross-node reach before expecting runners to
   register. Until that lands the runners can't live on any worker node,
-  and #151 forbids kai-server. (coilysiren/infrastructure#163)
+  and #151 forbids kai-server. (coilyco-flight-deck/infrastructure#163)
 
 ## 8. First-time setup checklist for a new repo
 

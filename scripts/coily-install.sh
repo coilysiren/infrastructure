@@ -26,9 +26,9 @@ if ! grep -qF "${BREW_ENV_LINE}" "${HOME}/.bashrc" 2>/dev/null; then
 fi
 eval "${BREW_ENV_LINE}"
 
-echo "==> brew install coilysiren/coily/coily"
-brew tap coilysiren/coily https://github.com/coilysiren/coily
-brew install coilysiren/coily/coily || brew upgrade coilysiren/coily/coily
+echo "==> brew install coilyco-bridge/coily/coily"
+brew tap coilyco-bridge/coily https://github.com/coilyco-bridge/coily
+brew install coilyco-bridge/coily/coily || brew upgrade coilyco-bridge/coily/coily
 coily setup
 
 echo
