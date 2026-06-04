@@ -1,0 +1,10 @@
+# Reload the LaunchDaemon after a template change. bootout tolerates "not
+# loaded" so first install and reconverge share one path; kickstart -k forces
+# an immediate restart so a changed manager script takes effect now rather than
+# on the next tick.
+- name: Reload keepawake daemon
+  ansible.builtin.shell: |
+    launchctl bootout system {{ keepawake_plist_path }} 2>/dev/null || true
+    launchctl bootstrap system {{ keepawake_plist_path }}
+    launchctl kickstart -k system/{{ keepawake_label }}
+  changed_when: true

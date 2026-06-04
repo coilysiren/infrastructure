@@ -15,11 +15,12 @@ ansible/
 ├── inventory/group_vars/all.yml    # fleet-wide repos role vars (owner, forgejo, ssm path)
 ├── library/repo_registry.py        # read-only repo-layout discovery module
 ├── library/repo_status.py          # per-repo git sweep module (fetch/status/drift; pull on apply)
-├── playbooks/freshen.yml           # freshen a host (homebrew + agent-compose + repos + git)
+├── playbooks/freshen.yml           # freshen a host (homebrew + agent-compose + repos + git + keepawake)
 ├── roles/homebrew/                 # taps + formulae + casks via community.general
 ├── roles/agent-compose/            # render ~/.config/agent-compose + converge harness symlinks
 ├── roles/repos/                    # reconcile local clones against the live repo layout
-└── roles/git/                      # git remote-sync + github<->forgejo mirror-drift sweep
+├── roles/git/                      # git remote-sync + github<->forgejo mirror-drift sweep
+└── roles/keepawake/                # root LaunchDaemon holding the system awake for remote dispatch
 ```
 
 ## Usage
@@ -70,6 +71,32 @@ remote; check mode reports only. Drift is **never resolved** - no force, no push
 (matches `up-to-date.py` step 6). Fetch runs in check mode too, since reporting
 ahead/behind/drift requires current remote-tracking refs. Runs after `repos` so
 a repo cloned in the same pass is swept too; `tags=git` scopes to just this role.
+
+## keepawake
+
+The `keepawake` role keeps a workstation reachable so remote dispatch keeps
+running after Kai walks away from the desk - whether or not the laptop is
+plugged in. It installs a root LaunchDaemon (`me.coilysiren.keepawake`) that
+ticks every 60s and reconciles `pmset disablesleep`: held on by default
+(power-source-agnostic, so it survives battery and lid-closed, which is the
+only state `disablesleep` covers), and **released** in two cases so the hold
+can never do harm:
+
+- the nightly maintenance window (`keepawake_maint_hour`, default `03`) so the
+  macOS / ansible software-update + reboot cycle runs clean, then re-asserts, and
+- a battery floor (`keepawake_floor_pct`, default 30) - on battery below it,
+  sleep is allowed so an unattended pack can't drain to zero.
+
+Display sleep is left untouched. Every flip is logged to `/var/log/keepawake.log`
+with its reason (`default-hold` / `maint-window` / `battery-floor`). Set
+`keepawake_schedule_wake: true` to also `pmset repeat wake` just before the
+window so the box is reachable at the maintenance hour even if it slept overnight
+(off by default - `pmset repeat` is a single global schedule).
+
+Run just this role with `coily ansible-freshen action=apply` plus a tag filter
+(`--tags keepawake`). Uninstall: `sudo launchctl bootout
+system /Library/LaunchDaemons/me.coilysiren.keepawake.plist` then remove the
+plist + `/usr/local/sbin/keepawake-manager.sh` and `sudo pmset -a disablesleep 0`.
 
 ## Adding a Mac
 

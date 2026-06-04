@@ -1,7 +1,8 @@
 # Freshen a host: bring it up to date across the coilysiren surface. Today:
 # Homebrew state, the agent-compose cross-harness context config, the
-# local-clone reconcile against the live repo layout (GitHub + Forgejo), and
-# the git remote-sync + github<->forgejo mirror-drift sweep.
+# local-clone reconcile against the live repo layout (GitHub + Forgejo), the
+# git remote-sync + github<->forgejo mirror-drift sweep, and the keepawake power
+# hold that keeps remote dispatch running after Kai walks away from the desk.
 #
 # Idempotent and additive. homebrew ensures declared packages are present and
 # uninstalls nothing; group_vars/mac.yml is seeded by `coily ansible-mac-seed`.
@@ -9,7 +10,8 @@
 # clones any owned repo that is recently active on a remote but absent locally.
 # git fetches every clone, reports drift/dirty/ahead-behind, and (on apply)
 # pulls --ff-only + wires the fleet remote topology - it never force-pushes or
-# resolves drift.
+# resolves drift. keepawake installs a root LaunchDaemon that holds the system
+# awake (battery floor + nightly maintenance window release it).
 #
 # Check first:  coily ansible-freshen            (action=check)
 # Apply:        coily ansible-freshen action=apply
@@ -30,3 +32,6 @@
       tags: [repos]
     - role: git
       tags: [git]
+    - role: keepawake
+      become: true
+      tags: [keepawake, power]
