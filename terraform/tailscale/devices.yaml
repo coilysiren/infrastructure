@@ -1,18 +1,5 @@
-# Physical devices on the tailnet that should carry IaC-owned tags.
-#
-# Each entry maps the device's MagicDNS short name to the tag list the
-# tailscale_device_tags resource will assert. Tag model:
-#
-#   tag:server   - "this is a server you SSH/connect into for services"
-#                  ONLY kai-server. The existing {src: tag:ci, dst:
-#                  tag:server:*} ACL grants GHA runners reach to this
-#                  bucket; expanding it to client physicals (Mac,
-#                  laptop, tower) would inadvertently let CI SSH them.
-#   tag:physical - "this is real hardware, not a k8s pod". All four.
-#                  Carries the {src: tag:physical, dst: *:*} permit
-#                  that keeps client physicals reachable-out after
-#                  tagging.
-#   tag:<host>   - per-host identity, future ACL granularity.
+# Physical tailnet devices mapped to IaC tags via tailscale_device_tags.
+# tag:server (kai-server only), tag:physical (all), tag:<host>. See docs/tailscale.md.
 devices:
   kai-server:
     - tag:server

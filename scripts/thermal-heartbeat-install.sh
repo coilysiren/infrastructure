@@ -1,22 +1,14 @@
 #!/usr/bin/bash
-# thermal-heartbeat-install.sh - bring up (or refresh) the thermal heartbeat
-# on kai-server. Idempotent: safe to re-run after pulls that change the
-# script, the unit files, or the helm values.
-#
-# Prereqs:
-#   - lm-sensors and nvme-cli will be apt-installed.
-#   - The two SSM params /sentry-dsn/kai-server and
-#     /kai-server/thermal-heartbeat-cron-url already exist.
-#   - helm repos for prometheus-community are already added (they were
-#     added when the observability stack first went in).
-#
-# Run as the `kai` user from the repo checkout. Sudo is invoked per-step.
+# Bring up or refresh the thermal heartbeat on kai-server. Idempotent. Run as kai from
+# the repo checkout (sudo per-step). apt-installs lm-sensors + nvme-cli.
+
+# Prereqs: SSM /sentry-dsn/kai-server and /kai-server/thermal-heartbeat-cron-url exist,
+# and the prometheus-community helm repo is already added.
 
 set -euo pipefail
 
-# Source brew's shellenv when running non-interactively so coily and helm
-# (both installed via Linuxbrew) land on PATH. ~/.bashrc isn't read by
-# `bash scripts/foo.sh`, only by interactive logins.
+# Source brew's shellenv so coily and helm (Linuxbrew) land on PATH for a
+# non-interactive `bash scripts/foo.sh`, which doesn't read ~/.bashrc.
 if [ -x /home/linuxbrew/.linuxbrew/bin/brew ]; then
   eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
 fi

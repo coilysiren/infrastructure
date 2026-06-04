@@ -1,11 +1,6 @@
 #!/usr/bin/env bash
-# Bootstrap /home/kai/projects/coilysiren/ on kai-server with the active
-# coilysiren/* repo set. Idempotent: clones missing repos, fetches existing
-# ones. Never auto-pulls dirty checkouts.
-#
-# Drives: repo-recall's kai-server instance (infrastructure#69, infrastructure#68).
-# Mirrors the workspace layout used on the Mac and the new Windows path.
-# coilyco-vault is intentionally excluded (not in git).
+# Bootstrap /home/kai/projects/coilysiren/ on kai-server with the coilysiren/*
+# repo set. Idempotent: clones missing, fetches existing, skips dirty trees.
 
 set -euo pipefail
 

@@ -1,18 +1,9 @@
 #!/usr/bin/env bash
-# install-linuxbrew-operator.sh - install or upgrade the linuxbrew-operator
-# Helm chart on the kai-server k3s cluster via the helm-git plugin.
-#
-# By design: no container registry holds anything we produce. Helm clones the
-# chart from this repo's sibling at coilysiren/linuxbrew-operator via SSH; the
-# controller Pod's init container clones the same repo again at startup and
-# builds the manager binary on the cluster.
-#
-# Idempotent: re-run to upgrade. Re-run with a different REF= to pin a tag.
-#
-# Run as: bash /home/kai/projects/coilysiren/infrastructure/scripts/install-linuxbrew-operator.sh
-# kubectl + helm must be on PATH; sudo is invoked only via k3s if you use the
-# `k3s kubectl` wrapper. This script uses bare kubectl, configured against
-# whatever ~/.kube/config points at.
+# Install/upgrade the linuxbrew-operator Helm chart on the kai-server k3s cluster via
+# helm-git (no registry: helm + the init container clone+build from source over SSH).
+
+# Idempotent (REF= pins a tag). Run via bash with kubectl + helm on PATH, pointed at
+# ~/.kube/config. See docs/k3s-deploy-notes.md.
 
 set -euo pipefail
 
@@ -54,14 +45,8 @@ kubectl create secret generic "$SECRET_NAME" \
   --from-file=known_hosts="$KNOWN_HOSTS_TMP" \
   --dry-run=client -o yaml | kubectl apply -f -
 
-# 4. helm upgrade --install. Idempotent. Re-running with a different REF=
-#    triggers a rolling restart of the controller Pod, which reclones and
-#    rebuilds against that ref.
-#
-# helm-git URL shape: git+ssh://git@host/owner/repo.git//path?ref=ref
-# Convert "git@github.com:coilysiren/linuxbrew-operator.git" into
-# "git+ssh://git@github.com/coilysiren/linuxbrew-operator.git//chart?ref=main"
-# by replacing the single ":" between host and path with "/".
+# 4. helm upgrade --install. Idempotent, and a new REF= rolls the controller Pod.
+# helm-git URL shape git+ssh://host/owner/repo.git//path?ref=ref: swap the host:path ":".
 HOST_PATH="${REPO_SSH_URL/:/\/}"   # git@github.com/coilysiren/...
 HELM_URL="git+ssh://${HOST_PATH}//chart?ref=${REF}"
 

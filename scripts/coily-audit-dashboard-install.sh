@@ -1,15 +1,6 @@
 #!/usr/bin/env bash
-# coily-audit-dashboard-install.sh - install the coily audit dashboard
-# timer + unit on kai-server, plus the /var/lib/coily output dir.
-#
-# Idempotent: re-run after editing the unit files.
-#
-# Prereqs:
-#   - coily already installed via scripts/coily-install.sh.
-#   - Caddy already running with the audit-dashboard server block in
-#     caddy/Caddyfile.
-#
-# Run as the `kai` user from the repo checkout. Sudo is invoked per-step.
+# Install the coily audit dashboard timer + unit on kai-server, plus /var/lib/coily.
+# Idempotent. Prereqs: coily-install.sh + Caddy audit block. Run as kai.
 
 set -euo pipefail
 

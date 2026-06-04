@@ -35,9 +35,8 @@ from pathlib import Path
 FORGEJO_URL = os.environ.get("FORGEJO_URL", "https://forgejo.coilysiren.me").rstrip("/")
 FORGEJO_TOKEN = os.environ.get("FORGEJO_TOKEN", "")
 
-# Upstream that handles every Host header that already routes through
-# Traefik. Pulled from docs/k3s-deploy-notes.md §1: Traefik LoadBalancer
-# listens on 192.168.0.194:80 in namespace kube-system.
+# Upstream for Host headers already routing through Traefik (LoadBalancer in
+# kube-system). See docs/k3s-deploy-notes.md §1.
 TRAEFIK_UPSTREAM = "192.168.0.194:80"
 
 # Shortcut tokens must match this so a malformed entry can't smuggle Caddy
@@ -193,10 +192,8 @@ def reconcile(sites_dir: Path, desired: dict[str, str], dry_run: bool) -> int:
     changes = 0
     existing = {p.stem: p for p in sites_dir.glob("*.caddy")}
 
-    # Refuse mass-deletes when there's something to compare against. A
-    # transient Forgejo API failure (or an auth issue masking private
-    # repos) can make every desired shortcut disappear, which would
-    # otherwise blow away the whole sites dir on a green run.
+    # Refuse mass-deletes: a transient Forgejo API or auth failure can drop
+    # every desired shortcut and otherwise wipe the whole sites dir.
     to_delete = [s for s in existing if s not in desired]
     if existing and len(to_delete) > max(2, len(existing) // 2):
         print(

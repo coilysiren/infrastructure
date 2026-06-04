@@ -1,8 +1,6 @@
 #!/usr/bin/env bash
-# install-coilysiren-forgejo-mirror.sh - install the forgejo-mirror unit +
-# timer on kai-server. Idempotent.
-#
-# Run as: bash /home/kai/projects/coilysiren/infrastructure/scripts/install-coilysiren-forgejo-mirror.sh
+# Install the forgejo-mirror unit + timer on kai-server. Idempotent.
+# Run via bash. See docs/forgejo-deploy-plan.md.
 
 set -euo pipefail
 

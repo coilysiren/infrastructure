@@ -1,18 +1,9 @@
 #!/usr/bin/env bash
-# Poll a tailnet host's SSH every POLL_INTERVAL seconds. Log state transitions.
-# On dead->alive recovery, stream scripts/host-diag.sh into the remote and
-# capture the output locally so each recurrence has a fresh post-recovery
-# snapshot.
-#
-# Usage:
-#   bash scripts/host-watch.sh <ssh-alias>
-#   make host-watch host=<ssh-alias>
-#   coily exec host-watch host=<ssh-alias>
-#
-# Tunables (env vars):
-#   POLL_INTERVAL  seconds between probes (default 15)
-#   OUT_DIR        where to write state log + recovery snapshots
-#                  (default /tmp/host-watch-<alias>)
+# Poll a tailnet host's SSH, log state transitions, and on dead->alive recovery
+# stream host-diag.sh into the remote for a fresh snapshot. See docs/tailscale.md.
+
+# Usage: bash scripts/host-watch.sh <ssh-alias> (or make/coily exec host-watch).
+# Env: POLL_INTERVAL (default 15), OUT_DIR (default /tmp/host-watch-<alias>).
 set -u
 
 HOST="${1:?usage: host-watch.sh <ssh-alias>}"
@@ -24,9 +15,8 @@ DIAG="${SCRIPT_DIR}/host-diag.sh"
 mkdir -p "$OUT_DIR"
 LOG="${OUT_DIR}/watch.log"
 
-# coily is the boundary; the script never invokes ssh directly. coily's ops
-# verbs are host-wide and don't bind to a repo, so it runs the same from any
-# cwd (the canonical case is this repo).
+# coily is the boundary, never raw ssh. Its host-wide ops verbs run the same from
+# any cwd. See docs/tailscale.md.
 COILY=(coily)
 
 log() {

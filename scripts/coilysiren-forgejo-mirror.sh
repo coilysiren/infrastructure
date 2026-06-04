@@ -1,24 +1,6 @@
 #!/usr/bin/env bash
-# coilysiren-forgejo-mirror.sh - mirror every coilysiren GitHub repo pushed
-# in the last 48h to the self-hosted Forgejo at forgejo.coilysiren.me.
-#
-# Invoked by coilysiren-forgejo-mirror.timer daily ~03:45, and on-demand via
-# `coily systemctl start coilysiren-forgejo-mirror.service` or by running
-# this script directly.
-#
-# Why: the Mac multi-push only mirrors repos Kai pushes from her Mac. Code
-# that reaches GitHub from any other machine or the web never lands on
-# Forgejo. This sweep closes that gap. The 48h window (not 24h) gives one
-# full day of overlap, so a single failed run self-heals the next night.
-#
-# Per repo: clone --mirror from GitHub, push --mirror to Forgejo, delete.
-# One at a time. A failure on one repo does not abort the sweep.
-#
-# Auth: GitHub clone uses kai-server's existing git SSH key. Forgejo is
-# HTTPS-only (SSH disabled), so push + create-if-missing use the Forgejo
-# API token from SSM /forgejo/api-token, fetched once at startup. The
-# token reaches git via a mode-600 credential file inside the per-repo
-# temp dir, never argv - so it stays out of `ps`. See infrastructure#260.
+# Mirror coilysiren GitHub repos pushed in the last 48h to forgejo.coilysiren.me
+# (per repo: clone/push --mirror, delete). Token via SSM (infrastructure#260).
 
 set -uo pipefail
 

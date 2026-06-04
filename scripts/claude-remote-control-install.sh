@@ -1,15 +1,6 @@
 #!/usr/bin/env bash
-# claude-remote-control-install.sh - install the Claude Code remote-control
-# daemon unit plus its daily 3am restart timer on kai-server. Idempotent:
-# re-run after editing the unit files.
-#
-# Prereqs:
-#   - nvm installed for kai with a default node version selected.
-#   - `claude` (npm package) installed under that node version.
-#   - `claude login` already run as kai against the active claude.ai
-#     subscription (Pro/Max/Team/Enterprise; API keys not supported).
-#
-# Run as the `kai` user from the repo checkout. Sudo is invoked per-step.
+# Install the remote-control daemon + 3am restart timer on kai-server.
+# Run as kai. See docs/claude-remote-control.md.
 
 set -euo pipefail
 

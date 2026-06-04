@@ -1,14 +1,9 @@
 #!/usr/bin/env bash
-# install-coilysiren-tangled-knot-autodeploy.sh - install the
-# tangled-knot autodeploy unit + timer on kai-server. Idempotent.
-#
-# Run as: bash /home/kai/projects/coilysiren/infrastructure/scripts/install-coilysiren-tangled-knot-autodeploy.sh
-#
-# See infrastructure#293. The autodeploy itself runs as root because
-# it writes /opt/tangled-knot/current, /var/backups/tangled-knot, and
-# restarts tangled-knot.service - root sidesteps a per-verb sudoers
-# entry. The tangled-knot install (install-tangled-knot.sh) must have
-# run first so /opt/tangled-knot/current already exists.
+# Install the tangled-knot autodeploy unit + timer on kai-server. Idempotent.
+# Run via bash. install-tangled-knot.sh must run first. See infrastructure#293.
+
+# The autodeploy runs as root (writes /opt/tangled-knot/current, backups, restarts
+# the service), sidestepping a per-verb sudoers entry.
 
 set -euo pipefail
 

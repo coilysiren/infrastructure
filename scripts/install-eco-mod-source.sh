@@ -1,23 +1,9 @@
 #!/usr/bin/env bash
-# Deploy a source-tree Eco mod by rsyncing it from the kai-server-side
-# coilysiren checkouts into the EcoServer Mods tree. Sibling to
-# install-eco-mod.sh, which handles release-zip mods.
-#
-# For each of {eco-mods, eco-mods-public}, fast-forward the checkout
-# and look for Mods/UserCode/NAME or Mods/NAME inside it. Any match
-# rsyncs into the corresponding subdir under $SERVER_DIR. Matches in
-# multiple repos are applied in order (eco-mods first, then
-# eco-mods-public); --delete is intentionally not used so a partial
-# split between repos does not wipe the other half.
-#
-# eco-configs is intentionally not covered: configs are pushed by a
-# different surface and a Mods/<name> rsync is the wrong shape for
-# them.
-#
-# Run as kai (or whichever user owns the EcoServer tree). No root
-# needed: everything lives under /home/kai/.
-#
-# Argv: install-eco-mod-source.sh NAME
+# Deploy a source-tree Eco mod by rsyncing Mods/UserCode/NAME or Mods/NAME from the
+# eco-mods{,-public} checkouts into the EcoServer Mods tree. See docs/eco-server-setup.md.
+
+# Both repos apply in order (no --delete, so a cross-repo split survives). Runs as kai,
+# no root. Argv: install-eco-mod-source.sh NAME.
 
 set -euo pipefail
 

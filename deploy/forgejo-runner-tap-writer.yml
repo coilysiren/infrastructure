@@ -1,28 +1,5 @@
-# Forgejo Actions "tap-writer" runner: a lightweight, DinD-free runner whose
-# only job is cross-repo formula bumps into the homebrew tap(s). Jobs opt in
-# via `runs-on: tap-writer`; nothing else lands here.
-#
-# Why a separate runner instead of an Actions secret: the tap-write token
-# lives in SSM and reaches git ONLY through a credential helper that reads it
-# at push time. It is never placed in the job environment and never echoed,
-# so it can't leak into Actions logs. Isolated by label, so a token this
-# broad isn't exposed to every repo's CI the way the instance build runner's
-# jobs would be.
-#
-# Why host executor (no DinD): a bump is just git + awk, no container builds.
-# The `host` executor runs job steps directly in this container, so none of
-# the DinD bridge churn that plagues deploy/forgejo-runner.yml (#151/#163)
-# applies. Trade-off: the host executor has no node, so bump jobs must be
-# pure-shell `run:` steps with no JS `uses:` actions (see ward release.yml).
-#
-# Prereq before apply: a Forgejo token with write access to the tap repo(s)
-# stored at SSM /forgejo/tap-bump-token. An org-scoped (coilyco-flight-deck)
-# write token covers all ~8 planned taps with one credential.
-#
-# Pinned to kai-desktop-tower-wsl for parity with the build runner until
-# cross-node routing lands (see docs/k3s-deploy-notes.md §7).
-#
-# Apply: sudo k3s kubectl apply -f deploy/forgejo-runner-tap-writer.yml
+# Forgejo Actions "tap-writer" runner: host-executor, DinD-free, for homebrew
+# tap bumps via `runs-on: tap-writer`. Details: docs/k3s-deploy-notes.md §7.
 ---
 apiVersion: external-secrets.io/v1beta1
 kind: ExternalSecret
@@ -68,9 +45,8 @@ spec:
       nodeSelector:
         kubernetes.io/hostname: kai-desktop-tower-wsl
       initContainers:
-        # Mint a per-pod registration token via the admin API and register
-        # with a single custom label, host executor. Skips if already
-        # registered (re-applies / restarts mustn't re-register).
+        # Mint a per-pod registration token via the admin API, register with a
+        # single label + host executor; skips if already registered.
         - name: register
           image: data.forgejo.org/forgejo/runner:12
           env:

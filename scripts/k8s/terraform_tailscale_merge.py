@@ -85,9 +85,8 @@ def prepare(env):
             env=env,
         )
 
-    # Drop the duplicate ACL from oidc's pulled state so it never lands
-    # in the merged file. The live `terraform_acl.main` row in the oidc
-    # backend gets cleaned up later by `orphan`.
+    # Drop the duplicate ACL from oidc's pulled state so it never lands in the
+    # merged file; the live oidc-backend row gets cleaned up later by `orphan`.
     run(
         f"terraform -chdir=terraform/tailscale-oidc state rm "
         f"-state={src_state_path('tailscale-oidc')} tailscale_acl.main",

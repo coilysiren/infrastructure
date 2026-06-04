@@ -1,28 +1,6 @@
 #!/usr/bin/env python3
-# thermal-heartbeat.py - read every available temperature sensor on the host,
-# write a Prometheus textfile for node-exporter to scrape, and ping a Sentry
-# cron monitor.
-#
-# Runs on kai-server every 30s via thermal-heartbeat.timer.
-#
-# Sources, in order of preference:
-#   1. lm-sensors `sensors -j`   (CPU package, per-core, motherboard, ambient)
-#   2. nvme-cli   `nvme smart-log -o json` for each /dev/nvme*n*
-#   3. kernel    /sys/class/thermal/thermal_zone*/temp  (always-on backstop)
-#
-# Outputs:
-#   /var/lib/node-exporter/textfile/thermal.prom
-#       node_thermal_celsius{source,chip,sensor} <C>
-#       node_thermal_heartbeat_seconds <unix-ts>
-#       node_thermal_breach <0|1>
-#
-# Sentry side, when SENTRY_CRON_URL is set:
-#   - Always POSTs a check-in with status=ok|error and duration.
-#   - On threshold breach, additionally sends an envelope to SENTRY_DSN with
-#     the thermal payload as tags so alert rules can fire on level=warning.
-#
-# Stdlib only on purpose - this runs on a stock Debian box without any
-# Python venv.
+# Read host temp sensors (lm-sensors/nvme/kernel), write node-exporter textfile
+# thermal.prom, and ping a Sentry cron. Runs on kai-server every 30s; stdlib only.
 
 import argparse
 import dataclasses
@@ -43,17 +21,14 @@ from typing import Iterable
 TEXTFILE_DEFAULT = "/var/lib/node-exporter/textfile/thermal.prom"
 STATE_DEFAULT = "/var/lib/thermal-heartbeat/state.yaml"
 DEFAULT_THRESHOLDS = {
-    # source -> celsius. Anything not listed never breaches.
-    # CPU pkg in the 80-85 range under load is normal for this box; modern
-    # desktop CPUs throttle in the high 90s. 90C is the "actually warm" line.
+    # source -> celsius breach line (unlisted sources never breach). CPU
+    # 80-85C under load is normal here, throttle is high 90s, so 90C = warm.
     "lm_sensors_cpu": 90.0,
     "nvme": 70.0,
     "thermal_zone": 95.0,
 }
-# Minimum gap between Sentry breach events while the *same* set of sensors
-# stays in breach. New sensors entering breach re-fire immediately. Without
-# this, a sustained breach at 30s cadence drains the Sentry error budget in
-# under a day.
+# Min gap between Sentry breach events for the same sensor set (new sensors
+# re-fire now); caps a sustained breach from draining the error budget.
 SENTRY_EVENT_MIN_INTERVAL_S = 3600
 HOSTNAME = socket.gethostname()
 
@@ -107,10 +82,8 @@ def read_lm_sensors() -> Iterable[Reading]:
         for sensor_name, sensor_body in chip_body.items():
             if not isinstance(sensor_body, dict):
                 continue
-            # lm-sensors keys look like "temp1_input" (Celsius) or
-            # "fan1_input" (RPM). Both have the same `_input` suffix, so
-            # narrow on the `temp` prefix to avoid reporting fan speeds as
-            # temperatures.
+            # lm-sensors keys share the `_input` suffix (temp1_input vs
+            # fan1_input); the `temp` prefix avoids reporting fan RPM as temps.
             for key, value in sensor_body.items():
                 if isinstance(value, (int, float)) and key.startswith("temp") and key.endswith("_input"):
                     yield Reading("lm_sensors", chip, sensor_name, float(value))
@@ -210,9 +183,8 @@ def render_textfile(
         ]
     )
     if cpu_usage_pct is not None:
-        # Pair-with-thermal CPU util: node-exporter exposes the raw counters
-        # too, but emitting the gauge alongside the temps keeps the breach
-        # narrative ("hot AND loaded" vs "hot AND idle") in one panel.
+        # Emit CPU util beside the temps so the breach narrative ("hot AND
+        # loaded" vs "hot AND idle") stays in one panel.
         lines.extend(
             [
                 "# HELP node_thermal_cpu_usage_pct Instantaneous system-wide CPU usage % over a 250ms sample.",
@@ -328,12 +300,8 @@ def sentry_event(  # pylint: disable=too-many-locals
 
 
 def load_state(path: pathlib.Path) -> dict:
-    # Hand-rolled YAML reader for this fixed shape:
-    #   last_event_ts: <float>
-    #   last_breach_signature:
-    #     - <string>
-    #     - ...
-    # Stdlib has no yaml; the shape is small enough to parse inline.
+    # Inline YAML reader for the fixed {last_event_ts: float,
+    # last_breach_signature: [str, ...]} shape; stdlib has no yaml.
     try:
         text = path.read_text()
     except OSError:

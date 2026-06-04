@@ -1,14 +1,6 @@
 #!/usr/bin/env bash
-# fail2ban-install.sh - install and enable fail2ban with the sshd jail on
-# kai-server. Idempotent. Installs the package, drops the repo's explicit
-# jail.local, enables + starts the service, and prints status.
-#
-# Run as: bash /home/kai/projects/coilysiren/infrastructure/scripts/fail2ban-install.sh
-#
-# Why: sshd listens on 0.0.0.0:22 and takes continuous brute-force scans;
-# nothing was throttling failed auth. This bans source IPs after N failed
-# attempts. No sshd binding, firewall topology, or exposure change. See
-# infrastructure#104 (parent audit: infrastructure#103).
+# Install and enable fail2ban with the sshd jail on kai-server (idempotent), to
+# ban brute-force source IPs after repeated failed auth. See docs/fail2ban.md.
 
 set -euo pipefail
 

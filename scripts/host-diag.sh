@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
-# Capture post-incident diagnostic snapshot from a remote host.
-# Intended to be streamed via: ssh <host> -- bash -s < scripts/host-diag.sh
-# Writes to /tmp/host-diag-<UTC-ts>.txt on the remote AND streams to stdout.
+# Capture a post-incident diagnostic snapshot from a remote host, streamed via
+# `ssh <host> -- bash -s < scripts/host-diag.sh`. Writes /tmp + stdout.
 set +e
 TS="$(date -u +%Y%m%dT%H%M%SZ)"
 OUT="/tmp/host-diag-${TS}.txt"

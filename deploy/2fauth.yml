@@ -1,17 +1,5 @@
-# 2FAuth (self-hosted TOTP manager) on kai-server k3s. Tailnet-only.
-#
-# Tailnet-only following the repo-recall.yml pattern: an in-pod tailscale
-# sidecar gives the Pod a tailnet IP, so peers reach the app at
-# `http://2fauth:8000`. No public Ingress, no cert-manager, no Route 53.
-#
-# Auth into the app is 2FAuth's own login (a tailnet peer hitting :8000
-# gets a login wall, not Kai's codes). The ts authkey is minted by
-# terraform/tailscale/ (service `2fauth` in services.yaml) and
-# landed in SSM at /coilysiren/2fauth/ts-authkey. The APP_KEY that
-# encrypts the SQLite TOTP DB is in SSM at /coilysiren/2fauth/app-key.
-#
-# Apply: sudo k3s kubectl apply -f deploy/2fauth.yml
-# Tracker: coilyco-flight-deck/infrastructure#266
+# 2FAuth (self-hosted TOTP manager) on kai-server k3s. Tailnet-only in-pod
+# tailscale sidecar. Details: docs/k3s-deploy-notes.md. Apply: kubectl apply -f.
 ---
 apiVersion: v1
 kind: Namespace

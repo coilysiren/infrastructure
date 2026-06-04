@@ -1,52 +1,13 @@
-# repo-recall on kai-server k3s. Tailnet-only, no Ingress, no Route 53.
-#
-# Three containers in one Pod: `api` (Rust axum + MCP on :7777), `web`
-# (Caddy serving the static SPA on :8080, reverse-proxying /api,
-# /openapi.json, /mcp to localhost:7777), and `ts` (tailscale sidecar
-# in kernel mode that gives the Pod a tailnet IP, so tailnet peers
-# reach `repo-recall.<tailnet>.ts.net:8080` directly).
-#
-# The ts sidecar replaces the tailscale-operator's per-Service ts-proxy
-# StatefulSet. Auth key is minted by terraform/tailscale/ and
-# materialized into the namespace via the ExternalSecret below. State
-# persists in a k8s Secret (TS_KUBE_SECRET) so pod restarts re-use the
-# device identity without re-consuming the single-use auth key.
-#
-# Filesystem access is via hostPath, read-only. The API container reads the
-# host project tree and Claude session JSONL during ingest; it does not
-# write either path. Cache (redb + tantivy) goes to $TMPDIR per AGENTS.
-# hostPath rather than a local-path PVC because the data we want is already
-# at a stable on-host location (the operator-managed worktree); a PVC would
-# add a sidecar to populate it from the same path, which is just indirection.
-# securityContext UID 1000 must match the host owner of /home/kai/* (kai on
-# kai-server is UID 1000). Read-only mounts mean a misbehaving container
-# can't corrupt the worktree.
-#
-# Images come from coilysiren/repo-recall's `docker.yml` workflow:
-#   ghcr.io/coilysiren/repo-recall-api:latest
-#   ghcr.io/coilysiren/repo-recall-web:latest
-# The manifest references `:latest` so a fresh `kubectl apply` (including
-# from a third-party operator deploying repo-recall on their own cluster)
-# pulls a working image from GHCR. Subsequent rolls on kai-server happen
-# via `kubectl set image deploy/repo-recall <container>=ghcr.io/coilysiren
-# /repo-recall-<api|web>:sha-<short>` from the docker.yml `ship` job,
-# which sideloads SHA-pinned images directly into kai-server's containerd
-# via tailscale ssh + `k3s ctr import`. imagePullPolicy: IfNotPresent so
-# the kubelet prefers the sideloaded image.
-#
-# Apply: sudo k3s kubectl apply -f deploy/repo-recall.yml
+# repo-recall on kai-server k3s: three-container Pod (api/web/ts), tailnet-only,
+# hostPath read-only, GHCR images. See docs/repo-recall-deploy.md.
 ---
 apiVersion: v1
 kind: Namespace
 metadata:
   name: repo-recall
 ---
-# Dedicated ServiceAccount + Role + RoleBinding so the ts sidecar can
-# read/write its TS_KUBE_SECRET state Secret (repo-recall-ts-state).
-# Scoped tight: only this Secret name, only get/update/patch (+ create
-# for initial seed). Mirrors the operator's `proxies` ServiceAccount
-# pattern, but namespaced to repo-recall rather than living in the
-# global tailscale namespace.
+# Dedicated SA + Role + RoleBinding so the ts sidecar can read/write its
+# TS_KUBE_SECRET state Secret. See docs/repo-recall-deploy.md.
 apiVersion: v1
 kind: ServiceAccount
 metadata:
@@ -99,13 +60,8 @@ spec:
         app: repo-recall
     spec:
       serviceAccountName: repo-recall
-      # Pin to kai-server (native Linux 6.8) instead of the WSL2 nodes
-      # (kai-desktop-tower / kai-desktop-tower-wsl). The ts sidecar
-      # needs /dev/net/tun, which the WSL2 kernel doesn't expose to
-      # containerd by default. Every working operator-managed ts-proxy
-      # in this cluster is on kai-server; same constraint applies here.
-      # Also keeps the hostPath worktree consistent (single source of
-      # truth on one node).
+      # Pin to kai-server: ts sidecar needs /dev/net/tun, unexposed on WSL2.
+      # See docs/repo-recall-deploy.md.
       nodeSelector:
         kubernetes.io/hostname: kai-server
       securityContext:
@@ -121,35 +77,24 @@ spec:
             - name: api
               containerPort: 7777
           env:
-            # 0.0.0.0 so the kubelet readiness/liveness probes reach
-            # :7777 via the pod IP. The api stays private: only the web
-            # container's :8080 is fronted externally, and the tailnet
-            # ACL doesn't open :7777. Caddy reverse-proxies to
-            # localhost:7777 in-pod, which works either way.
+            # 0.0.0.0 so kubelet probes reach :7777 via pod IP. The api stays
+            # private; only web's port is fronted. See docs/repo-recall-deploy.md.
             - name: REPO_RECALL_HOST
               value: "0.0.0.0"
             - name: REPO_RECALL_PORT
               value: "7777"
-            # MCP CORS allowlist. The Caddy sidecar terminates the tailnet
-            # request on the SPA origin; same-Pod localhost upstream means
-            # MCP only ever sees a same-origin call. Listing the public
-            # MagicDNS name here lets a direct curl from a tailnet peer
-            # against /mcp succeed too.
+            # MCP CORS allowlist; the MagicDNS name lets a direct tailnet curl
+            # against /mcp succeed. See docs/repo-recall-deploy.md.
             - name: REPO_RECALL_MCP_ORIGINS
               value: "http://repo-recall,http://repo-recall.tail09a41b.ts.net,https://repo-recall.tail09a41b.ts.net"
-            # Mounted worktree + Claude session JSONL. HOME is repointed at
-            # the mount root so the standard `~/.claude/projects/*.jsonl`
-            # glob in the ingest layer finds the sessions without code changes.
+            # Mounted worktree + Claude session JSONL; HOME repointed at the mount
+            # root so the ingest glob finds sessions. See docs/repo-recall-deploy.md.
             - name: REPO_RECALL_CWD
               value: "/workspace/projects/coilysiren"
             - name: HOME
               value: "/workspace/home"
-            # GitHub token for the octocrab ingest layer. Sourced from
-            # SSM /coilysiren/repo-recall/gh-token via the external-
-            # secrets operator (see ExternalSecret below). repo-recall's
-            # OctocrabClient reads GH_TOKEN ahead of `gh auth token`,
-            # so this env var alone is sufficient - no need to seed a
-            # gh CLI config in the image.
+            # GH_TOKEN for the octocrab ingest layer, from SSM via the
+            # ExternalSecret below. See docs/repo-recall-deploy.md.
             - name: GH_TOKEN
               valueFrom:
                 secretKeyRef:
@@ -188,11 +133,8 @@ spec:
             - name: http
               containerPort: 80
           env:
-            # Port 80 so tailnet peers can hit `http://repo-recall`
-            # without an explicit :PORT suffix - same shape as forgejo
-            # (Service.port 80 -> targetPort 3000, but here we drop the
-            # port-translating Service since the sidecar puts the Pod
-            # directly on the tailnet, so web binds 80 itself).
+            # Port 80 so tailnet peers hit `http://repo-recall` without a :PORT
+            # suffix; web binds 80 directly. See docs/repo-recall-deploy.md.
             - name: PORT
               value: "80"
             # Same-Pod sibling. localhost is the Caddyfile default but
@@ -200,9 +142,8 @@ spec:
             - name: API_UPSTREAM
               value: "localhost:7777"
           securityContext:
-            # Caddy runs as UID 1000 per the pod-level securityContext;
-            # binding port 80 from non-root needs CAP_NET_BIND_SERVICE.
-            # Strictly scoped to the bind capability, no other privilege.
+            # Caddy runs as UID 1000; binding port 80 non-root needs
+            # CAP_NET_BIND_SERVICE, scoped to that one capability.
             capabilities:
               add: ["NET_BIND_SERVICE"]
           resources:
@@ -224,14 +165,8 @@ spec:
               port: 80
             initialDelaySeconds: 15
             periodSeconds: 30
-        # tailscale sidecar in kernel mode. Pod gains a tailnet IP via
-        # WireGuard userspace + a real TUN device (privileged: true is
-        # what the previous operator-managed ts-proxy StatefulSets use
-        # on this same WSL2 kernel, so it's the known-working shape).
-        # Once `tailscale up` runs, web's 0.0.0.0:8080 listener is
-        # reachable from tailnet peers at `repo-recall:8080`. No
-        # explicit forwarding rule needed - same pod netns means the
-        # tailnet IP and the pod IP both terminate at the web container.
+        # tailscale sidecar in kernel mode: Pod gains a tailnet IP, web's
+        # listener reachable at `repo-recall`. See docs/repo-recall-deploy.md.
         - name: ts
           image: tailscale/tailscale:v1.78.1
           env:
@@ -243,9 +178,8 @@ spec:
               value: "false"
             - name: TS_AUTH_ONCE
               value: "true"
-            # Don't override the pod's resolv.conf; the cluster has its
-            # own DNS path and accepting tailnet DNS would break in-pod
-            # service discovery for the api/web siblings.
+            # Keep the pod's resolv.conf; accepting tailnet DNS would break
+            # in-pod service discovery for the api/web siblings.
             - name: TS_EXTRA_ARGS
               value: "--accept-dns=false"
             - name: TS_AUTHKEY
@@ -254,10 +188,8 @@ spec:
                   name: repo-recall-ts-authkey
                   key: authkey
           securityContext:
-            # privileged needed for /dev/net/tun on the WSL2 kernel.
-            # The pod-level runAsNonRoot is overridden here because
-            # tailscaled needs root for the netlink + tun ioctls; the
-            # api/web siblings still run as UID 1000.
+            # privileged + root: tailscaled needs /dev/net/tun and netlink
+            # ioctls. The api/web siblings still run as UID 1000.
             privileged: true
             runAsUser: 0
             runAsGroup: 0
@@ -279,8 +211,8 @@ spec:
             path: /home/kai/.claude
             type: Directory
 ---
-# GH_TOKEN for the api container's octocrab ingest. Sourced from
-# SSM /coilysiren/repo-recall/gh-token.
+# GH_TOKEN for the api container's octocrab ingest, from SSM
+# /coilysiren/repo-recall/gh-token.
 apiVersion: external-secrets.io/v1
 kind: ExternalSecret
 metadata:
@@ -303,11 +235,8 @@ spec:
       remoteRef:
         key: /coilysiren/repo-recall/gh-token
 ---
-# TS_AUTHKEY for the ts sidecar. Sourced from
-# SSM /coilysiren/repo-recall/ts-authkey, which terraform/tailscale-
-# devices/ provisions. Single-use, 90-day expiry; the ts sidecar's
-# TS_KUBE_SECRET state Secret holds the persisted device identity
-# after first boot so subsequent pod restarts don't need a fresh key.
+# TS_AUTHKEY for the ts sidecar, from SSM /coilysiren/repo-recall/ts-authkey
+# (terraform-provisioned). See docs/repo-recall-deploy.md.
 apiVersion: external-secrets.io/v1
 kind: ExternalSecret
 metadata:
@@ -330,10 +259,8 @@ spec:
       remoteRef:
         key: /coilysiren/repo-recall/ts-authkey
 ---
-# ClusterIP Service for in-cluster routing only. Tailnet exposure
-# comes from the ts sidecar's WireGuard interface, not from any
-# Service annotation. The previous tailscale.com/expose annotations
-# are gone with the operator deprovision.
+# ClusterIP Service for in-cluster routing only; tailnet exposure comes
+# from the ts sidecar's WireGuard interface, not a Service annotation.
 apiVersion: v1
 kind: Service
 metadata:

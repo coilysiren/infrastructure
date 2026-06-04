@@ -1,18 +1,5 @@
-# Public HTTP front door for the Tangled knot.
-#
-# The knot runs as a host systemd service on kai-server (not in k3s),
-# listening on :5555 - see systemd/tangled-knot.service. Host Caddy
-# cannot serve public domains (it is tailnet-internal; public
-# *.coilysiren.me :80/:443 traffic reaches Traefik, not Caddy), so the
-# public path goes through Traefik with a cert-manager DNS-01 cert -
-# the same shape as forgejo phase 2. DNS-01 means the cert never needs
-# the :80/:443 ACME challenge that fails against the home ingress.
-#
-# A selector-less Service plus a hand-pinned Endpoints object routes
-# cluster traffic to the off-cluster knot at the host LAN IP. The knot
-# binds 0.0.0.0:5555 (tangled-knot.env) so Traefik pods can reach it.
-#
-# Apply: sudo k3s kubectl apply -f deploy/tangled-knot-ingress.yml
+# Public front door for the Tangled knot (host systemd service on :5555) via
+# Traefik + cert-manager DNS-01. Details: docs/k3s-deploy-notes.md.
 ---
 apiVersion: v1
 kind: Namespace
@@ -31,9 +18,8 @@ spec:
       targetPort: 5555
       protocol: TCP
 ---
-# Selector-less Service: Endpoints are pinned by hand to the host, so
-# the knot process (off-cluster, host systemd) is reachable as a normal
-# in-cluster Service. kai-server's LAN IP is a stable RFC1918 address.
+# Selector-less Service: Endpoints pinned by hand to kai-server's RFC1918 LAN IP
+# so the off-cluster host-systemd knot is reachable as a normal Service.
 apiVersion: v1
 kind: Endpoints
 metadata:

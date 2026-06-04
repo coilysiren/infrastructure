@@ -1,23 +1,9 @@
 #!/usr/bin/env bash
-# tailscale-entity-rollup.sh - count tailnet entities, sliced every which way.
-#
-# Slices the same node set five ways. Four are disjoint and each sums to the
-# node total (by_type, by_os, by_owner, by_online). by_tag OVERLAPS - one node
-# can carry several tags - and the trailing rollup reconciles that duplication
-# so the overlap is explicit, not hidden.
-#
-# Defaults, baked in so a bare run is always right:
-#   * source  - always `coily tailscale` (top-level audited passthrough, never
-#               bare tailscale).
-#   * output  - always colorized YAML via `bat -l yaml`. bat auto-detects a
-#               terminal, so `... > out.yaml` writes plain YAML (no ANSI), while
-#               an interactive run is colorized. Falls back to cat if no bat.
-#
-# coily's ops verbs are host-wide and don't bind to a repo, so this runs the
-# same from any cwd.
-#
-# Usage: scripts/tailscale-entity-rollup.sh            # colorized YAML to terminal
-#        scripts/tailscale-entity-rollup.sh > out.yaml # plain YAML snapshot
+# Count tailnet entities sliced five ways via `coily tailscale`. Four are disjoint and sum
+# to the total. by_tag overlaps and the rollup reconciles it. See docs/tailscale.md.
+
+# Output is colorized YAML via bat (plain when piped to a file), cat fallback. Runs from
+# any cwd. Usage: scripts/tailscale-entity-rollup.sh [> out.yaml].
 set -euo pipefail
 
 colorize() {

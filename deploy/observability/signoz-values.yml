@@ -1,34 +1,13 @@
-# Helm values for the signoz/signoz chart.
-# https://github.com/SigNoz/charts/tree/main/charts/signoz
-#
-# Chart pinned to signoz-0.125.0 in scripts/k8s/signoz.py (SigNoz app
-# v0.125.0, OTel Collector v0.144.4).
-#
-# SigNoz is the third pane next to Sentry and VictoriaMetrics+Grafana:
-# self-hosted OpenTelemetry traces, logs, and metrics backed by ClickHouse.
-#
-# Traces-focused but whole. The full stack ships - the logs and metrics
-# pipelines stay configured, they are not disabled. SigNoz has no per-signal
-# feature flags and the cost is ingestion-driven, not deploy-driven. The
-# intent: traces get sent first, logs and metrics get fed later by pointing
-# shippers at the OTel collector. Nothing here needs to change for that.
-#
-# Private only. No public ingress, no Caddy route, no public DNS. The UI is
-# reachable only over Tailscale via the standalone ts-signoz Deployment in
-# deploy/observability/signoz-tailscale-service.yml.
-#
-# Every component is pinned to kai-server. The other cluster nodes are flaky
-# WSL2 nodes and k3s default storage is local-path (node-pinned volumes), so
-# the stateful pods must land on kai-server.
+# Helm values for signoz/signoz (pinned in scripts/k8s/signoz.py): self-hosted OTel
+# traces/logs/metrics on ClickHouse. Private, tailnet-only, pinned to kai-server.
 
 # ClickHouse - the telemetry store. Single shard, single replica.
 clickhouse:
   enabled: true
   nodeSelector:
     kubernetes.io/hostname: kai-server
-  # The Altinity clickhouse-operator reconciles the ClickHouse install.
-  # Pin it to kai-server too - on a flaky WSL2 node it stalls and blocks
-  # ClickHouse bringup for the whole stack.
+  # The Altinity clickhouse-operator reconciles the install; pin it to kai-server
+  # too, since on a flaky WSL2 node it stalls and blocks ClickHouse bringup.
   clickhouseOperator:
     nodeSelector:
       kubernetes.io/hostname: kai-server
@@ -92,9 +71,8 @@ signoz:
       cpu: "1"
       memory: 1Gi
 
-# OTel collector - the ingest front door. Traces (and later logs/metrics)
-# shippers point at this. No public ingress; reachable in-cluster and over
-# the tailnet only.
+# OTel collector - the ingest front door that shippers point at. No public ingress;
+# reachable in-cluster and over the tailnet only.
 otelCollector:
   nodeSelector:
     kubernetes.io/hostname: kai-server

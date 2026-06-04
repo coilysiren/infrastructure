@@ -1,23 +1,6 @@
 #!/usr/bin/env bash
-# coilysiren-pull-all.sh - fast-forward every git checkout under
-# ~/projects/coilysiren on kai-server.
-#
-# Invoked by coilysiren-pull-all.timer daily, and on-demand via
-# `coily systemctl start coilysiren-pull-all.service` or by running this
-# script directly.
-#
-# Why: several long-lived services on kai-server read local checkouts
-# directly:
-#   - personal-dashboard.service reads agentic-os-kai/data/catalog-graph.yaml
-#   - coily ssh deploy <target> calls scripts under infrastructure
-#   - eco-mods rsync deploys read from eco-mods / eco-mods-public
-# Stale checkouts silently feed stale data to running services.
-#
-# Skips with a one-line warning when:
-#   - working tree is dirty
-#   - HEAD is detached
-#   - current branch is not the remote's default branch
-# Failures on a single repo do not abort the sweep.
+# Fast-forward every git checkout under ~/projects/coilysiren on kai-server so
+# services don't run on stale trees. Skips dirty/detached/non-default; runs daily.
 
 set -uo pipefail
 
@@ -28,10 +11,8 @@ if [[ ! -d "$ROOT" ]]; then
   exit 1
 fi
 
-# Git LFS: eco-mods and infrastructure track binary assets via LFS.
-# Wire the global smudge/clean filters so every pull below fetches real
-# content, not pointer files. Idempotent; warns if git-lfs is absent.
-# See coilyco-flight-deck/infrastructure#286.
+# Wire global LFS filters so pulls fetch real content, not pointers (eco-mods +
+# infrastructure track LFS assets). Idempotent (coilyco-flight-deck/infrastructure#286).
 if command -v git-lfs >/dev/null 2>&1; then
   git lfs install --skip-repo >/dev/null
 else
@@ -92,10 +73,8 @@ for git_dir in "$ROOT"/*/.git; do
   fi
 done
 
-# Refresh agentic-os-kai's host setup (skill symlinks, ~/.claude/CLAUDE.md,
-# merged Claude settings) whenever its pull succeeded. setup.sh is
-# idempotent and cheap. Picked up by the daily restart at 03:00, gated
-# by claude-remote-control-restart-precheck.sh. See coilyco-flight-deck/infrastructure#211.
+# Re-run agentic-os-kai/setup.sh (skill symlinks, CLAUDE.md, Claude settings)
+# whenever its pull succeeded. Idempotent (coilyco-flight-deck/infrastructure#211).
 if (( agentic_os_kai_ok == 1 )); then
   setup="$ROOT/agentic-os-kai/setup.sh"
   if [[ -x "$setup" ]]; then

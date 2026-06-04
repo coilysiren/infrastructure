@@ -1,26 +1,6 @@
 #!/usr/bin/env bash
-# claude-session-watcher-install-mac.sh - install the Claude session
-# watcher as a launchd agent on a Mac (desktop or laptop).
-#
-# Component 1 of the cross-machine session-aggregation pipeline
-# (coilyco-flight-deck/infrastructure#224). Watches ~/.claude/projects and HTTP
-# POSTs each changed session file to the tailnet-only session-sink on
-# kai-server.
-#
-# Idempotent: re-run to upgrade the script, refresh the venv, or change
-# the machine id.
-#
-# Usage:
-#   scripts/claude-session-watcher-install-mac.sh --machine kai-mac-desktop
-#   scripts/claude-session-watcher-install-mac.sh --uninstall
-#
-# SESSION_SINK_URL is resolved from SSM (/coilysiren/session-sink/url) or
-# taken from the SESSION_SINK_URL env var. It embeds a tailnet FQDN (an
-# opaque id) so it is never committed - the filled-in plist lands only
-# in ~/Library/LaunchAgents.
-#
-# Prereqs: uv on PATH, aws CLI configured (unless SESSION_SINK_URL is
-# passed explicitly).
+# Install the Claude session watcher as a launchd agent on a Mac. Idempotent.
+# Usage: --machine <id> | --uninstall. See docs/claude-session-watcher.md.
 
 set -euo pipefail
 

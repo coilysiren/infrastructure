@@ -1,19 +1,6 @@
 #!/usr/bin/bash
-# factorio-backup.sh - copy the factorio saves dir to S3.
-#
-# Runs on kai-server. Invoked nightly by factorio-backup.timer and
-# ad-hoc by `coily gaming factorio saves backup-now`.
-#
-# Auth: uses the existing /home/kai/.aws credentials (kai-server-k3s
-# IAM user) which gets an inline S3 policy granting Put/List on the
-# kai-game-backups bucket.
-#
-# RPO target: ~24h. RPO is bounded tighter by Factorio's autosave
-# rotation (autosave_interval=5min, autosave_slots=10) which keeps a
-# rolling local 50min of history regardless of this script.
-#
-# The bucket lifecycle policy rotates these objects; this script does
-# not delete anything itself.
+# Copy the factorio saves dir to S3 (kai-game-backups) nightly or via
+# `coily gaming factorio saves backup-now`. Bucket lifecycle rotates; never deletes.
 
 set -euo pipefail
 
@@ -24,10 +11,8 @@ STAMP="$(date -u +%Y%m%dT%H%M%SZ)"
 PREFIX="factorio/${HOST}/${STAMP}"
 
 if [ ! -d "${SAVES_DIR}" ]; then
-  # Cleanly no-op when the server has been installed but not yet run
-  # (no saves dir created yet). The nightly timer fires before the
-  # first session is normal during onboarding; we don't want it to
-  # generate failure notifications. Exit 0 with a one-liner.
+  # No-op when the server is installed but never run (no saves dir yet), so the
+  # nightly timer doesn't alert during onboarding. Exit 0 with a one-liner.
   echo "factorio-backup: nothing to back up (saves dir does not exist yet): ${SAVES_DIR}"
   exit 0
 fi
@@ -39,10 +24,8 @@ if [ -z "$(find "${SAVES_DIR}" -maxdepth 1 -name '*.zip' -print -quit)" ]; then
   exit 0
 fi
 
-# --size-only because Factorio rewrites autosave files with new mtimes
-# even when the byte content is identical mid-session; size-only
-# defeats unnecessary re-uploads. Uses the default profile from
-# /home/kai/.aws/credentials.
+# --size-only because Factorio rewrites autosaves with new mtimes even when bytes
+# are identical, so size-only avoids needless re-uploads.
 aws s3 sync \
   --size-only \
   --no-progress \

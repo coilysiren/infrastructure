@@ -1,24 +1,15 @@
-# Helm values for the prometheus-node-exporter chart.
-# https://github.com/prometheus-community/helm-charts/tree/main/charts/prometheus-node-exporter
-#
-# DaemonSet across both nodes. Defaults disable the systemd, processes, and
-# login collectors already, which is what we want - those are the leak
-# vectors that would put game-server unit names and per-PID detail onto
-# graphs that may eventually go public.
+# Helm values for the prometheus-node-exporter chart. DaemonSet on both nodes;
+# defaults disable systemd/processes/login collectors (leak vectors for graphs).
 
-# Default args list runs CPU/mem/disk/net/etc. Explicitly disable a couple
-# more that have no signal value here and ship label-heavy data. hwmon stays
-# enabled (kernel-derived temps; the thermal-heartbeat textfile collector
-# also uses /sys/class/hwmon as a backstop). textfile collector is pointed
-# at the hostPath below.
+# Disable wifi/infiniband (no signal, label-heavy); hwmon stays on for temps. The
+# textfile collector reads the hostPath below.
 extraArgs:
   - --no-collector.wifi
   - --no-collector.infiniband
   - --collector.textfile.directory=/var/lib/node-exporter/textfile
 
-# Host path read-only mount for the textfile collector. systemd-managed
-# scripts on the host (currently: thermal-heartbeat) drop *.prom files here
-# every 30s and node-exporter reads them on the next scrape.
+# Read-only host mount for the textfile collector. Host systemd scripts (currently
+# thermal-heartbeat) drop *.prom files here every 30s, read on the next scrape.
 extraHostVolumeMounts:
   - name: textfile
     hostPath: /var/lib/node-exporter/textfile
@@ -44,6 +35,5 @@ service:
   # service shape is fine.
   port: 9100
 
-# The chart uses `app.kubernetes.io/name=prometheus-node-exporter` by
-# default - the vmagent scrape config in victoria-metrics-values.yml
-# matches on exactly that label.
+# Chart default label `app.kubernetes.io/name=prometheus-node-exporter` is what the
+# vmagent scrape config matches on (see vmagent-values.yml).

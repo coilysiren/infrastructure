@@ -1,10 +1,5 @@
-# Helm values for the victoria-metrics-single chart.
-# https://github.com/VictoriaMetrics/helm-charts/tree/master/charts/victoria-metrics-single
-#
-# Single-node VM: one StatefulSet (vmsingle), one PVC, one bundled vmagent that
-# scrapes the cluster's node-exporter pods. Tailnet-only; no public ingress.
-# Eco-telemetry and other OTLP producers will write to vmsingle's
-# `/opentelemetry/api/v1/push` endpoint over the tailnet.
+# Helm values for victoria-metrics-single: one vmsingle StatefulSet + PVC, tailnet-only,
+# no public ingress. OTLP producers push over the tailnet. See docs/k3s-deploy-notes.md.
 
 server:
   retentionPeriod: 1  # months. Default; cheap on disk per the sizing math.
@@ -23,15 +18,10 @@ server:
   # observability stack lives with the rest of the cluster substrate.
   nodeSelector:
     kubernetes.io/hostname: kai-server
-  # Tailnet exposure happens via the standalone ts-vmsingle Deployment
-  # in deploy/observability/vmsingle-tailscale-service.yml; no operator
-  # annotation needed (and wouldn't work here anyway - the chart's
-  # primary Service is headless).
+  # Tailnet exposure via the standalone ts-vmsingle Deployment in
+  # vmsingle-tailscale-service.yml (chart's primary Service is headless).
   service:
     type: ClusterIP
 
-# vmagent ships as a separate chart (victoria-metrics-agent), not as a
-# subcomponent here. See vmagent-values.yml in this directory.
-#
-# vmalert/alertmanager off for v1. Wire them when there's an alert worth
-# paging on; right now there isn't.
+# vmagent ships as a separate chart (see vmagent-values.yml). vmalert/alertmanager
+# off for v1 until there's an alert worth paging on.
