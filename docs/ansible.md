@@ -39,9 +39,12 @@ to `ansible/ansible.cfg` so playbooks run from the repo root.
   local connection (ansible drives the box it runs on, no SSH). New Macs are
   added here; remote ones need `ansible_host` + tailnet SSH reachability.
 - **`inventory/group_vars/mac.yml`** - the declared baseline for the `mac` group:
-  `homebrew_taps`, `homebrew_installed_packages`, `homebrew_cask_apps`, and
-  `agent_compose_scopes`. Auto-loaded because it sits next to the inventory (the
-  reason it lives under `inventory/`, not `ansible/`).
+  `homebrew_taps`, `homebrew_installed_packages`, `homebrew_cask_apps`,
+  `agent_compose_scopes`, and `system_python3_packages` (pip packages
+  force-installed into the brew system python3 so `language: system` pre-commit
+  hooks that `import yaml` against it don't crash - see the homebrew role).
+  Auto-loaded because it sits next to the inventory (the reason it lives under
+  `inventory/`, not `ansible/`).
 - **`inventory/group_vars/all.yml`** - fleet-wide vars for the `repos` role
   (`repos_owner`, `repos_forgejo_api`, `repos_forgejo_token_ssm`,
   `repos_recent_days`, `repos_forgejo_only`, `repos_known_orgs`, `repos_root`).
@@ -75,6 +78,19 @@ Gotcha surfaced in practice: `brew install` validates the whole list up front an
 aborts the batch if any name is unresolvable. An **orphaned keg** (a tapped
 formula the tap later renamed) shows up as a hard failure - drop it from the
 baseline and `brew uninstall` the stale keg.
+
+After the casks, the role force-installs `system_python3_packages` into the brew
+system python3 via that python's own `pip3` (`/opt/homebrew/bin/pip3`, the same
+Cellar `/opt/homebrew/bin/python3` resolves to - **not** ansible's uv-env
+interpreter). This exists because the catalog pre-commit suite ships hooks
+declared `language: system` (`check-coily-yaml`, `catalog-block-present`) that
+run `python3 script.py` and `import yaml` against that interpreter rather than an
+isolated venv. A freshly-provisioned Mac's brew python3 carries no PyYAML, so
+those hooks crash with `ModuleNotFoundError` and block every commit in
+catalog-using repos until the package lands. Homebrew python is
+externally-managed (PEP 668), so the install passes `--break-system-packages`;
+the `ansible.builtin.pip` module keeps it idempotent. Origin:
+coilyco-flight-deck/infrastructure#228.
 
 ## The agent-compose role
 

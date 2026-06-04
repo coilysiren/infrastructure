@@ -153,3 +153,8 @@ homebrew_cask_apps:
   - visual-studio-code
   - warp
   - warp@preview
+
+# pip packages force-installed into the brew system python3 so `language: system`
+# pre-commit hooks that import them don't crash. Rationale: docs/ansible.md.
+system_python3_packages:
+  - PyYAML

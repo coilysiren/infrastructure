@@ -21,3 +21,13 @@
     # installed outside brew (common for Chrome / Docker Desktop).
     accept_external_apps: true
   loop: "{{ homebrew_cask_apps }}"
+
+# Force hook deps into the brew system python3 (its own pip3, not ansible's
+# uv-env python) so `language: system` pre-commit hooks work. Why: docs/ansible.md.
+- name: Ensure Homebrew system python3 carries language-system pre-commit hook deps
+  ansible.builtin.pip:
+    name: "{{ system_python3_packages }}"
+    state: present
+    executable: /opt/homebrew/bin/pip3
+    extra_args: --break-system-packages
+  when: system_python3_packages | default([]) | length > 0
