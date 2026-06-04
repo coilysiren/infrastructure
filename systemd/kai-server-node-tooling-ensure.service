@@ -1,0 +1,16 @@
+[Unit]
+Description=Ensure required npm globals exist under the active nvm node (kai-server)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=kai
+# Match the remote-control daemon's environment so npm -g targets the same
+# node the daemon's ExecStart will `source nvm.sh` into.
+Environment=HOME=/home/kai
+Environment=NVM_DIR=/home/kai/.nvm
+ExecStart=/home/kai/projects/coilysiren/infrastructure/scripts/kai-server-node-tooling-ensure.sh
+
+[Install]
+WantedBy=multi-user.target

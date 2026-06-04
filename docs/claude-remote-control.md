@@ -68,6 +68,20 @@ CLAUDE_RC_NAME=kai-mac-kapwing CLAUDE_RC_WORKDIR="$HOME/projects" ./scripts/clau
 
 Same prereqs and laptop caveat as kais-macbook-pro. Because the workdir is `~/projects` (all repos, including Kapwing work), remote sessions spawned here can reach the full workspace - intended, but worth knowing on a work machine.
 
+## kai-server: node-version orphan failure mode + daily self-heal
+
+Symptom: kai-server silently drops out of the Remote Control dropdown, often overnight, with the journal showing `/bin/bash: line 1: exec: claude: not found` and `status=127`, followed by `Start request repeated too quickly`.
+
+Root cause: nvm's default alias on kai-server is `lts/*`, a floating alias. When a newer LTS node release is installed, `source nvm.sh` (which the daemon's ExecStart runs) resolves to the new version, whose global `node_modules` is empty. nvm does not migrate globals across versions, so `claude` and `mcporter` vanish from PATH. The next daily restart at 03:00 then fails with exit 127, and the old `StartLimitBurst=5` latched the unit into `failed` for the rest of the day.
+
+Three-part fix (all in this repo, installed by `claude-remote-control-install.sh`):
+
+1. **`scripts/kai-server-node-tooling-ensure.sh`** plus its `.service` / `.timer` (02:50 daily, before the 03:00 restart). Activates the default node and `npm install -g`s a static list (`@anthropic-ai/claude-code`, `mcporter`) so a node bump re-materializes the globals on the next tick. Add a tool to the `GLOBALS` array in that script when a service starts depending on a new global CLI. `npm`/`corepack` ship with node and are deliberately not listed. `npm audit fix` is intentionally omitted (it targets a project `package.json`, not the global prefix).
+2. **`claude-remote-control-restart-precheck.sh`** gained a second gate: it verifies `claude` resolves via `source nvm.sh` and skips the daily restart if not, keeping the live daemon serving instead of restarting into a broken state.
+3. **`claude-remote-control.service`** now self-heals: `StartLimitIntervalSec=0` + `Restart=always` + `RestartSec=30`, so a transient orphan retries until it recovers instead of latching `failed`.
+
+Manual recovery if it is ever latched (the installer does this automatically on re-run): `sudo systemctl reset-failed claude-remote-control.service && coily systemctl start kai-server-node-tooling-ensure.service && sudo systemctl restart claude-remote-control.service`.
+
 ## Cleanup: removing stale duplicate entries from the dropdown
 
 Background: claude.ai/code's Remote Control dropdown keys on the `--name` the daemon was started with. Old entries linger until you point each side at a unique name and tear down the duplicates.

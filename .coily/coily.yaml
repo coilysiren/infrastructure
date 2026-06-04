@@ -71,6 +71,9 @@ commands:
   host-watch:
     run: make host-watch
     description: Watch a tailnet host's SSH and capture a host-diag.sh snapshot on each dead->alive recovery. Args - host=<alias>.
+  claude-remote-control-install:
+    run: make claude-remote-control-install
+    description: (Re)install the kai-server remote-control daemon + node-tooling-ensure units + self-heal settings. Idempotent; recovers a latched daemon. Run on kai-server (sudo).
 
 # Free-form ssh-passthrough target list. Schema: coilysiren/coily#187 phase 2.
 # `coily ssh <alias> -- <coily args>` resolves <alias> here, ssh's into the

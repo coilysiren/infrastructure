@@ -87,3 +87,6 @@ caddy-shortcuts: ## Regenerate caddy/sites/*.caddy from sibling repos' coily.yam
 host-watch: ## Watch a tailnet host's SSH and capture a host-diag.sh snapshot on each dead->alive recovery. Args - host=<alias>.
 	@test -n "$(host)" || { echo "host=<alias> is required" >&2; exit 2; }
 	bash scripts/host-watch.sh $(host)
+
+claude-remote-control-install: ## (Re)install the kai-server remote-control daemon, node-tooling-ensure units, and self-heal settings. Idempotent; recovers a latched daemon. Run on kai-server.
+	bash scripts/claude-remote-control-install.sh

@@ -2,13 +2,22 @@
 Description=Claude Code remote-control daemon (kai-server, outbound HTTPS only)
 After=syslog.target network.target nss-lookup.target network-online.target
 Wants=network-online.target
-StartLimitBurst=5
-StartLimitIntervalSec=60
+# Self-heal: never latch into a permanent `failed` state. A node/nvm bump
+# can briefly orphan the global `claude` (exec: not found, exit 127); with
+# the start-rate limit disabled the unit keeps retrying every RestartSec
+# and recovers on its own once kai-server-node-tooling-ensure.service
+# reinstalls the global under the new node. Before this, StartLimitBurst=5
+# turned a one-minute orphan into a full-day outage that needed a manual
+# `systemctl reset-failed`.
+StartLimitIntervalSec=0
 
 [Service]
 Type=simple
-Restart=on-failure
-RestartSec=10
+# Restart=always (not on-failure): a >10min network outage makes the daemon
+# exit cleanly (status 0), which on-failure would NOT restart. RestartSec=30
+# keeps the retry loop from spamming the journal while claude is orphaned.
+Restart=always
+RestartSec=30
 User=kai
 # projects/coilysiren is the parent of git repos, not a repo itself, so
 # `--spawn worktree` cannot apply. All three hosts (kai-server, WSL,

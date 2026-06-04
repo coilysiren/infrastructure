@@ -26,10 +26,22 @@ fi
 
 result="$(systemctl show coilysiren-pull-all.service -p Result --value 2>/dev/null || true)"
 
-if [[ "$result" == "success" ]]; then
-  echo "coilysiren-pull-all.service Result=success; proceeding with restart"
-  exit 0
+if [[ "$result" != "success" ]]; then
+  echo "coilysiren-pull-all.service Result=${result:-unknown}; skipping restart"
+  exit 1
 fi
 
-echo "coilysiren-pull-all.service Result=${result:-unknown}; skipping restart"
-exit 1
+# Second gate: verify `claude` resolves the SAME way the daemon's non-login
+# ExecStart will (`source nvm.sh && exec claude`). A floating nvm default
+# (lts/*) can orphan the global on a node bump, and restarting into that
+# state is exactly what dropped kai-server out of the Remote Control
+# dropdown. Refuse the restart so the currently-running daemon keeps serving
+# until kai-server-node-tooling-ensure.service has reinstalled the global.
+NVM_DIR="${NVM_DIR:-/home/kai/.nvm}"
+if ! /bin/bash -c 'source "'"$NVM_DIR"'/nvm.sh" >/dev/null 2>&1 && command -v claude >/dev/null 2>&1'; then
+  echo "claude not resolvable via 'source nvm.sh'; skipping restart to keep the live daemon up"
+  exit 1
+fi
+
+echo "coilysiren-pull-all.service Result=success and claude resolves; proceeding with restart"
+exit 0

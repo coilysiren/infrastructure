@@ -1,0 +1,16 @@
+[Unit]
+Description=Daily tick for kai-server-node-tooling-ensure.service
+Requires=kai-server-node-tooling-ensure.service
+
+[Timer]
+# 02:50 local, between coilysiren-pull-all (02:45) and the
+# claude-remote-control restart (03:00), so a node bump's orphaned globals
+# are reinstalled before the daemon restart needs them. The small randomized
+# delay keeps it clear of 03:00; the restart-precheck is the hard guard if
+# this ever slips.
+OnCalendar=*-*-* 02:50:00
+RandomizedDelaySec=60
+Persistent=true
+
+[Install]
+WantedBy=timers.target
