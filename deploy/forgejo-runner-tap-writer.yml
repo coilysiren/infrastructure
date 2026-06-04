@@ -1,0 +1,168 @@
+# Forgejo Actions "tap-writer" runner: a lightweight, DinD-free runner whose
+# only job is cross-repo formula bumps into the homebrew tap(s). Jobs opt in
+# via `runs-on: tap-writer`; nothing else lands here.
+#
+# Why a separate runner instead of an Actions secret: the tap-write token
+# lives in SSM and reaches git ONLY through a credential helper that reads it
+# at push time. It is never placed in the job environment and never echoed,
+# so it can't leak into Actions logs. Isolated by label, so a token this
+# broad isn't exposed to every repo's CI the way the instance build runner's
+# jobs would be.
+#
+# Why host executor (no DinD): a bump is just git + awk, no container builds.
+# The `host` executor runs job steps directly in this container, so none of
+# the DinD bridge churn that plagues deploy/forgejo-runner.yml (#151/#163)
+# applies. Trade-off: the host executor has no node, so bump jobs must be
+# pure-shell `run:` steps with no JS `uses:` actions (see ward release.yml).
+#
+# Prereq before apply: a Forgejo token with write access to the tap repo(s)
+# stored at SSM /forgejo/tap-bump-token. An org-scoped (coilyco-flight-deck)
+# write token covers all ~8 planned taps with one credential.
+#
+# Pinned to kai-desktop-tower-wsl for parity with the build runner until
+# cross-node routing lands (see docs/k3s-deploy-notes.md §7).
+#
+# Apply: sudo k3s kubectl apply -f deploy/forgejo-runner-tap-writer.yml
+---
+apiVersion: external-secrets.io/v1beta1
+kind: ExternalSecret
+metadata:
+  name: forgejo-tap-writer-secrets
+  namespace: forgejo
+spec:
+  refreshInterval: 1h
+  secretStoreRef:
+    name: aws-parameter-store
+    kind: ClusterSecretStore
+  target:
+    name: forgejo-tap-writer-secrets
+    creationPolicy: Owner
+  data:
+    # Admin token, used ONLY by the initContainer to mint a registration
+    # token. Not exposed to jobs.
+    - secretKey: api-token
+      remoteRef:
+        key: /forgejo/api-token
+    # Dedicated tap-write token. The credential helper reads this; jobs
+    # never see it in env.
+    - secretKey: tap-token
+      remoteRef:
+        key: /forgejo/tap-bump-token
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: forgejo-runner-tap-writer
+  namespace: forgejo
+spec:
+  replicas: 1
+  serviceName: forgejo-runner-tap-writer
+  selector:
+    matchLabels:
+      app: forgejo-runner-tap-writer
+  template:
+    metadata:
+      labels:
+        app: forgejo-runner-tap-writer
+    spec:
+      nodeSelector:
+        kubernetes.io/hostname: kai-desktop-tower-wsl
+      initContainers:
+        # Mint a per-pod registration token via the admin API and register
+        # with a single custom label, host executor. Skips if already
+        # registered (re-applies / restarts mustn't re-register).
+        - name: register
+          image: data.forgejo.org/forgejo/runner:12
+          env:
+            - name: FORGEJO_INSTANCE_URL
+              value: http://forgejo.forgejo.svc.cluster.local
+            - name: API_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: forgejo-tap-writer-secrets
+                  key: api-token
+          command:
+            - /bin/sh
+            - -c
+            - |
+              set -eu
+              cd /data
+              if [ -f .runner ]; then
+                echo "already registered, skipping"
+                exit 0
+              fi
+              TOKEN=$(wget -qO- \
+                --header="Authorization: token ${API_TOKEN}" \
+                "${FORGEJO_INSTANCE_URL}/api/v1/admin/runners/registration-token" \
+                | sed -n 's/.*"token":"\([^"]*\)".*/\1/p')
+              if [ -z "${TOKEN}" ]; then
+                echo "failed to mint registration token" >&2
+                exit 1
+              fi
+              # host executor (no docker:// scheme) = job steps run in this
+              # container. Single label so only opted-in jobs land here.
+              forgejo-runner register \
+                --no-interactive \
+                --instance "${FORGEJO_INSTANCE_URL}" \
+                --token "${TOKEN}" \
+                --name "${HOSTNAME}" \
+                --labels "tap-writer:host"
+          volumeMounts:
+            - name: data
+              mountPath: /data
+      containers:
+        - name: runner
+          image: data.forgejo.org/forgejo/runner:12
+          command:
+            - /bin/sh
+            - -c
+            - |
+              set -eu
+              # Toolchain the host-executor jobs depend on (alpine base).
+              for t in git curl jq; do
+                command -v "$t" >/dev/null 2>&1 || apk add --no-cache "$t"
+              done
+              # Credential helper: emits the tap token from the mounted secret
+              # only when git asks (action=get). Token never enters job env.
+              helper=/usr/local/bin/forgejo-cred-helper
+              printf '%s\n' \
+                '#!/bin/sh' \
+                '[ "$1" = get ] || exit 0' \
+                'echo "username=tap-writer"' \
+                'echo "password=$(cat /run/tap/token)"' \
+                > "$helper"
+              chmod 0755 "$helper"
+              git config --system credential.helper "$helper"
+              git config --system \
+                credential.https://forgejo.coilysiren.me.useHttpPath false
+              exec forgejo-runner daemon
+          volumeMounts:
+            - name: data
+              mountPath: /data
+            - name: tap-token
+              mountPath: /run/tap
+              readOnly: true
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+      volumes:
+        - name: tap-token
+          secret:
+            secretName: forgejo-tap-writer-secrets
+            items:
+              - key: tap-token
+                path: token
+            defaultMode: 0400
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        storageClassName: local-path
+        resources:
+          requests:
+            storage: 1Gi
