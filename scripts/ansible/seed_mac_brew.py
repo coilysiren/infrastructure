@@ -10,6 +10,7 @@ Runs `brew` via subprocess (not the agent bash surface), so it works under the
 coily lockdown the way the other uv-run helpers do.
 """
 # pylint: disable=wrong-import-position
+import json
 import subprocess
 import sys
 from pathlib import Path
@@ -28,6 +29,33 @@ def brew(*args):
     return [line.strip() for line in out.splitlines() if line.strip()]
 
 
+def default_tap_remote(tap):
+    """The github.com location brew assumes when a tap carries no explicit url."""
+    user, repo = tap.split("/", 1)
+    return f"https://github.com/{user}/homebrew-{repo}"
+
+
+def tap_entries(taps):
+    """Each tap as {name, url?}. url is emitted only when the tap's actual
+    remote differs from brew's default github.com location - i.e. the private
+    Forgejo taps. Keeps public taps as bare {name} so they stay portable."""
+    entries = []
+    for tap in taps:
+        info = json.loads(brew_raw("tap-info", "--json", tap))
+        remote = (info[0].get("remote") if info else None) or ""
+        if remote and remote.lower() != default_tap_remote(tap).lower():
+            entries.append({"name": tap, "url": remote})
+        else:
+            entries.append({"name": tap})
+    return entries
+
+
+def brew_raw(*args):
+    return subprocess.run(
+        ["brew", *args], check=True, capture_output=True, text=True
+    ).stdout
+
+
 def yaml_list(name, items, comment):
     lines = [f"# {comment}", f"{name}:"]
     if not items:
@@ -37,8 +65,20 @@ def yaml_list(name, items, comment):
     return "\n".join(lines)
 
 
+def yaml_taps(name, entries, comment):
+    lines = [f"# {comment}", f"{name}:"]
+    if not entries:
+        lines.append("  []")
+    else:
+        for entry in entries:
+            lines.append(f"  - name: {entry['name']}")
+            if "url" in entry:
+                lines.append(f"    url: {entry['url']}")
+    return "\n".join(lines)
+
+
 def main():
-    taps = [t for t in brew("tap") if t not in SKIP_TAPS]
+    taps = tap_entries([t for t in brew("tap") if t not in SKIP_TAPS])
     formulae = brew("leaves")
     casks = brew("list", "--cask")
 
@@ -49,7 +89,13 @@ def main():
             "# Additive: ansible ensures these are present, never uninstalls.",
             "# Curate by hand after seeding - this is the fleet's declared baseline.",
             "",
-            yaml_list("homebrew_taps", taps, "Third-party taps (core/cask omitted)."),
+            yaml_taps(
+                "homebrew_taps",
+                taps,
+                "Third-party taps (core/cask omitted). {name, url?}; url is "
+                "set only for private Forgejo taps whose bare name has no "
+                "github.com/<user>/homebrew-<repo> default.",
+            ),
             "",
             yaml_list(
                 "homebrew_installed_packages",

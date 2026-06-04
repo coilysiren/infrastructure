@@ -3,29 +3,32 @@
 # Additive: ansible ensures these are present, never uninstalls.
 # Curate by hand after seeding - this is the fleet's declared baseline.
 
-# agent-compose scope tags for this machine class. The `mac` group is personal
-# machines today, so the full operating context composes. Interim value: while
-# the private overlay still chains the public base via @import, this stays
-# [kai-private] (composing kai-private alone pulls in public, so adding
-# kai-public would double-load it). Once the content-disjoint split lands
-# (public base moves to its own kai-public source), switch this to the matrix
-# value [kai-public, kai-private]. A work mac joining the fleet wants
-# [work, kai-public] and belongs in its own group/host_vars, never private.
-agent_compose_scopes:
-  - kai-private
+# agent-compose source selection for this machine class. The `mac` group is
+# personal machines, so they take the role default: the public base plus the
+# private overlay, composed into the global context every harness loads. A work
+# mac joining the fleet belongs in its own group and overrides
+# `agent_compose_sources` to the public base alone, never the private overlay.
 
-# Third-party taps (core/cask omitted).
+# Third-party taps (core/cask omitted). Each entry is {name, url?}. Private
+# Forgejo taps carry an explicit url - the bare name resolves to
+# github.com/<user>/homebrew-<repo>, which does not exist for them. Public
+# taps omit url. The coilysiren/* org migrated to coilyco-flight-deck/*;
+# coily has not moved yet, agent-guard was renamed to ward (now its own tap).
 homebrew_taps:
-  - coilyco-flight-deck/ward
-  - coilysiren/agent-guard
-  - coilysiren/coily
-  - coilysiren/o2r
-  - coilysiren/repo-recall
-  - coilysiren/session-lattice
-  - getsentry/tools
-  - homebrew/services
-  - openhue/cli
-  - steipete/tap
+  - name: coilyco-flight-deck/otel-a2a-relay-cli
+    url: https://forgejo.coilysiren.me/coilyco-flight-deck/otel-a2a-relay-cli
+  - name: coilyco-flight-deck/repo-recall
+    url: https://forgejo.coilysiren.me/coilyco-flight-deck/repo-recall
+  - name: coilyco-flight-deck/session-lattice
+    url: https://forgejo.coilysiren.me/coilyco-flight-deck/session-lattice
+  - name: coilyco-flight-deck/ward
+    url: https://forgejo.coilysiren.me/coilyco-flight-deck/ward
+  - name: coilysiren/coily
+    url: https://forgejo.coilysiren.me/coilysiren/coily
+  - name: getsentry/tools
+  - name: homebrew/services
+  - name: openhue/cli
+  - name: steipete/tap
 
 # Top-level formulae (brew leaves), not their dependencies.
 homebrew_installed_packages:
@@ -35,14 +38,14 @@ homebrew_installed_packages:
   - awscli
   - bat
   - bottom
+  - coilyco-flight-deck/otel-a2a-relay-cli/o2r
+  - coilyco-flight-deck/repo-recall/repo-recall
+  - coilyco-flight-deck/session-lattice/session-lattice-puller
   - coilyco-flight-deck/ward/ward
   # coilysiren/agent-guard/agent-guard dropped: orphaned keg, the tap renamed
   # the formula to `ward` (coilyco-flight-deck/infrastructure#197). `brew
   # uninstall coilysiren/agent-guard/agent-guard` on this Mac to clear it.
   - coilysiren/coily/coily
-  - coilysiren/o2r/o2r
-  - coilysiren/repo-recall/repo-recall
-  - coilysiren/session-lattice/session-lattice-puller
   - cryptography
   - diff-pdf
   - direnv
