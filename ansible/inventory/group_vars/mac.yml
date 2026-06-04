@@ -3,6 +3,17 @@
 # Additive: ansible ensures these are present, never uninstalls.
 # Curate by hand after seeding - this is the fleet's declared baseline.
 
+# agent-compose scope tags for this machine class. The `mac` group is personal
+# machines today, so the full operating context composes. Interim value: while
+# the private overlay still chains the public base via @import, this stays
+# [kai-private] (composing kai-private alone pulls in public, so adding
+# kai-public would double-load it). Once the content-disjoint split lands
+# (public base moves to its own kai-public source), switch this to the matrix
+# value [kai-public, kai-private]. A work mac joining the fleet wants
+# [work, kai-public] and belongs in its own group/host_vars, never private.
+agent_compose_scopes:
+  - kai-private
+
 # Third-party taps (core/cask omitted).
 homebrew_taps:
   - coilyco-flight-deck/ward

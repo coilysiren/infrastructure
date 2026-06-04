@@ -1,0 +1,30 @@
+# Converge agent-compose on a workstation: render the per-machine config, then
+# run the composer to (re)write COMPOSED.md and point each harness global load
+# point at it by symlink. The composer is idempotent and opt-in (no config =>
+# no-op), and it backs up any pre-existing real load-point file to <name>.bak.
+- name: Ensure agent-compose config directory exists
+  ansible.builtin.file:
+    path: "{{ ansible_env.HOME }}/.config/agent-compose"
+    state: directory
+    mode: "0755"
+
+- name: Render the per-machine agent-compose config
+  ansible.builtin.template:
+    src: agent-compose.yaml.j2
+    dest: "{{ ansible_env.HOME }}/.config/agent-compose/agent-compose.yaml"
+    mode: "0644"
+
+# Invoked exactly as setup.sh does (module form + PYTHONPATH), so it works
+# whether or not the agent-compose console script is on PATH. In check mode it
+# runs --dry-run and mutates nothing.
+- name: Compose COMPOSED.md and converge harness symlinks
+  ansible.builtin.command:
+    cmd: "python3 -m agentic_os.agent_compose{{ ' --dry-run' if ansible_check_mode else '' }}"
+  environment:
+    PYTHONPATH: "{{ agent_compose_aos_root }}"
+  register: agent_compose_run
+  changed_when: >-
+    ('linked ' in agent_compose_run.stdout)
+    or ('wrote ' in agent_compose_run.stdout)
+    or ('would ' in agent_compose_run.stdout)
+  check_mode: false

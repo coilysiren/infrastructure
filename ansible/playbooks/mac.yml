@@ -1,9 +1,12 @@
-# Converge a macOS workstation's Homebrew state (taps, formulae, casks).
+# Converge a macOS workstation: Homebrew state (taps, formulae, casks) and the
+# agent-compose cross-harness context config.
 #
-# Idempotent and additive: it ensures the declared packages are present and
-# does NOT uninstall anything absent from the lists. The lists in
+# Idempotent and additive: homebrew ensures the declared packages are present
+# and does NOT uninstall anything absent from the lists. The lists in
 # group_vars/mac.yml are seeded from the live machine by
 # `coily ansible-mac-seed`, so a first apply on a seeded host is a near no-op.
+# agent-compose renders this machine's config from `agent_compose_scopes` and
+# converges COMPOSED.md + the harness global-load-point symlinks.
 #
 # Run check-mode first:  coily ansible-mac            (alias for action=check)
 # Apply for real:        coily ansible-mac action=apply
@@ -12,4 +15,7 @@
   gather_facts: true
   become: false
   roles:
-    - homebrew
+    - role: homebrew
+      tags: [homebrew]
+    - role: agent-compose
+      tags: [agent-compose]
