@@ -99,9 +99,11 @@ homebrew_installed_packages:
   - procs
   - pyenv
   - python@3.12
+  - repomix
   - ruby
   - ruff
   - rust
+  - scc
   - scrcpy
   - sd
   - starship
