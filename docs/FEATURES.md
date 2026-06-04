@@ -37,6 +37,12 @@ Baseline of `coilysiren/infrastructure`. Update when scope changes.
 - **Forgejo tap-writer runner** - Lightweight DinD-free `act_runner` (`deploy/forgejo-runner-tap-writer.yml`) for cross-repo formula bumps into the coilyco-flight-deck homebrew tap(s). Host executor, label `tap-writer`, opt-in via `runs-on: tap-writer`. Carries a repo-write token from SSM `/forgejo/tap-bump-token` through a git credential helper, so the token never enters a job env or a Forgejo Actions secret. Provision the token with `scripts/provision-tap-bump-token.sh`.
 - **llama.cpp inference** - k8s Deployment in `llama` namespace, initContainer pulls TinyLLama-1.1B, serves :8080. Verbs: `coily llama-deploy`, `coily llama-deploy-secrets`.
 
+## Workstation and host convergence (Ansible)
+
+- **First-class Ansible subsystem** - `ansible/` converges workstation/host state, shipped as a uv-managed dependency (`community.general` bundled) and driven by coily verbs in the repo's k8s/terraform pattern. Full walkthrough in `docs/ansible.md`.
+- **macOS Homebrew convergence** - The `mac` inventory group ensures declared taps, formulae, and casks are present (additive, never uninstalls). `coily ansible-mac` dry-runs (`--check --diff`); `coily ansible-mac action=apply` converges. `coily ansible-mac-seed` captures the live machine's `brew leaves`/casks/taps into the baseline.
+- **agent-compose convergence** - The `agent-compose` role renders `~/.config/agent-compose/agent-compose.yaml` from per-host scopes and composes `COMPOSED.md`, symlinking each harness global load point (`~/.claude/CLAUDE.md`, `~/.codex/AGENTS.md`) at it. Idempotent, opt-in, backs up real files to `<name>.bak`.
+
 ## Cross-machine session aggregation
 
 - **Claude session watcher** - Per-machine `watchdog`-driven process that ships `~/.claude/projects` session files to a tailnet-only sink so every machine's Claude sessions are queryable from one place. Runs on the 4 non-kai-server environments (Mac desktop/laptop, Windows native, WSL) via launchd / Scheduled Task / systemd. Component 1 of the pipeline in `coilysiren/infrastructure#224`. See `docs/claude-session-watcher.md`.

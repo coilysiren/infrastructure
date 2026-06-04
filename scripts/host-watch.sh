@@ -24,9 +24,9 @@ DIAG="${SCRIPT_DIR}/host-diag.sh"
 mkdir -p "$OUT_DIR"
 LOG="${OUT_DIR}/watch.log"
 
-# coily is the boundary; the script never invokes ssh directly. Inherit the
-# operator's commit-scope from cwd (each host-watch run binds to whichever
-# repo it was started in, which for the canonical case is this repo).
+# coily is the boundary; the script never invokes ssh directly. coily's ops
+# verbs are host-wide and don't bind to a repo, so it runs the same from any
+# cwd (the canonical case is this repo).
 COILY=(coily)
 
 log() {

@@ -46,7 +46,7 @@ Canonical write shape (no value in argv):
 
 ```sh
 openssl rand -hex 32 \
-  | coily --commit-scope=infrastructure aws ssm put-parameter \
+  | coily aws ssm put-parameter \
       --name /forgejo/secret-key \
       --type SecureString \
       --value file:///dev/stdin
@@ -188,7 +188,7 @@ Only after phase-1 smoke passes (it has).
 1. **Route 53 A record.** Add `forgejo.coilysiren.me → <HOME_PUBLIC_IP>` in zone `Z06714552N3MO04UBWF33`:
 
     ```sh
-    coily --commit-scope=infrastructure aws route53 change-resource-record-sets \
+    coily aws route53 change-resource-record-sets \
       --hosted-zone-id Z06714552N3MO04UBWF33 \
       --change-batch '{
         "Changes": [{
@@ -245,7 +245,7 @@ Only after phase-1 smoke passes (it has).
 5. **Pull + apply on kai-server:**
 
     ```sh
-    coily --commit-scope=infrastructure ssh git pull /home/kai/projects/coilysiren/infrastructure
+    coily ssh git pull /home/kai/projects/coilysiren/infrastructure
     ssh kai-server 'cd /home/kai/projects/coilysiren/infrastructure && k3s kubectl apply -f deploy/forgejo.yml'
     ```
 

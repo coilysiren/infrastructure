@@ -13,15 +13,12 @@
 #               terminal, so `... > out.yaml` writes plain YAML (no ANSI), while
 #               an interactive run is colorized. Falls back to cat if no bat.
 #
-# Run it from inside ~/projects/coilysiren/* so coily can resolve a commit
-# scope, or export COILY_COMMIT_SCOPE to a repo path.
+# coily's ops verbs are host-wide and don't bind to a repo, so this runs the
+# same from any cwd.
 #
 # Usage: scripts/tailscale-entity-rollup.sh            # colorized YAML to terminal
 #        scripts/tailscale-entity-rollup.sh > out.yaml # plain YAML snapshot
 set -euo pipefail
-
-: "${COILY_COMMIT_SCOPE:=$HOME/projects/coilysiren/infrastructure}"
-export COILY_COMMIT_SCOPE
 
 colorize() {
   if command -v bat >/dev/null 2>&1; then

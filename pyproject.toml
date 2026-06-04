@@ -27,6 +27,7 @@ excludes = [
     "deploy/*/README.md",
     "terraform/*/README.md",
     "docs/FEATURES.md",
+    "docs/ansible.md",
     "docs/eco-server-setup.md",
     "docs/certificates.md",
     "docs/claude-remote-control.md",
