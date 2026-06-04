@@ -18,9 +18,10 @@ to `ansible/ansible.cfg` so playbooks run from the repo root.
 ## Verbs
 
 - **`coily ansible-freshen`** - freshen this host: Homebrew + agent-compose +
-  repo-layout reconcile. Defaults to **check mode** (`--check --diff`): mutates
-  nothing, prints the plan. `action=apply` converges for real. Scope to one unit
-  with `--tags` (e.g. `--tags repos`). (Backed by `scripts/ansible/freshen.py`;
+  repo-layout reconcile + git remote-sync sweep. Defaults to **check mode**
+  (`--check --diff`): mutates nothing, prints the plan. `action=apply` converges
+  for real. Scope to one role with `tags=<csv>` (e.g. `tags=git`), which the verb
+  forwards to `ansible-playbook --tags`. (Backed by `scripts/ansible/freshen.py`;
   the Ansible port of `agentic-os-kai/scripts/up-to-date.py`.)
 - **`coily ansible-mac-seed`** - capture the live machine's `brew leaves`, casks,
   and third-party taps into `inventory/group_vars/mac.yml`, so a subsequent check
@@ -45,12 +46,14 @@ to `ansible/ansible.cfg` so playbooks run from the repo root.
   `repos_recent_days`, `repos_forgejo_only`, `repos_known_orgs`, `repos_root`).
   All meaningful names; the Forgejo PAT is resolved from SSM at runtime.
 - **`playbooks/freshen.yml`** - the host-freshen play. Runs the `homebrew`,
-  `agent-compose`, and `repos` roles, each tagged so you can run one in isolation
-  (e.g. `--tags repos`).
+  `agent-compose`, `repos`, and `git` roles in order, each tagged so you can run
+  one in isolation (e.g. `tags=git`).
 - **`library/repo_registry.py`** - the read-only discovery module the `repos`
   role calls (local custom module, found via `library = library` in ansible.cfg).
-- **`roles/homebrew/`**, **`roles/agent-compose/`**, **`roles/repos/`** - the
-  units of work, detailed below.
+- **`library/repo_status.py`** - the per-repo git sweep module the `git` role
+  calls (fetch + status + drift; pull + remote-topology wiring on apply).
+- **`roles/homebrew/`**, **`roles/agent-compose/`**, **`roles/repos/`**,
+  **`roles/git/`** - the units of work, detailed below.
 
 ## The homebrew role
 
@@ -99,10 +102,41 @@ stays machines, so this composes with the other roles in one play.
 
 The Forgejo PAT is fetched from SSM (`repos_forgejo_token_ssm`) at runtime and
 sent only to the canonical Forgejo host, pinned in the module code rather than
-config so a tampered var set cannot exfiltrate it (coilysiren/inbox#36). This is
-the first slice of the `up-to-date.py` port; git remote-sync (with github<->
-forgejo mirror-drift), org-aware layout reconcile, and the catalog deptree check
-land as further roles.
+config so a tampered var set cannot exfiltrate it (coilysiren/inbox#36). The
+org-aware layout reconcile and the catalog deptree check land as further roles.
+
+## The git role
+
+Sweeps every local clone across the `repos_known_orgs` dirs, the maintenance
+counterpart to `repos` (which clones what is missing; `git` syncs what is
+present). The read-only `repo_status` module (`library/repo_status.py`, same
+local-custom-module pattern as `repo_registry`) does all the per-repo git work
+and returns structured rows; the role just renders them. Per repo it runs
+`git fetch --all --prune`, then reports ahead/behind vs each remote,
+uncommitted/untracked, in-progress op (rebase/merge/cherry-pick/revert/bisect),
+detached HEAD, worktrees, stash, and stale unmerged branches (tip older than 24h,
+unmerged into the default branch - repo-recall's land-or-delete signal).
+
+**github<->forgejo mirror-drift** is the HEAD sha compared across the `origin`
+(github) and `forgejo` remotes: a mismatch is flagged `DRIFT forgejo!=origin`.
+Drift is **reported, never resolved** - no force, no push - matching
+`up-to-date.py` step 6, because resolving it automatically could silently drop
+commits on whichever side is behind.
+
+On `action=apply` the module additionally converges the fleet remote topology
+(origin pushes both github + forgejo, a `forgejo` fetch remote exists, the
+default branch pulls forgejo and pushes origin) and pulls `--ff-only` from each
+remote whose default branch matches the checked-out branch; a non-fast-forward
+pull reports `BLOCKED` rather than merging. In **check mode** the module reports
+only - but it still fetches, since ahead/behind and drift are meaningless
+without current remote-tracking refs (fetch touches no working tree). Repos are
+**data looped inside the module** (a bounded `parallel` thread pool, default 8),
+not inventory hosts, so the sweep composes into the one `mac` play.
+
+A repo flagged in `action_required` (dirty tree, in-progress op, detached HEAD,
+mirror-drift, or a blocked pull) needs a human - the sweep surfaces it, never
+touches it. Because it runs after `repos`, a repo cloned in the same pass is
+swept too.
 
 ## Safety model
 

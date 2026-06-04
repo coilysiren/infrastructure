@@ -14,18 +14,21 @@ ansible/
 ├── inventory/group_vars/mac.yml    # declared taps / formulae / casks + agent_compose_scopes
 ├── inventory/group_vars/all.yml    # fleet-wide repos role vars (owner, forgejo, ssm path)
 ├── library/repo_registry.py        # read-only repo-layout discovery module
-├── playbooks/freshen.yml           # freshen a host (homebrew + agent-compose + repos)
+├── library/repo_status.py          # per-repo git sweep module (fetch/status/drift; pull on apply)
+├── playbooks/freshen.yml           # freshen a host (homebrew + agent-compose + repos + git)
 ├── roles/homebrew/                 # taps + formulae + casks via community.general
 ├── roles/agent-compose/            # render ~/.config/agent-compose + converge harness symlinks
-└── roles/repos/                    # reconcile local clones against the live repo layout
+├── roles/repos/                    # reconcile local clones against the live repo layout
+└── roles/git/                      # git remote-sync + github<->forgejo mirror-drift sweep
 ```
 
 ## Usage
 
 ```bash
-coily ansible-mac-seed              # capture this Mac's brew state into group_vars/mac.yml
-coily ansible-freshen               # dry run (--check --diff), mutates nothing
-coily ansible-freshen action=apply  # converge for real
+coily ansible-mac-seed                       # capture this Mac's brew state into group_vars/mac.yml
+coily ansible-freshen                        # dry run (--check --diff), mutates nothing
+coily ansible-freshen action=apply           # converge for real
+coily ansible-freshen tags=git               # scope to one role (here: the git sweep)
 ```
 
 Ansible ships as the `ansible` dependency in the repo's `pyproject.toml`
@@ -53,6 +56,20 @@ The sources are the canonical `AGENTS.md` files themselves: personal machines
 overlay (`agentic-os-kai/AGENTS.md`); a work laptop overrides
 `agent_compose_sources` to the public base alone. Per-host source selection is
 what scopes the fleet, so the composer's own scope-filtering stays off.
+
+## The git role
+
+Sweeps every local clone across the `repos_known_orgs` dirs. The `repo_status`
+module fetches each repo (`--all --prune`) and reports ahead/behind per remote,
+uncommitted/untracked, in-progress op, detached HEAD, worktrees, stash, stale
+unmerged branches, and **github<->forgejo mirror-drift** (the HEAD sha compared
+across the `origin` and `forgejo` remotes). On `action=apply` it also converges
+the fleet remote topology (origin pushes both remotes, a `forgejo` fetch remote,
+default branch pulls forgejo / pushes origin) and pulls `--ff-only` from each
+remote; check mode reports only. Drift is **never resolved** - no force, no push
+(matches `up-to-date.py` step 6). Fetch runs in check mode too, since reporting
+ahead/behind/drift requires current remote-tracking refs. Runs after `repos` so
+a repo cloned in the same pass is swept too; `tags=git` scopes to just this role.
 
 ## Adding a Mac
 
