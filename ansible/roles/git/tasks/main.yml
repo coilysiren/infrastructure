@@ -1,11 +1,5 @@
-# Git remote-sync + github<->forgejo mirror-drift across every local clone in
-# the known org dirs. The repo_status module does the per-repo git work (fetch,
-# status, ahead/behind, in-progress op, detached HEAD, worktrees, stash, stale
-# branches, drift; and in apply mode pull --ff-only + remote-topology wiring)
-# and returns structured rows; this role just renders them. Repos are data
-# looped inside the module, not inventory hosts. Drift is reported, never
-# resolved - no force, no push (matches up-to-date.py step 6). Runs after
-# `repos` so a repo cloned this same pass is swept too.
+# Git remote-sync + mirror-drift sweep across every local clone. repo_status
+# does the per-repo work; this role renders rows. See docs/ansible.md.
 - name: Sweep local repos (fetch, status, mirror-drift; pull --ff-only on apply)
   repo_status:
     root: "{{ repos_root }}"

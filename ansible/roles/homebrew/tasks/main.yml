@@ -1,8 +1,5 @@
-# Homebrew convergence for macOS workstations. Uses the community.general
-# homebrew modules (shipped in the `ansible` package pinned in pyproject.toml).
-# Each tap is a dict: {name, url?}. Private Forgejo taps carry an explicit
-# url because the bare name resolves to github.com/<user>/homebrew-<repo>,
-# which does not exist for them. Public taps omit url and take the default.
+# Homebrew convergence via community.general modules. Taps are {name, url?};
+# private Forgejo taps need an explicit url. See docs/ansible.md.
 - name: Ensure Homebrew taps are present
   community.general.homebrew_tap:
     name: "{{ item.name }}"

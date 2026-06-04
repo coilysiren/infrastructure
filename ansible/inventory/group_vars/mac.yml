@@ -1,19 +1,11 @@
-# group_vars for the `mac` inventory group. Seeded from the live
-# machine by `coily ansible-mac-seed` (scripts/ansible/seed_mac_brew.py).
-# Additive: ansible ensures these are present, never uninstalls.
-# Curate by hand after seeding - this is the fleet's declared baseline.
+# Declared baseline for the `mac` group, seeded by `coily ansible-mac-seed`.
+# Additive (never uninstalls); hand-curate after seeding. See docs/ansible.md.
 
-# agent-compose source selection for this machine class. The `mac` group is
-# personal machines, so they take the role default: the public base plus the
-# private overlay, composed into the global context every harness loads. A work
-# mac joining the fleet belongs in its own group and overrides
-# `agent_compose_sources` to the public base alone, never the private overlay.
+# agent-compose source selection. `mac` = personal machines, so the role
+# default (public base + private overlay). A work mac overrides in its group.
 
-# Third-party taps (core/cask omitted). Each entry is {name, url?}. Private
-# Forgejo taps carry an explicit url - the bare name resolves to
-# github.com/<user>/homebrew-<repo>, which does not exist for them. Public
-# taps omit url. The coilysiren/* org migrated to coilyco-flight-deck/*;
-# coily has not moved yet, agent-guard was renamed to ward (now its own tap).
+# Third-party taps {name, url?}. Private Forgejo taps need an explicit url; the
+# bare name resolves to a nonexistent github.com/<user>/homebrew-<repo>.
 homebrew_taps:
   - name: coilyco-flight-deck/otel-a2a-relay-cli
     url: https://forgejo.coilysiren.me/coilyco-flight-deck/otel-a2a-relay-cli
@@ -26,9 +18,8 @@ homebrew_taps:
   - name: coilysiren/coily
     url: https://forgejo.coilysiren.me/coilysiren/coily
   - name: getsentry/tools
-  # homebrew/services dropped: the tap was deprecated and emptied upstream
-  # (brew services merged into core), so tapping it now errors. The `brew
-  # services` command still works tap-free.
+  # homebrew/services dropped: tap deprecated and emptied (merged into core), so
+  # tapping errors. `brew services` still works tap-free.
   - name: openhue/cli
   - name: steipete/tap
   - name: terraform-linters/tap
@@ -42,21 +33,14 @@ homebrew_installed_packages:
   - bat
   - bottom
   - coilyco-flight-deck/otel-a2a-relay-cli/o2r
-  # repo-recall skipped: its formula pins tag v0.45.0 to commit c5f0e8e, but
-  # that tag was re-pointed upstream to 5041759, so brew's tag-integrity check
-  # fails and aborts the whole batch. Re-enable once the formula's pinned sha
-  # is corrected upstream in the coilyco-flight-deck/repo-recall tap.
+  # repo-recall skipped: re-pointed upstream tag breaks brew tag-integrity.
   # - coilyco-flight-deck/repo-recall/repo-recall
-  # session-lattice-puller skipped: its formula declares a dependency on the
-  # dead coilysiren/session-lattice org path (pre-migration), which is
-  # unresolvable, and re-adding the old tap collides with the new one (same
-  # repo via redirect => duplicate formula). Re-enable once the puller's
-  # dependency is fixed upstream in the coilyco-flight-deck/session-lattice tap.
+
+  # session-lattice-puller skipped: formula depends on the dead pre-migration org path.
   # - coilyco-flight-deck/session-lattice/session-lattice-puller
   - coilyco-flight-deck/ward/ward
-  # coilysiren/agent-guard/agent-guard dropped: orphaned keg, the tap renamed
-  # the formula to `ward` (coilyco-flight-deck/infrastructure#197). `brew
-  # uninstall coilysiren/agent-guard/agent-guard` on this Mac to clear it.
+  # agent-guard/agent-guard dropped: orphaned keg, tap renamed it to `ward`
+  # (#197). `brew uninstall coilysiren/agent-guard/agent-guard` to clear it.
   - coilysiren/coily/coily
   - cryptography
   - diff-pdf
@@ -147,9 +131,7 @@ homebrew_cask_apps:
   - android-platform-tools
   - aptakube
   - blender
-  # codex skipped: already installed as an npm global
-  # (/opt/homebrew/bin/codex -> @openai/codex), and the cask refuses to
-  # clobber that binary. The npm install is the working harness; leave it.
+  # codex skipped: already an npm global (@openai/codex), cask refuses to clobber it.
   # - codex
   - corelocationcli
   - docker
@@ -163,9 +145,8 @@ homebrew_cask_apps:
   - ngrok
   - obsidian
   - orbstack
-  # powershell dropped from casks: there is no `powershell` cask (it ships as
-  # the `powershell` formula, already declared above). The bogus cask entry
-  # failed the casks task.
+  # powershell dropped from casks: no `powershell` cask exists (it's the formula,
+  # declared above). The bogus cask entry failed the casks task.
   - proxyman
   - tableplus
   - tailscale-app

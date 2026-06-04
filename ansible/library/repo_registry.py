@@ -1,8 +1,6 @@
 #!/usr/bin/python
-# GPL-3.0-or-later (see https://www.gnu.org/licenses/gpl-3.0.txt)
-# Shebang is the Ansible convention: the controller rewrites this /usr/bin/python
-# to ansible_python_interpreter. An env-style shebang is left unsubstituted and
-# fails on hosts without a bare python3 on PATH.
+# GPL-3.0-or-later (https://www.gnu.org/licenses/gpl-3.0.txt). The /usr/bin/python
+# shebang is the Ansible convention - the controller rewrites it; env-style fails.
 """Ansible module: discover the live repo layout across GitHub + Forgejo.
 
 Read-only fact-gatherer for the `repos` role. Returns which owned repos are

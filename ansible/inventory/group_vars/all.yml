@@ -1,6 +1,5 @@
-# Fleet-wide vars for the repos role (live-layout reconcile). All meaningful
-# names and safe in plaintext; the Forgejo PAT is resolved from SSM at runtime
-# and only ever sent to the canonical host.
+# Fleet-wide vars for the repos role. Plaintext-safe; the Forgejo PAT resolves
+# from SSM at runtime, sent only to the canonical host. See docs/ansible.md.
 repos_owner: coilysiren
 repos_forgejo_api: https://forgejo.coilysiren.me/api/v1
 repos_forgejo_token_ssm: /forgejo/api-token

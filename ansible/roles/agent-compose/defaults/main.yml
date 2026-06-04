@@ -1,20 +1,12 @@
-# Defaults for the agent-compose role. The per-host-varying bit (which sources
-# compose) is set in inventory group_vars/host_vars; the rest is fleet-static.
-#
-# agent-compose composes one global context file (COMPOSED.md) from the sources
-# below and points each harness's global load point at it by symlink, so Claude
-# Code, Codex, and OpenClaw load byte-identical context with nothing duplicated.
+# Fleet-static defaults for the agent-compose role; per-host source selection
+# lives in group_vars. See docs/ansible.md for the role walkthrough.
 
 # Repo roots on the host. Override per host if a machine's layout differs.
 agent_compose_kai_root: "{{ ansible_env.HOME }}/projects/coilyco-bridge/agentic-os-kai"
 agent_compose_aos_root: "{{ ansible_env.HOME }}/projects/coilyco-flight-deck/agentic-os"
 
-# Sources composed in listed order: public base first, then the private overlay.
-# The composer inlines each file's text verbatim, so COMPOSED.md is the full
-# operating context as real text (no @import) that every harness loads the same
-# way. This default is the personal-machine pair; a work laptop overrides it in
-# its group_vars to the public base alone. Per-host source selection is what
-# scopes the fleet, so the composer's own scope-filtering is left off.
+# Sources composed in order: public base, then private overlay (inlined verbatim
+# into COMPOSED.md). Default is the personal-machine pair; work macs override.
 agent_compose_sources:
   - "{{ agent_compose_aos_root }}/AGENTS.md"
   - "{{ agent_compose_kai_root }}/AGENTS.md"

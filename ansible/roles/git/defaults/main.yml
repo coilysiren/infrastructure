@@ -1,4 +1,3 @@
-# Parallel fetch/pull workers for the per-repo sweep. The work is network-bound
-# (one `git fetch --all` per repo), so a modest pool keeps the sweep fast
-# without hammering either remote. Bump on a fat link, drop to 1 to serialize.
+# Parallel fetch/pull workers for the per-repo sweep (network-bound). Bump on a
+# fat link, drop to 1 to serialize.
 git_sweep_parallel: 8

@@ -1,6 +1,5 @@
 # Reconcile local clones against the live repo layout. Discovery is read-only
-# (repo_registry module); cloning is the convergence step. Repos are data here,
-# looped over on the host - the inventory stays machines, not repos.
+# (repo_registry); cloning converges. Repos are data looped over the host.
 - name: Discover the live repo layout (GitHub + Forgejo)
   repo_registry:
     owner: "{{ repos_owner }}"
