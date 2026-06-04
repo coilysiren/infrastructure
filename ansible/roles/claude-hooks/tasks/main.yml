@@ -1,0 +1,23 @@
+# Converge Claude Code harness hooks into ~/.claude/settings.json. Today: the
+# advisory o2r cross-node PreToolUse nudge. Render the detector (fleet host list
+# baked in from defaults), then merge the hook idempotently via the
+# claude_settings_hook module. See docs/ansible.md.
+- name: Ensure the Claude hook script directory exists
+  ansible.builtin.file:
+    path: "{{ o2r_nudge_dir }}"
+    state: directory
+    mode: "0755"
+
+- name: Render the o2r cross-node nudge hook script
+  ansible.builtin.template:
+    src: o2r-nudge.sh.j2
+    dest: "{{ o2r_nudge_script }}"
+    mode: "0755"
+
+- name: Wire the o2r nudge as a PreToolUse Bash hook
+  claude_settings_hook:
+    event: PreToolUse
+    matcher: Bash
+    command: "{{ o2r_nudge_script }}"
+    marker: o2r-nudge.sh
+    state: present

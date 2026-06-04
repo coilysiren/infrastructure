@@ -1,0 +1,27 @@
+#!/usr/bin/env bash
+# Advisory PreToolUse nudge. When a Bash command targets another fleet node,
+# remind the agent to route agent-to-agent delivery over o2r (otel-a2a-relay)
+# via the kai-command-handover skill, never a pasted command or URL. Non-blocking:
+# it only injects context, the command still runs through normal permissioning.
+#
+# Managed by ansible (roles/claude-hooks); edit the .j2 template, not this copy.
+set -euo pipefail
+
+cmd="$(jq -r '.tool_input.command // empty' 2>/dev/null || true)"
+[ -z "$cmd" ] && exit 0
+
+hosts='{{ o2r_nudge_fleet_hosts | join("|") }}'
+hit=0
+
+# ssh/scp/rsync as a command word, plus a fleet host or the kai@ remote user.
+# (coily's ssh passthrough was removed, so any ssh is bare - agentic-os-kai
+# AGENTS, "SSH into kai-server".)
+if printf '%s' "$cmd" | grep -Eiq '(^|[^[:alnum:]_-])(ssh|scp|rsync)([[:space:]]|$)'; then
+  printf '%s' "$cmd" | grep -Eiq "(kai@|${hosts})" && hit=1
+fi
+
+[ "$hit" -eq 0 ] && exit 0
+
+reason='This Bash command targets another fleet node. If this is agent-to-agent command delivery, route it over o2r (otel-a2a-relay) via the kai-command-handover skill: file a verifiable request envelope, never hand over a pasted command or URL (a handwritten URL is refused at the relay). Direct ops you run yourself, or a command handed to a human operator, may proceed.'
+jq -cn --arg r "$reason" '{hookSpecificOutput: {hookEventName: "PreToolUse", additionalContext: $r}}'
+exit 0
