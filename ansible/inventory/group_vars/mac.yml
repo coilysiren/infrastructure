@@ -25,7 +25,9 @@ homebrew_installed_packages:
   - bat
   - bottom
   - coilyco-flight-deck/ward/ward
-  - coilysiren/agent-guard/agent-guard
+  # coilysiren/agent-guard/agent-guard dropped: orphaned keg, the tap renamed
+  # the formula to `ward` (coilyco-flight-deck/infrastructure#197). `brew
+  # uninstall coilysiren/agent-guard/agent-guard` on this Mac to clear it.
   - coilysiren/coily/coily
   - coilysiren/o2r/o2r
   - coilysiren/repo-recall/repo-recall
