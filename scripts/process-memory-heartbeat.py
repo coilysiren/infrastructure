@@ -90,37 +90,47 @@ def humanize(comm: str, argv: list[str]) -> str:
     return _collapse_digits(_humanize_inner(comm, argv))
 
 
-def _humanize_inner(comm: str, argv: list[str]) -> str:  # pylint: disable=too-many-return-statements
+def _first_non_flag(args: list[str]) -> str | None:
+    """Return the first argv token that isn't a `-`-prefixed flag, or None."""
+    for a in args:
+        if not a.startswith("-"):
+            return a
+    return None
+
+
+def _humanize_python(comm: str, argv: list[str]) -> str:
+    # `python -m <runner> <target>` -> "<runner>:<target-first-segment>".
+    # Falls through to the script-path scan if `-m` has no module after it.
+    if "-m" in argv:
+        i = argv.index("-m")
+        if i + 1 < len(argv):
+            module = argv[i + 1]
+            if module not in PYTHON_RUNNERS:
+                return module
+            target = _first_non_flag(argv[i + 2 :])
+            if target is None:
+                return module
+            base = target.split(":")[0]
+            return f"{module}:{base}" if base else module
+    # `python /path/to/script.py ...` -> "script.py"
+    target = _first_non_flag(argv[1:])
+    if target is None:
+        return comm
+    return os.path.basename(target) or comm
+
+
+def _humanize_inner(comm: str, argv: list[str]) -> str:
     if not comm:
         return "?"
 
     if re.fullmatch(r"python\d*(\.\d+)?", comm):
-        # `python -m <runner> <target>` -> "<runner>:<target-first-segment>"
-        if "-m" in argv:
-            i = argv.index("-m")
-            if i + 1 < len(argv):
-                module = argv[i + 1]
-                if module in PYTHON_RUNNERS:
-                    for tail in argv[i + 2 :]:
-                        if tail.startswith("-"):
-                            continue
-                        base = tail.split(":")[0]
-                        return f"{module}:{base}" if base else module
-                    return module
-                return module
-        # `python /path/to/script.py ...` -> "script.py"
-        for a in argv[1:]:
-            if a.startswith("-"):
-                continue
-            return os.path.basename(a) or comm
-        return comm
+        return _humanize_python(comm, argv)
 
     if comm in {"node", "nodejs"}:
-        for a in argv[1:]:
-            if a.startswith("-"):
-                continue
-            return os.path.basename(a) or comm
-        return comm
+        target = _first_non_flag(argv[1:])
+        if target is None:
+            return comm
+        return os.path.basename(target) or comm
 
     return comm
 

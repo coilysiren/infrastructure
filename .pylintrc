@@ -3,5 +3,4 @@ disable=missing-function-docstring,
         broad-exception-raised,
         line-too-long,
         missing-module-docstring,
-        invalid-name,
-        too-many-nested-blocks
+        invalid-name
