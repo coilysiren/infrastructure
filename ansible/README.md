@@ -34,19 +34,21 @@ set the fleet baseline.
 ## agent-compose
 
 The `agent-compose` role owns the per-machine cross-harness context config. It
-renders `~/.config/agent-compose/agent-compose.yaml` from `agent_compose_scopes`
-(set per host class in group_vars) plus the fleet-static sources / load points in
+renders `~/.config/agent-compose/agent-compose.yaml` from `agent_compose_sources`
+(set per host class in group_vars) plus the fleet-static load points in
 `roles/agent-compose/defaults/main.yml`, then runs the composer to write
 `COMPOSED.md` and point each harness's global load point (Claude Code `~/.claude/
-CLAUDE.md`, Codex `~/.codex/AGENTS.md`) at it by symlink. The only per-machine bit
-is the scope list - everything else is identical fleet-wide, which is why this is
-an Ansible var lookup, not a hand-edited file. The composer is opt-in (no config
-=> no-op) and backs up any pre-existing real load-point file to `<name>.bak`.
+CLAUDE.md`, Codex `~/.codex/AGENTS.md`) at it by symlink. The composer inlines
+each source file's text verbatim, so `COMPOSED.md` is the full operating context
+as real text (no `@import`), which every harness loads identically. It is opt-in
+(no config => no-op) and backs up any pre-existing real load-point file to
+`<name>.bak`.
 
-Each host composes the `AGENTS.COMPOSE.md` sources whose declared scopes intersect
-its `agent_compose_scopes`, so one source set is correct on every host. Personal
-machines (`mac` group) run `[kai-private]` today; see the note in
-`group_vars/mac.yml` for the interim scoping and the planned matrix value.
+The sources are the canonical `AGENTS.md` files themselves: personal machines
+(`mac` group) compose the public base (`agentic-os/AGENTS.md`) plus the private
+overlay (`agentic-os-kai/AGENTS.md`); a work laptop overrides
+`agent_compose_sources` to the public base alone. Per-host source selection is
+what scopes the fleet, so the composer's own scope-filtering stays off.
 
 ## Adding a Mac
 

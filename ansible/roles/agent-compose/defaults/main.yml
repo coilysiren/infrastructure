@@ -1,5 +1,5 @@
-# Defaults for the agent-compose role. The per-host-varying bit (scopes) is set
-# in inventory group_vars/host_vars; everything here is fleet-static structure.
+# Defaults for the agent-compose role. The per-host-varying bit (which sources
+# compose) is set in inventory group_vars/host_vars; the rest is fleet-static.
 #
 # agent-compose composes one global context file (COMPOSED.md) from the sources
 # below and points each harness's global load point at it by symlink, so Claude
@@ -9,10 +9,15 @@
 agent_compose_kai_root: "{{ ansible_env.HOME }}/projects/coilyco-bridge/agentic-os-kai"
 agent_compose_aos_root: "{{ ansible_env.HOME }}/projects/coilyco-flight-deck/agentic-os"
 
-# Disjoint AGENTS.COMPOSE.md sources, composed in listed order. Explicit (not
-# root-walked) for determinism and speed.
+# Sources composed in listed order: public base first, then the private overlay.
+# The composer inlines each file's text verbatim, so COMPOSED.md is the full
+# operating context as real text (no @import) that every harness loads the same
+# way. This default is the personal-machine pair; a work laptop overrides it in
+# its group_vars to the public base alone. Per-host source selection is what
+# scopes the fleet, so the composer's own scope-filtering is left off.
 agent_compose_sources:
-  - "{{ agent_compose_kai_root }}/AGENTS.COMPOSE.md"
+  - "{{ agent_compose_aos_root }}/AGENTS.md"
+  - "{{ agent_compose_kai_root }}/AGENTS.md"
 
 # Harness global load points. openclaw is empty => skipped (forgejo #135 deferred
 # the OpenClaw global load point); set it to a path to wire a third symlink.
@@ -20,8 +25,3 @@ agent_compose_load_points:
   claude: "{{ ansible_env.HOME }}/.claude/CLAUDE.md"
   codex: "{{ ansible_env.HOME }}/.codex/AGENTS.md"
   openclaw: ""
-
-# This machine's scope tags. Overridden in group_vars per host class. A source
-# composes iff its declared scopes intersect this set.
-agent_compose_scopes:
-  - kai-private

@@ -3,12 +3,9 @@
 # `coily ansible-mac action=apply`.
 #
 # Presence of this file activates agent-compose. It composes COMPOSED.md from
-# the sources below (filtered to this machine's scopes) and points each harness
-# global load point at it by symlink.
-scopes:
-{% for scope in agent_compose_scopes %}
-  - {{ scope }}
-{% endfor %}
+# the sources below and points each harness global load point at it by symlink.
+# Per-host source selection (set in Ansible group_vars) scopes the fleet, so the
+# composer's own scope-filtering is left off (no scopes key).
 sources:
 {% for source in agent_compose_sources %}
   - {{ source }}
