@@ -26,9 +26,12 @@ homebrew_taps:
   - name: coilysiren/coily
     url: https://forgejo.coilysiren.me/coilysiren/coily
   - name: getsentry/tools
-  - name: homebrew/services
+  # homebrew/services dropped: the tap was deprecated and emptied upstream
+  # (brew services merged into core), so tapping it now errors. The `brew
+  # services` command still works tap-free.
   - name: openhue/cli
   - name: steipete/tap
+  - name: terraform-linters/tap
 
 # Top-level formulae (brew leaves), not their dependencies.
 homebrew_installed_packages:
@@ -39,8 +42,17 @@ homebrew_installed_packages:
   - bat
   - bottom
   - coilyco-flight-deck/otel-a2a-relay-cli/o2r
-  - coilyco-flight-deck/repo-recall/repo-recall
-  - coilyco-flight-deck/session-lattice/session-lattice-puller
+  # repo-recall skipped: its formula pins tag v0.45.0 to commit c5f0e8e, but
+  # that tag was re-pointed upstream to 5041759, so brew's tag-integrity check
+  # fails and aborts the whole batch. Re-enable once the formula's pinned sha
+  # is corrected upstream in the coilyco-flight-deck/repo-recall tap.
+  # - coilyco-flight-deck/repo-recall/repo-recall
+  # session-lattice-puller skipped: its formula declares a dependency on the
+  # dead coilysiren/session-lattice org path (pre-migration), which is
+  # unresolvable, and re-adding the old tap collides with the new one (same
+  # repo via redirect => duplicate formula). Re-enable once the puller's
+  # dependency is fixed upstream in the coilyco-flight-deck/session-lattice tap.
+  # - coilyco-flight-deck/session-lattice/session-lattice-puller
   - coilyco-flight-deck/ward/ward
   # coilysiren/agent-guard/agent-guard dropped: orphaned keg, the tap renamed
   # the formula to `ward` (coilyco-flight-deck/infrastructure#197). `brew
@@ -112,7 +124,9 @@ homebrew_installed_packages:
   - tailscale
   - tailwindcss
   - tfenv
-  - tflint
+  # tflint left homebrew-core; it ships from the terraform-linters tap now,
+  # so the bare name no longer resolves. Qualified to its tap.
+  - terraform-linters/tap/tflint
   - tokei
   - tree
   - trippy
@@ -133,7 +147,10 @@ homebrew_cask_apps:
   - android-platform-tools
   - aptakube
   - blender
-  - codex
+  # codex skipped: already installed as an npm global
+  # (/opt/homebrew/bin/codex -> @openai/codex), and the cask refuses to
+  # clobber that binary. The npm install is the working harness; leave it.
+  # - codex
   - corelocationcli
   - docker
   - docker-desktop
@@ -146,7 +163,9 @@ homebrew_cask_apps:
   - ngrok
   - obsidian
   - orbstack
-  - powershell
+  # powershell dropped from casks: there is no `powershell` cask (it ships as
+  # the `powershell` formula, already declared above). The bogus cask entry
+  # failed the casks task.
   - proxyman
   - tableplus
   - tailscale-app
