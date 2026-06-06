@@ -18,17 +18,6 @@ repos:
         always_run: true
         require_serial: true
 
-  - repo: local
-    hooks:
-      - id: coily-trailer
-        name: coily audit-log trailer
-        description: Append Audit-log trailers to the commit message based on coily's audit log for this repo.
-        entry: coily git trailer-hook
-        language: system
-        stages: [prepare-commit-msg]
-        always_run: true
-        require_serial: true
-
   # BEGIN managed by agentic-os/scripts/apply-agentic-os-hooks.py
   - repo: https://forgejo.coilysiren.me/coilyco-flight-deck/agentic-os
     rev: v0.14.0
