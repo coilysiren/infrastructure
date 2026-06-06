@@ -170,17 +170,25 @@ uncommitted/untracked, in-progress op (rebase/merge/cherry-pick/revert/bisect),
 detached HEAD, worktrees, stash, and stale unmerged branches (tip older than 24h,
 unmerged into the default branch - repo-recall's land-or-delete signal).
 
-**github<->forgejo mirror-drift** is the HEAD sha compared across the `origin`
-(github) and `forgejo` remotes: a mismatch is flagged `DRIFT forgejo!=origin`.
-Drift is **reported, never resolved** - no force, no push - matching
-`up-to-date.py` step 6, because resolving it automatically could silently drop
-commits on whichever side is behind.
+### Remote topology
 
-On `action=apply` the module additionally converges the fleet remote topology
-(origin pushes both github + forgejo, a `forgejo` fetch remote exists, the
-default branch pulls forgejo and pushes origin) and pulls `--ff-only` from each
-remote whose default branch matches the checked-out branch; a non-fast-forward
-pull reports `BLOCKED` rather than merging. In **check mode** the module reports
+Three remotes, all normal fetch+push remotes (nothing is push-disabled):
+
+* `origin` - canonical forgejo (`forgejo.coilysiren.me/<org>/<repo>.git`). The default for pull and push.
+* `forgejo` - the same canonical forgejo URL under an explicit name, so `git push forgejo` is unambiguous.
+* `github` - the github mirror (`git@github.com:<org>/<repo>.git`).
+
+`origin == forgejo` by URL: they point at the same host and never drift from each other. `github` is the only one that can lag or run ahead.
+
+### Push / pull rules
+
+* **Pull** - from `origin` (canonical forgejo). The default branch's `branch.<main>.remote` is pinned to `origin`.
+* **Push** - to `origin` (canonical forgejo). The default branch's `branch.<main>.pushRemote` is pinned to `origin`, so a bare `git push` always lands on forgejo.
+* **Pushing github** - github keeps a real push URL but is never any branch's default, so it only takes a push when named on purpose: `git push github <branch>`. That is git's "be explicit to push here" gate (`pushRemote` selects the implicit target; everything else is opt-in by name). The github copy is normally refreshed by CI, so a manual `git push github` is the rare deliberate case, not the default path.
+* **Divergence** - on `action=apply`, if local has diverged from `origin`, the sweep rebases local commits onto origin via explicit `--rebase` (not the host's ambient `pull.rebase`, so it is deterministic before the git role has converged a host). A failed rebase is aborted at once and reported `BLOCKED`, never left mid-op. `forgejo` stays `--ff-only`; `github` is never auto-pulled.
+* **Mirror-drift** - the github HEAD sha compared against canonical, flagged `DRIFT github!=origin`. **Reported, never resolved** - no force, no push - matching `up-to-date.py` step 6, because resolving it automatically could silently drop commits on whichever side is behind.
+
+On `action=apply` the module converges the topology above (adding any missing remote, repointing a stray URL, dropping a legacy dual-push pushurl, and pinning the default branch's pull/push to `origin`) before integrating divergence. The `git` role also converges `pull.rebase=true` globally so Kai's own `git pull` rebases the same way; the module passes `--rebase` explicitly and never depends on it. In **check mode** the module reports
 only - but it still fetches, since ahead/behind and drift are meaningless
 without current remote-tracking refs (fetch touches no working tree). Repos are
 **data looped inside the module** (a bounded `parallel` thread pool, default 8),

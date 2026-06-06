@@ -1,6 +1,15 @@
 # Git remote-sync + mirror-drift sweep across every local clone. repo_status
 # does the per-repo work; this role renders rows. See docs/ansible.md.
-- name: Sweep local repos (fetch, status, mirror-drift; pull --ff-only on apply)
+
+# Linear-history default for interactive pulls; repo_status passes --rebase
+# explicitly and never depends on this. Detail in docs/ansible.md (git role).
+- name: Default git pull to rebase globally
+  community.general.git_config:
+    name: pull.rebase
+    scope: global
+    value: "true"
+
+- name: Sweep local repos (fetch, status, mirror-drift; origin rebase + others ff-only on apply)
   repo_status:
     root: "{{ repos_root }}"
     known_orgs: "{{ repos_known_orgs }}"

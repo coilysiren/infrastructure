@@ -7,11 +7,16 @@ Per local repo across the known org dirs (the same dirs the `repos` role
 discovers): `git fetch --all --prune`, then report ahead/behind vs each remote,
 uncommitted/untracked, in-progress op, detached HEAD, worktrees, stash, and
 stale unmerged branches. In apply mode it also converges the fleet remote
-topology and pulls `--ff-only` from each remote; check mode reports only.
+topology, rebases the default branch from `origin` (`--rebase`, abort-on-
+conflict, so divergence converges to a linear history instead of stalling), and
+pulls `--ff-only` from `forgejo`; check mode reports only.
 
-github<->forgejo mirror-drift is the HEAD sha compared across the github
-(`origin`) and forgejo remotes: divergence is flagged, never resolved - no
-force, no push (matches agentic-os-kai/scripts/up-to-date.py, step 6).
+Remote convention: `origin` and an explicit `forgejo` remote both point at the
+canonical forgejo host (fetch + push); an explicit `github` remote mirrors the
+same slug fetch-only (push disabled - the github copy is refreshed by CI, never
+a local push). mirror-drift is the github HEAD sha compared against canonical:
+flagged, never resolved - no force, no push (matches
+agentic-os-kai/scripts/up-to-date.py, step 6).
 
 Fetch runs in check mode too: it only refreshes remote-tracking refs (no
 working-tree change) and reporting ahead/behind/drift requires it. The
@@ -111,46 +116,79 @@ def _stale_branches(repo, current):
     return out
 
 
-def _github_origin_slug(repo, known_orgs):
-    """`<owner>/<name>` if origin's fetch URL is a GitHub repo under a known org,
-    else "". Deriving the owner from the URL (not assuming coilysiren) follows a
-    repo through the org split; forks under other owners are left untouched."""
-    rc, url = _git(repo, "remote", "get-url", "origin")
-    if rc != 0 or not url:
-        return ""
-    for prefix in ("git@github.com:", "https://github.com/", "ssh://git@github.com/"):
+_FORGE_PREFIXES = (
+    "git@github.com:", "https://github.com/", "ssh://git@github.com/",
+    f"https://{CANONICAL_FORGEJO_HOST}/", f"git@{CANONICAL_FORGEJO_HOST}:",
+    f"ssh://git@{CANONICAL_FORGEJO_HOST}/",
+)
+
+
+def _slug_from_url(url):
+    """`<owner>/<name>` parsed from a github or canonical-forgejo URL, else ""."""
+    for prefix in _FORGE_PREFIXES:
         if url.startswith(prefix):
             slug = url[len(prefix):]
-            if slug.endswith(".git"):
-                slug = slug[:-4]
-            owner, _, name = slug.partition("/")
-            return f"{owner}/{name}" if owner in known_orgs and name else ""
+            return slug[:-4] if slug.endswith(".git") else slug
     return ""
 
 
+def _repo_slug(repo, known_orgs):
+    """`<owner>/<name>` for a repo under a known org, read from whichever of
+    origin/forgejo/github resolves first. Deriving the owner from the URL (not
+    assuming coilysiren) follows a repo through the org split; forks under other
+    owners and unknown repos return "" and are left untouched."""
+    for remote in ("origin", "forgejo", "github"):
+        rc, url = _git(repo, "remote", "get-url", remote)
+        if rc != 0 or not url:
+            continue
+        slug = _slug_from_url(url.strip())
+        owner, _, name = slug.partition("/")
+        if owner in known_orgs and name:
+            return slug
+    return ""
+
+
+def _ensure_remote(repo, name, url, check_mode):
+    """Converge remote `name` to fetch+push `url` (a single normal remote, no
+    explicit pushurl - push follows fetch). Returns a change token or []."""
+    _, listed = _git(repo, "remote")
+    if name not in listed.split():
+        if not check_mode:
+            _git(repo, "remote", "add", name, url)
+        return [f"+{name}"]
+    changes = []
+    _, cur = _git(repo, "remote", "get-url", name)
+    if cur.strip() != url:
+        changes.append(f"{name}.url")
+        if not check_mode:
+            _git(repo, "remote", "set-url", name, url)
+    # Drop any stray pushurl (e.g. a legacy dual-push origin): push follows fetch.
+    _, push_out = _git(repo, "remote", "get-url", "--push", "--all", name)
+    if {u.strip() for u in push_out.splitlines() if u.strip()} not in ({url}, set()):
+        changes.append(f"{name}.push->url")
+        if not check_mode:
+            _git(repo, "config", "--unset-all", f"remote.{name}.pushurl")
+    return changes
+
+
 def _ensure_remote_topology(repo, known_orgs, check_mode):
-    """Converge `repo` onto the fleet remote convention: origin fetches github +
-    pushes both; a `forgejo` fetch remote exists; the default branch pulls from
-    forgejo and pushes to origin. Returns the changes applied (or, in check mode,
-    that would apply); empty means already correct. No-op for non-known repos."""
-    slug = _github_origin_slug(repo, known_orgs)
+    """Converge `repo` onto the fleet remote convention: `origin` and an explicit
+    `forgejo` remote both point at the canonical forgejo host; an explicit
+    `github` remote points at github. All three are normal fetch+push remotes -
+    nothing is push-disabled. The default branch's `pushRemote` is pinned to
+    `origin`, so a bare `git push` always goes to canonical forgejo and reaching
+    github takes a deliberate `git push github <branch>`. Returns the changes
+    applied (or, in check mode, that would apply); empty means already correct.
+    No-op for repos not under a known org."""
+    slug = _repo_slug(repo, known_orgs)
     if not slug:
         return []
-    gh_url = f"git@github.com:{slug}.git"
     fj_url = f"https://{CANONICAL_FORGEJO_HOST}/{slug}.git"
+    gh_url = f"git@github.com:{slug}.git"
     changes = []
-    _, push_out = _git(repo, "remote", "get-url", "--push", "--all", "origin")
-    if {u.strip() for u in push_out.splitlines() if u.strip()} != {gh_url, fj_url}:
-        changes.append("origin->push both")
-        if not check_mode:
-            _git(repo, "config", "--unset-all", "remote.origin.pushurl")
-            _git(repo, "remote", "set-url", "--add", "--push", "origin", gh_url)
-            _git(repo, "remote", "set-url", "--add", "--push", "origin", fj_url)
-    _, remotes = _git(repo, "remote")
-    if "forgejo" not in remotes.split():
-        changes.append("+forgejo remote")
-        if not check_mode:
-            _git(repo, "remote", "add", "forgejo", fj_url)
+    changes += _ensure_remote(repo, "origin", fj_url, check_mode)
+    changes += _ensure_remote(repo, "forgejo", fj_url, check_mode)
+    changes += _ensure_remote(repo, "github", gh_url, check_mode)
     main = _local_default_branch(repo)
     if main:
         changes += _wire_default_branch(repo, main, check_mode)
@@ -158,12 +196,15 @@ def _ensure_remote_topology(repo, known_orgs, check_mode):
 
 
 def _wire_default_branch(repo, main, check_mode):
+    """Pull and push the default branch via `origin` (canonical forgejo). Pinning
+    pushRemote here is what keeps `git push` off github by default - github stays
+    a normal remote, reachable only by naming it explicitly."""
     changes = []
     _, cur_remote = _git(repo, "config", "--get", f"branch.{main}.remote")
-    if cur_remote.strip() != "forgejo":
-        changes.append(f"{main}.pull->forgejo")
+    if cur_remote.strip() != "origin":
+        changes.append(f"{main}.pull->origin")
         if not check_mode:
-            _git(repo, "config", f"branch.{main}.remote", "forgejo")
+            _git(repo, "config", f"branch.{main}.remote", "origin")
     _, cur_push = _git(repo, "config", "--get", f"branch.{main}.pushRemote")
     if cur_push.strip() != "origin":
         changes.append(f"{main}.push->origin")
@@ -191,14 +232,13 @@ def _remote_states(repo, branch, remotes):
 
 
 def _drift(state):
-    """github<->forgejo mirror-drift: remote pairs whose HEAD sha differs."""
-    items = list(state.items())
-    out = []
-    for i, (an, a) in enumerate(items):
-        for bn, b in items[i + 1:]:
-            if a["sha"] and b["sha"] and a["sha"] != b["sha"]:
-                out.append(f"{an}!={bn}")
-    return out
+    """Mirror-drift: github's HEAD sha differs from canonical (origin == forgejo,
+    so they never drift from each other; only github can lag or run ahead)."""
+    gh = state.get("github")
+    canon = state.get("origin") or state.get("forgejo")
+    if gh and canon and gh["sha"] and canon["sha"] and gh["sha"] != canon["sha"]:
+        return ["github!=origin"]
+    return []
 
 
 def _working_state(repo, branch):
@@ -217,12 +257,29 @@ def _working_state(repo, branch):
 
 
 def _pull_remotes(repo, branch, remotes):
+    """Integrate the default branch from the canonical forgejo remotes.
+
+    `origin` (canonical forgejo) resolves divergence: on local-ahead histories it
+    rebases local commits onto origin via explicit `--rebase`, not the host's
+    ambient `pull.rebase`, so the module is deterministic on a host whose git
+    role hasn't converged yet. A failed rebase (conflict or otherwise) is aborted
+    immediately - a fleet sweep must never leave a repo mid-rebase - and reports
+    BLOCKED. `forgejo` (same canonical host) stays `--ff-only`. `github` is never
+    pulled: it isn't the branch's upstream, and its drift is surfaced by `_drift`
+    rather than auto-resolved here (see module docstring)."""
     pulled = []
     for r in remotes:
+        if r == "github":
+            continue
         rb = _remote_branch(repo, r)
         if not rb or rb != branch:
             continue
-        rc, _ = _git(repo, "pull", "--ff-only", r, branch)
+        if r == "origin":
+            rc, _ = _git(repo, "pull", "--rebase", r, branch)
+            if rc != 0:
+                _git(repo, "rebase", "--abort")  # no-op if no rebase is in progress
+        else:
+            rc, _ = _git(repo, "pull", "--ff-only", r, branch)
         pulled.append(f"{r}:{'ok' if rc == 0 else 'BLOCKED'}")
     return pulled
 

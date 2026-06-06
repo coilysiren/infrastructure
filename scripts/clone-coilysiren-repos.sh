@@ -6,23 +6,9 @@ set -euo pipefail
 
 ROOT="${ROOT:-/home/kai/projects/coilysiren}"
 ORG="coilysiren"
-FORGEJO_HOST="forgejo.coilysiren.me"
 
-# Forgejo is the canonical upstream and GitHub a downstream mirror. Wire origin
-# so a single push fans out to both. See ansible/library/repo_status.py.
-wire_dual_push() {
-  local name="$1"
-  local gh_url="git@github.com:${ORG}/${name}.git"
-  local fj_url="https://${FORGEJO_HOST}/${ORG}/${name}.git"
-  local pushes
-  pushes="$(git -C "$name" remote get-url --push --all origin 2>/dev/null)"
-  if ! grep -qxF "$gh_url" <<<"$pushes" || ! grep -qxF "$fj_url" <<<"$pushes"; then
-    git -C "$name" config --unset-all remote.origin.pushurl 2>/dev/null || true
-    git -C "$name" remote set-url --add --push origin "$gh_url"
-    git -C "$name" remote set-url --add --push origin "$fj_url"
-  fi
-  git -C "$name" remote | grep -qx forgejo || git -C "$name" remote add forgejo "$fj_url"
-}
+# Remote topology is owned by the ansible git role (repo_status.py); this script
+# only clones and fetches. Push/pull rules: docs/ansible.md.
 
 REPOS=(
   backend
@@ -60,7 +46,6 @@ for name in "${REPOS[@]}"; do
   if [[ ! -d "$name/.git" ]]; then
     echo ">>> cloning $name"
     if git clone "git@github.com:${ORG}/${name}.git" "$name"; then
-      wire_dual_push "$name"
       cloned=$((cloned + 1))
     else
       echo "!!! clone failed: $name" >&2
@@ -76,7 +61,6 @@ for name in "${REPOS[@]}"; do
     continue
   fi
   fetched=$((fetched + 1))
-  wire_dual_push "$name"
 
   if [[ -n "$(git -C "$name" status --porcelain)" ]]; then
     echo "    dirty working tree, leaving alone"
