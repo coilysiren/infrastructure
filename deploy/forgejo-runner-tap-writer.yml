@@ -20,11 +20,11 @@ spec:
     - secretKey: api-token
       remoteRef:
         key: /forgejo/api-token
-    # Dedicated tap-write token. The credential helper reads this; jobs
-    # never see it in env.
+    # CI release token (write:repository). The credential helper reads this;
+    # jobs never see it in env.
     - secretKey: tap-token
       remoteRef:
-        key: /forgejo/tap-bump-token
+        key: /forgejo/ci-release-token
 ---
 apiVersion: apps/v1
 kind: StatefulSet
