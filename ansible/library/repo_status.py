@@ -241,6 +241,22 @@ def _drift(state):
     return []
 
 
+def _push_pending(repo, branch):
+    """Commits on the local default branch not yet on `origin` (canonical forgejo)
+    - a clean `git push` away. This is healthy local-ahead work, NOT a freshness
+    failure: it is surfaced as informational `needs_push`, never folded into
+    `action_required`. Detached HEAD, or a branch with no matching origin ref,
+    returns 0. Computed after the apply-mode pull, so a rebased-then-ahead branch
+    reports the commits that still need pushing."""
+    if branch == "(detached)":
+        return 0
+    rb = _remote_branch(repo, "origin")
+    if not rb or rb != branch:
+        return 0
+    rc, out = _git(repo, "rev-list", "--count", f"origin/{rb}..{branch}")
+    return int(out) if rc == 0 and out.isdigit() else 0
+
+
 def _working_state(repo, branch):
     _, porcelain = _git(repo, "status", "--porcelain")
     lines = [line for line in porcelain.splitlines() if line]
@@ -310,6 +326,9 @@ def _sync_repo(repo, known_orgs, check_mode):
     row.update(_working_state(repo, branch))
     if not check_mode and not detached:
         row["pulled"] = _pull_remotes(repo, branch, remotes)
+    # After any pull: commits the default branch still owes origin. Purely
+    # informational (needs_push), deliberately kept out of action_required.
+    row["needs_push"] = _push_pending(repo, branch)
     return row
 
 
@@ -339,13 +358,25 @@ def _label(row):
 
 
 def _is_action_required(row):
-    """Hard repo-recall signals: dirty tree, in-progress op, detached HEAD,
-    mirror-drift, or a blocked (non-ff) pull."""
+    """Hard signals that block a fresh host - the sweep surfaces them and the run
+    FAILS on them: uncommitted/untracked changes, stashed work, unmerged local
+    branches (work parked off the default branch), an in-progress op, detached
+    HEAD, mirror-drift, or a pull that could not happen automatically (non-ff /
+    rebase-conflict, reported BLOCKED). Being merely ahead of origin is NOT here -
+    that is a clean push away, surfaced separately as informational needs_push."""
     if "error" in row:
         return True
     dirty = row["modified"] + row["untracked"]
     blocked = any("BLOCKED" in p for p in row["pulled"])
-    return bool(dirty or row["op"] or row["detached"] or row["drift"] or blocked)
+    return bool(
+        dirty
+        or row["stashes"]
+        or row["stale"]
+        or row["op"]
+        or row["detached"]
+        or row["drift"]
+        or blocked
+    )
 
 
 def _summarize(row):
@@ -416,6 +447,9 @@ def run_module():
         repos=rows,
         summaries=[_summarize(r) for r in rows],
         action_required=[_label(r) for r in rows if _is_action_required(r)],
+        needs_push=[
+            f"{_label(r)} (+{r['needs_push']})" for r in rows if r.get("needs_push")
+        ],
         repo_count=len(rows),
     )
 

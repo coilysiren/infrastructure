@@ -21,3 +21,17 @@
       tags: [git]
     - role: deptree
       tags: [deptree]
+
+  # Freshness gate: fail the run on any repo the git sweep flagged for manual
+  # action. Deferred here so every role converges first. See docs/ansible.md.
+  post_tasks:
+    - name: Fail the freshen run on repos needing manual action
+      ansible.builtin.fail:
+        msg: >-
+          Host is not fresh: {{ repo_sweep.action_required | length }} repo(s)
+          need manual action - {{ repo_sweep.action_required | join(', ') }}.
+          See the git-role report above for the per-repo flags.
+      when:
+        - repo_sweep is defined
+        - repo_sweep.action_required | length > 0
+      tags: [git, always]
