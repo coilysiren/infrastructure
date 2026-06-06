@@ -68,7 +68,13 @@ to `ansible/ansible.cfg` so playbooks run from the repo root.
 
 Ensures the declared taps, formulae, and casks are present, using the
 `community.general.homebrew_tap`, `homebrew`, and `homebrew_cask` modules. Taps
-converge first so tap-qualified formulae resolve. **Additive only**: it ensures
+converge first so tap-qualified formulae resolve. The tap task carries
+`check_mode: false` so it adds taps even under `--check`: a dry-run tap is only
+"would-change", but the next task probes brew live for tap-qualified formulae
+(`<org>/<tap>/<formula>`), which fail to resolve if the tap was never really
+added. Adding taps in check mode trades a little check purity for an honest
+formula check - the only way `--check` passes on a host missing a baseline tap
+(#243). **Additive only**: it ensures
 presence and never uninstalls anything absent from the lists. Casks use
 `accept_external_apps: true` to avoid reinstall churn for apps first installed
 outside brew (Chrome, Docker Desktop). Because the baseline is seeded from the
