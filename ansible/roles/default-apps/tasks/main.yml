@@ -1,0 +1,23 @@
+# Point editor-shaped file types at the preferred editor via duti (ships from
+# the homebrew role). Only real-UTI extensions belong here; caveat in docs/ansible.md.
+- name: Set default editor file-type handlers
+  when: default_app_editor_bundle_id | length > 0
+  block:
+    - name: Query current default handler per editor file type
+      ansible.builtin.command: "duti -x {{ item }}"
+      loop: "{{ default_app_editor_extensions }}"
+      register: default_apps_current
+      changed_when: false
+      failed_when: false
+
+    - name: Point editor file types at the preferred editor (duti)
+      ansible.builtin.command: "duti -s {{ default_app_editor_bundle_id }} {{ item.item }} all"
+      loop: "{{ default_apps_current.results }}"
+      loop_control:
+        label: "{{ item.item }}"
+      # duti -x prints the resolved bundle id on its last line; skip when it
+      # already matches the desired handler so the role is idempotent.
+      when: default_app_editor_bundle_id not in (item.stdout | default(''))
+      register: default_apps_set
+      changed_when: default_apps_set.rc == 0
+      failed_when: default_apps_set.rc != 0

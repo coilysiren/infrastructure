@@ -50,8 +50,9 @@ to `ansible/ansible.cfg` so playbooks run from the repo root.
   `repos_recent_days`, `repos_forgejo_only`, `repos_known_orgs`, `repos_root`).
   All meaningful names; the Forgejo PAT is resolved from SSM at runtime.
 - **`playbooks/freshen.yml`** - the host-freshen play. Runs `fleet-orgs`,
-  `homebrew`, `agent-compose`, `claude-hooks`, `repos`, `reconcile`, `git`,
-  `lockdown`, `precommit-hooks`, `repo-data`, and `deptree` in order, each tagged
+  `homebrew`, `default-apps`, `agent-compose`, `claude-hooks`, `repos`,
+  `reconcile`, `git`, `lockdown`, `precommit-hooks`, `repo-data`, and `deptree`
+  in order, each tagged
   so you can run one in isolation (e.g. `tags=git`). `fleet-orgs` carries the
   `always` tag so tag-scoped runs still resolve the org list first.
 - **`library/repo_registry.py`** - the read-only discovery module the `repos`
@@ -62,9 +63,9 @@ to `ansible/ansible.cfg` so playbooks run from the repo root.
   role calls (move/remove drifted checkouts to match origin org; check-aware).
 - **`library/repo_deptree.py`** - the read-only dep-tree validator the `deptree`
   role calls (FAIL on flight-deck -> bridge `dependsOn` edges).
-- **`roles/homebrew/`**, **`roles/agent-compose/`**, **`roles/repos/`**,
-  **`roles/reconcile/`**, **`roles/git/`**, **`roles/deptree/`** - the units of
-  work, detailed below.
+- **`roles/homebrew/`**, **`roles/default-apps/`**, **`roles/agent-compose/`**,
+  **`roles/repos/`**, **`roles/reconcile/`**, **`roles/git/`**,
+  **`roles/deptree/`** - the units of work, detailed below.
 - **`roles/fleet-orgs/`**, **`roles/lockdown/`**, **`roles/precommit-hooks/`**,
   **`roles/repo-data/`** - the fleet-management rollout roles, detailed below.
 
@@ -78,8 +79,14 @@ converge first so tap-qualified formulae resolve. The tap task carries
 (`<org>/<tap>/<formula>`), which fail to resolve if the tap was never really
 added. Adding taps in check mode trades a little check purity for an honest
 formula check - the only way `--check` passes on a host missing a baseline tap
-(#243). **Additive only**: it ensures
-presence and never uninstalls anything absent from the lists. Casks use
+(#243). **Present by default, with an explicit removal surface**: it ensures the
+`homebrew_installed_packages` / `homebrew_cask_apps` lists are installed and
+never touches anything merely omitted from them, but the
+`homebrew_installed_packages_absent` / `homebrew_cask_apps_absent` lists are
+uninstalled (`state: absent`) so a tool can be retired fleet-wide instead of
+lingering on machines that once had it - e.g. `warp` (Stable) was retired in
+favour of `warp@preview` (see the default-apps role). Removal is idempotent (a
+no-op once the tool is gone). Casks use
 `accept_external_apps: true` to avoid reinstall churn for apps first installed
 outside brew (Chrome, Docker Desktop). Because the baseline is seeded from the
 live machine, a first apply on a seeded host is a no-op (`changed=0`).
@@ -108,6 +115,12 @@ baseline. This is for Python CLIs that ship as pipx apps rather than brew
 formulae, each in its own isolated venv with no system-python pollution. Today
 just `python-kasa`, which provides the `kasa` command for the home-1 Kasa HS300
 smart strip (see the `machine-power-strip` skill).
+
+## The default-apps role
+
+Sets macOS default file-type handlers via `duti` (the formula ships from the homebrew baseline), so editor-shaped files open in the editor Kai actually uses. Driven by `default_app_editor_bundle_id` and `default_app_editor_extensions` in `group_vars/mac.yml`; today that is Warp Preview (`dev.warp.Warp-Preview`) over ~35 extensions. The role queries `duti -x <ext>` per extension and only runs `duti -s <bundle> <ext> all` when the resolved handler differs, so it is idempotent and reports `changed` honestly. A no-op when `default_app_editor_bundle_id` is empty (the role default), so non-mac hosts skip it cleanly.
+
+The hard constraint: **LaunchServices only accepts a handler for a real UTI.** Extensions whose only UTI is dynamic (`dyn.*` - `go`, `rs`, `toml`, `tsx`, `tf`, `ini`, `dockerfile`, ...) fail `duti -s` with error -50 and are deliberately **not** in the list. Those are handled structurally instead: the homebrew baseline installs only `warp@preview`, not Stable (`warp`), so Preview is the sole Warp claimant and wins their open-by-default. With both builds installed, Stable out-ranked Preview and grabbed every dynamic-UTI dev file. `html`/`xhtml` are intentionally omitted so a double-clicked page still opens in the browser. Scope with `tags=default-apps`.
 
 ## The agent-compose role
 

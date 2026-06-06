@@ -151,8 +151,15 @@ homebrew_cask_apps:
   - tableplus
   - tailscale-app
   - visual-studio-code
-  - warp
+  # Warp Preview only -- Stable dropped so Preview is the sole claimant for the
+  # dynamic-UTI dev files duti can't set. See default-apps role, docs/ansible.md.
   - warp@preview
+
+# Casks/formulae to uninstall fleet-wide (homebrew role, state: absent). warp is
+# Stable -- retired in favour of warp@preview. See default-apps role.
+homebrew_cask_apps_absent:
+  - warp
+homebrew_installed_packages_absent: []
 
 # pip packages force-installed into the brew system python3 so `language: system`
 # pre-commit hooks that import them don't crash. Rationale: docs/ansible.md.
@@ -163,3 +170,46 @@ system_python3_packages:
 # command for the home-1 Kasa HS300 smart strip (machine-power-strip skill).
 pipx_packages:
   - python-kasa
+
+# Default file-type handlers (default-apps role, via duti). Editor-shaped files
+# open in Warp Preview. Rationale and the dynamic-UTI caveat: docs/ansible.md.
+default_app_editor_bundle_id: dev.warp.Warp-Preview
+default_app_editor_extensions:
+  # plain text, logs, docs
+  - txt
+  - text
+  - log
+  - md
+  - markdown
+  # data / config
+  - json
+  - yaml
+  - yml
+  - xml
+  - csv
+  - tsv
+  - sql
+  # shell
+  - sh
+  - bash
+  - zsh
+  # web / styles (not html/xhtml -- those stay in the browser)
+  - css
+  - js
+  - mjs
+  - ts
+  # compiled-language sources with real UTIs
+  - c
+  - h
+  - cpp
+  - hpp
+  - cc
+  - swift
+  - py
+  - rb
+  - pl
+  - php
+  - java
+  # diffs
+  - diff
+  - patch

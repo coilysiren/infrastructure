@@ -7,6 +7,8 @@
   roles:
     - role: homebrew
       tags: [homebrew, tooling]
+    - role: default-apps
+      tags: [default-apps, tooling]
     - role: agent-compose
       tags: [agent-compose]
     - role: claude-hooks
