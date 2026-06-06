@@ -158,3 +158,8 @@ homebrew_cask_apps:
 # pre-commit hooks that import them don't crash. Rationale: docs/ansible.md.
 system_python3_packages:
   - PyYAML
+
+# Python CLIs installed via pipx (isolated venvs). python-kasa ships the `kasa`
+# command for the home-1 Kasa HS300 smart strip (machine-power-strip skill).
+pipx_packages:
+  - python-kasa

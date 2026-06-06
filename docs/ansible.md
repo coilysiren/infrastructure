@@ -49,9 +49,11 @@ to `ansible/ansible.cfg` so playbooks run from the repo root.
   (`repos_owner`, `repos_forgejo_api`, `repos_forgejo_token_ssm`,
   `repos_recent_days`, `repos_forgejo_only`, `repos_known_orgs`, `repos_root`).
   All meaningful names; the Forgejo PAT is resolved from SSM at runtime.
-- **`playbooks/freshen.yml`** - the host-freshen play. Runs the `homebrew`,
-  `agent-compose`, `repos`, `reconcile`, `git`, and `deptree` roles in order,
-  each tagged so you can run one in isolation (e.g. `tags=git`).
+- **`playbooks/freshen.yml`** - the host-freshen play. Runs `fleet-orgs`,
+  `homebrew`, `agent-compose`, `claude-hooks`, `repos`, `reconcile`, `git`,
+  `lockdown`, `precommit-hooks`, `repo-data`, and `deptree` in order, each tagged
+  so you can run one in isolation (e.g. `tags=git`). `fleet-orgs` carries the
+  `always` tag so tag-scoped runs still resolve the org list first.
 - **`library/repo_registry.py`** - the read-only discovery module the `repos`
   role calls (local custom module, found via `library = library` in ansible.cfg).
 - **`library/repo_status.py`** - the per-repo git sweep module the `git` role
@@ -63,6 +65,8 @@ to `ansible/ansible.cfg` so playbooks run from the repo root.
 - **`roles/homebrew/`**, **`roles/agent-compose/`**, **`roles/repos/`**,
   **`roles/reconcile/`**, **`roles/git/`**, **`roles/deptree/`** - the units of
   work, detailed below.
+- **`roles/fleet-orgs/`**, **`roles/lockdown/`**, **`roles/precommit-hooks/`**,
+  **`roles/repo-data/`** - the fleet-management rollout roles, detailed below.
 
 ## The homebrew role
 
@@ -97,6 +101,13 @@ catalog-using repos until the package lands. Homebrew python is
 externally-managed (PEP 668), so the install passes `--break-system-packages`;
 the `ansible.builtin.pip` module keeps it idempotent. Origin:
 coilyco-flight-deck/infrastructure#228.
+
+Finally the role converges `pipx_packages` via `community.general.pipx` (`state:
+present`, the idempotent install alias), backed by the brew `pipx` formula in the
+baseline. This is for Python CLIs that ship as pipx apps rather than brew
+formulae, each in its own isolated venv with no system-python pollution. Today
+just `python-kasa`, which provides the `kasa` command for the home-1 Kasa HS300
+smart strip (see the `machine-power-strip` skill).
 
 ## The agent-compose role
 
@@ -197,6 +208,15 @@ Kai's private tools. Both data files ship in `agentic-os-kai/data/`
 (`deptree_kai_root` points at the checkout; override per host). Absent or
 unparseable data degrades to a skip with a note, never a hard failure, and the
 module runs identically in check and apply mode.
+
+## Fleet-management rollout roles
+
+These four roles enforce the **authoring-vs-rollout** rule (see `agentic-os/AGENTS.md`): a tool or validator is authored in its home repo, and the rollout that fans it across every checkout is an ansible role here. Install-time mass mutation never lives in `coily setup` or a brew post-install.
+
+- **`fleet-orgs`** - resolves the fleet org list once and overrides `repos_known_orgs` with it, so every later role walks the same set. Order: env `COILYSIREN_FLEET_ORGS` fast-path, then SSM `/coilysiren/fleet/orgs` (`coily ops aws ssm get-parameter`, comma- or whitespace-separated; coily's argv policy rejects literal newlines so the value is comma-joined), else the static `repos_known_orgs` fallback from `group_vars/all.yml`. Carries the `always` tag so tag-scoped runs resolve it first. A pure fact-gather (`changed_when: false`, runs in check mode).
+- **`lockdown`** - fleet-wide lockdown convergence, moved out of `coily setup`. Per org, `coily lockdown --recursive --apply --replace --path ~/projects/<org>`, then `coily lockdown --user --apply` once. In check mode it drops `--apply` to preview via coily's own dry-run.
+- **`precommit-hooks`** - the ansible reimplementation of `agentic-os/scripts/apply-agentic-os-hooks.py`. Discovers every on-disk repo across the fleet orgs and, per repo (skipping the `agentic-os` source repo and any `.agentic-os-ignore` opt-out): strips legacy per-hook managed blocks (`ansible.builtin.replace`), upserts the single agentic-os managed block (`ansible.builtin.blockinfile`, markers carry the 2-space indent so the existing Python-written block is refreshed in place, never duplicated), drops legacy stamped `check-*.py` scripts, and runs `pre-commit install`. Hook IDs come from `precommit_hooks_default_ids` (lockstep with the script); `eco-*` repos skip `code-comments`. Bump `precommit_hooks_rev` on each agentic-os release. Full check-mode/`--diff` support.
+- **`repo-data`** - the rollout/invocation layer for the repo-data collectors authored in `agentic-os-kai` (`make -C <kai-root> {build-catalog-graph,sync-repo-registry,compile-repo-digests}`), passing the resolved org list via `COILYSIREN_FLEET_ORGS`. Replaces the GitHub Actions daily crons. Skipped in check mode (the collectors have no dry-run).
 
 ## Safety model
 

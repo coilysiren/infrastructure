@@ -32,3 +32,12 @@
     executable: /opt/homebrew/bin/pip3
     extra_args: --break-system-packages
   when: system_python3_packages | default([]) | length > 0
+
+# Python CLIs as pipx apps (isolated venvs), backed by the brew `pipx` formula.
+# `present` is the idempotent install alias. Why pipx not brew: docs/ansible.md.
+- name: Ensure pipx applications are present
+  community.general.pipx:
+    name: "{{ item }}"
+    state: present
+  loop: "{{ pipx_packages | default([]) }}"
+  when: pipx_packages | default([]) | length > 0
