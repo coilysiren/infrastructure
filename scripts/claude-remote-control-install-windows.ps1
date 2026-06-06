@@ -7,7 +7,7 @@
 .DESCRIPTION
   This host registers as 'kai-desktop-tower-native' in claude.ai/code's
   Remote Control dropdown. The WSL installer registers the same physical
-  tree (X:\projects-x\coilysiren <-> /mnt/x/projects-x/coilysiren) as
+  tree (X:\projects-x <-> /mnt/x/projects-x) as
   'kai-desktop-tower-wsl'; the two --name values must stay distinct or
   the dropdown collapses them.
 
@@ -21,12 +21,12 @@
     - npm-global `claude` installed under the running user's profile.
     - `claude login` already completed against the active claude.ai
       subscription.
-    - X:\projects-x\coilysiren reachable.
+    - X:\projects-x reachable.
 #>
 
 [CmdletBinding()]
 param(
-  [string]$WorkDir   = 'X:\projects-x\coilysiren',
+  [string]$WorkDir   = 'X:\projects-x',
   [string]$Name      = 'kai-desktop-tower-native',
   [string]$TaskName  = 'ClaudeRemoteControl',
   [string]$RestartTaskName = 'ClaudeRemoteControlDailyRestart'
@@ -37,7 +37,7 @@ $ErrorActionPreference = 'Stop'
 function Fail($msg) { Write-Error $msg; exit 1 }
 
 if (-not (Test-Path -LiteralPath $WorkDir)) {
-  Fail "Workdir $WorkDir not reachable. Confirm the X: drive is attached and the coilysiren tree exists."
+  Fail "Workdir $WorkDir not reachable. Confirm the X: drive is attached and the projects-x tree exists."
 }
 
 # --- locate claude ----------------------------------------------------

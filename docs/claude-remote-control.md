@@ -4,15 +4,15 @@ The hosts that drive claude.ai/code's Remote Control dropdown:
 
 | Host                       | OS / runtime | Workdir                            | `--name` / session-name-prefix | Installer |
 |----------------------------|--------------|------------------------------------|--------------------------------|-----------|
-| kai-server                 | Linux (systemd) | `/home/kai/projects/coilysiren` | `kai-server`                  | [`scripts/claude-remote-control-install.sh`](../scripts/claude-remote-control-install.sh) |
-| kai-desktop-tower (WSL)    | Linux (systemd inside WSL2) | `/mnt/x/projects-x/coilysiren` | `kai-desktop-tower-wsl`      | [`scripts/claude-remote-control-install-wsl.sh`](../scripts/claude-remote-control-install-wsl.sh) |
-| kai-desktop-tower (native) | Windows (Scheduled Task) | `X:\projects-x\coilysiren`       | `kai-desktop-tower-native`   | [`scripts/claude-remote-control-install-windows.ps1`](../scripts/claude-remote-control-install-windows.ps1) |
-| kais-macbook-pro           | macOS (launchd LaunchAgent) | `/Users/kai/projects/coilysiren` | `kais-macbook-pro`          | [`scripts/claude-remote-control-install-macos.sh`](../scripts/claude-remote-control-install-macos.sh) |
-| kai-mac-kapwing            | macOS (launchd LaunchAgent) | `/Users/kai/projects`            | `kai-mac-kapwing`           | same installer, env-overridden: `CLAUDE_RC_NAME=kai-mac-kapwing CLAUDE_RC_WORKDIR="$HOME/projects" ./scripts/claude-remote-control-install-macos.sh` |
+| kai-server                 | Linux (systemd) | `/home/kai/projects` | `kai-server`                  | [`scripts/claude-remote-control-install.sh`](../scripts/claude-remote-control-install.sh) |
+| kai-desktop-tower (WSL)    | Linux (systemd inside WSL2) | `/mnt/x/projects-x` | `kai-desktop-tower-wsl`      | [`scripts/claude-remote-control-install-wsl.sh`](../scripts/claude-remote-control-install-wsl.sh) |
+| kai-desktop-tower (native) | Windows (Scheduled Task) | `X:\projects-x`       | `kai-desktop-tower-native`   | [`scripts/claude-remote-control-install-windows.ps1`](../scripts/claude-remote-control-install-windows.ps1) |
+| kais-macbook-pro           | macOS (launchd LaunchAgent) | `/Users/kai/projects` | `kais-macbook-pro`          | [`scripts/claude-remote-control-install-macos.sh`](../scripts/claude-remote-control-install-macos.sh) |
+| kai-mac-kapwing            | macOS (launchd LaunchAgent) | `/Users/kai/projects`            | `kai-mac-kapwing`           | same installer, env-overridden name: `CLAUDE_RC_NAME=kai-mac-kapwing ./scripts/claude-remote-control-install-macos.sh` |
 
 All hosts pass both `--name` and `--remote-control-session-name-prefix` set to the same value. The dropdown row in claude.ai/code is keyed off the **prefix** (default: `hostname`), not `--name`; `--name` labels the pre-created session inside the daemon. Passing both keeps every surface labelled. Setting the prefix explicitly is what prevents the WSL/Windows-native collision: inside WSL `hostname` returns the Windows host name, so the unscoped default produced two indistinguishable dropdown rows.
 
-Spawn mode: `--spawn same-dir` on all three. The workdir on every host is `projects/coilysiren` (or `projects-x/coilysiren` on the desktop hosts), which is the **parent** of git repos, not a repo. `--spawn worktree` cannot apply there.
+Spawn mode: `--spawn same-dir` on all three. The workdir on every host is `projects` (or `projects-x` on the desktop hosts), the umbrella **parent** of the org dirs (`coilysiren`, `coilyco-flight-deck`, `coilyco-bridge`), not a repo. `--spawn worktree` cannot apply there.
 
 ## First-time install per host
 
@@ -31,7 +31,7 @@ cd ~/infrastructure   # or wherever this repo is checked out
 ./scripts/claude-remote-control-install-wsl.sh
 ```
 
-Prereqs: `claude login` already run once as `kai` inside WSL; `/mnt/x/projects-x/coilysiren` reachable.
+Prereqs: `claude login` already run once as `kai` inside WSL; `/mnt/x/projects-x` reachable.
 
 First run also drops a `[network] hostname=kai-desktop-tower-wsl` block into `/etc/wsl.conf`. WSL otherwise inherits the Windows host's `COMPUTERNAME` from `gethostname(2)`, which collides with the Windows-native daemon in the dropdown (the bottom-line label is keyed off `gethostname`, not the session-name-prefix). After the installer writes the file, run `wsl --shutdown` once from Windows so `/init` re-reads it on next boot.
 
@@ -59,11 +59,11 @@ Prereqs: `claude` on PATH, `claude login` already run once as the user, `claude 
 
 ### kai-mac-kapwing (macOS, Kapwing work mac)
 
-Same installer, two env overrides - a distinct `--name` (or it collides with `kais-macbook-pro` in the dropdown) and a `~/projects` workdir (this host has no `~/projects/coilysiren`; the workspace root is the parent-of-repos `~/projects`, matching the `--spawn same-dir` pattern):
+Same installer, one env override - a distinct `--name` (or it collides with `kais-macbook-pro` in the dropdown). The workdir now defaults to `~/projects` on every host, so no `CLAUDE_RC_WORKDIR` override is needed:
 
 ```bash
 cd ~/projects/coilyco-flight-deck/infrastructure   # or wherever this repo is checked out
-CLAUDE_RC_NAME=kai-mac-kapwing CLAUDE_RC_WORKDIR="$HOME/projects" ./scripts/claude-remote-control-install-macos.sh
+CLAUDE_RC_NAME=kai-mac-kapwing ./scripts/claude-remote-control-install-macos.sh
 ```
 
 Same prereqs and laptop caveat as kais-macbook-pro. Because the workdir is `~/projects` (all repos, including Kapwing work), remote sessions spawned here can reach the full workspace - intended, but worth knowing on a work machine.

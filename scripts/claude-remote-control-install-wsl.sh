@@ -5,7 +5,7 @@
 set -euo pipefail
 
 REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-WORKDIR="/mnt/x/projects-x/coilysiren"
+WORKDIR="/mnt/x/projects-x"
 CLAUDE_JSON="${HOME}/.claude.json"
 
 if [[ ! -d "${WORKDIR}" ]]; then

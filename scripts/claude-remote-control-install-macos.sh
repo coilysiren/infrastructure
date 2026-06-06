@@ -7,7 +7,7 @@ set -euo pipefail
 # NAME and WORKDIR are env-overridable per host (distinct --name avoids dropdown
 # row collisions). Defaults target kais-macbook-pro. See docs/claude-remote-control.md.
 NAME="${CLAUDE_RC_NAME:-kais-macbook-pro}"
-WORKDIR="${CLAUDE_RC_WORKDIR:-${HOME}/projects/coilysiren}"
+WORKDIR="${CLAUDE_RC_WORKDIR:-${HOME}/projects}"
 LABEL="me.coilysiren.claude-remote-control"
 PLIST="${HOME}/Library/LaunchAgents/${LABEL}.plist"
 CLAUDE_JSON="${HOME}/.claude.json"
