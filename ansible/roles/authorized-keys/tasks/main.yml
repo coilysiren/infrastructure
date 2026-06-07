@@ -1,0 +1,12 @@
+# Authorize GitHub-published SSH keys for a local account. ansible.posix's
+# authorized_key module accepts a URL as `key`, fetches it at converge time,
+# and adds every key it returns. See docs/ansible.md (authorized-keys role).
+- name: Authorize GitHub-published SSH keys for {{ authorized_keys_user }}
+  ansible.posix.authorized_key:
+    user: "{{ authorized_keys_user }}"
+    key: "https://github.com/{{ item }}.keys"
+    state: present
+    exclusive: "{{ authorized_keys_exclusive }}"
+    manage_dir: true
+  loop: "{{ authorized_keys_github_users }}"
+  become: true

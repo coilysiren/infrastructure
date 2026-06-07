@@ -20,6 +20,8 @@ ansible/
 │   └── local.yml            # single-host inventory: localhost, connection=local
 ├── playbooks/
 │   └── ser8-bootstrap.yml   # first-time bring-up for ser8
+├── roles/
+│   └── authorized-keys/     # add GitHub-published SSH keys to a local account
 └── files/
     └── sudoers-coilysiren-fleet   # canonical sudoers fragment Ansible deploys
 ```
@@ -34,6 +36,17 @@ ansible-playbook -i ansible/inventory/local.yml ansible/playbooks/ser8-bootstrap
 ```
 
 Before the bootstrap, the one-shot path is documented in the channel R9GH state - scp the `ansible/` tree to `/tmp/ansible` on the target, `apt install -y ansible`, run with `--connection=local`.
+
+## authorized-keys role
+
+`roles/authorized-keys` authorizes the SSH public keys that a GitHub user
+publishes at `https://github.com/<user>.keys`. The `ansible.posix.authorized_key`
+module fetches the URL at converge time, so rotating a key on GitHub propagates
+on the next run. Defaults (`roles/authorized-keys/defaults/main.yml`):
+`authorized_keys_github_users` (default `[coilysiren]`), `authorized_keys_user`
+(default the connecting account), and `authorized_keys_exclusive` (default
+`false`, so existing keys are kept). Wired into `ser8-bootstrap.yml`, gated
+behind the ser8 host assert in `pre_tasks`.
 
 ## Sudoers
 

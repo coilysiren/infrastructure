@@ -12,13 +12,20 @@
   gather_facts: true
   become: true
 
-  tasks:
+  # pre_tasks run before roles, so the host guard fires before any role
+  # (including authorized-keys) touches the box.
+  pre_tasks:
     - name: Refuse to run anywhere but ser8
       ansible.builtin.assert:
         that:
           - ansible_hostname == "ser8"
         fail_msg: "This playbook is ser8-only. Found hostname {{ ansible_hostname }}."
 
+  roles:
+    - role: authorized-keys
+      tags: [authorized-keys, ssh]
+
+  tasks:
     - name: Deploy Ansible-managed sudoers fragment for the coilysiren account
       ansible.builtin.copy:
         src: ../files/sudoers-coilysiren-fleet

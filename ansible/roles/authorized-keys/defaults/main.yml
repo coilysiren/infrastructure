@@ -1,0 +1,16 @@
+# authorized-keys role defaults.
+#
+# GitHub usernames whose published SSH public keys are authorized to log in.
+# Keys are fetched from https://github.com/<user>.keys at converge time, so
+# rotating a key on GitHub propagates on the next run. Idempotent.
+authorized_keys_github_users:
+  - coilysiren
+
+# Local account that receives the keys. Defaults to whoever Ansible connected
+# as. Override per-play if a different account should be authorized.
+authorized_keys_user: "{{ ansible_user_id }}"
+
+# Append to existing keys rather than replacing them. Leave false unless you
+# explicitly want GitHub to be the sole source of truth for this account's
+# authorized_keys (which would prune any hand-added keys).
+authorized_keys_exclusive: false
