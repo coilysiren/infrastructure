@@ -1,0 +1,25 @@
+# Report-only convergence: never writes, just surfaces repos whose AGENTS.md lacks
+# the current pointer block. Informational like needs_push. Detail in docs/ansible.md.
+- name: Survey managed repos for a missing or drifted AGENTS.md pointer block
+  ansible.builtin.command:
+    cmd: "python3 scripts/apply-agents-pointer.py --dry-run"
+    chdir: "{{ agents_pointer_aos_root }}"
+  environment:
+    PYTHONPATH: "{{ agents_pointer_aos_root }}"
+  register: agents_pointer_survey
+  changed_when: false
+  check_mode: false
+
+- name: Report repos whose AGENTS.md pointer block needs a render
+  ansible.builtin.debug:
+    msg: >-
+      {{ agents_pointer_drift | length }} managed repo(s) need an AGENTS.md
+      pointer-block render - run scripts/agents-pointer-migrate.py --execute:
+      {{ agents_pointer_drift | join(', ') }}
+  vars:
+    agents_pointer_drift: >-
+      {{ agents_pointer_survey.stdout_lines
+         | select('search', 'would-write')
+         | map('regex_replace', '^\\s*(\\S+).*$', '\\1')
+         | list }}
+  when: "'would-write' in agents_pointer_survey.stdout"

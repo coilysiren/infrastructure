@@ -21,7 +21,8 @@ DEFAULT_GOAL := help
 	terraform-aws-inventory \
 	host-watch \
 	ansible-freshen \
-	ansible-mac-seed
+	ansible-mac-seed \
+	agents-pointer-migrate
 
 help: ## Print this help.
 	@awk 'BEGIN {FS = ":.*?## "} /^[a-zA-Z_-]+:.*?## / {printf "%-32s %s\n", $$1, $$2}' $(MAKEFILE_LIST)
@@ -98,3 +99,6 @@ ansible-freshen: ## Freshen this host (homebrew + agent-compose + repos + git sw
 
 ansible-mac-seed: ## Seed ansible/group_vars/mac.yml from this machine's live brew leaves/casks/taps.
 	@uv run python scripts/ansible/seed_mac_brew.py
+
+agents-pointer-migrate: ## One-time: render the managed AGENTS.md pointer block into every managed repo's canonical Forgejo main. Dry run by default; args - execute=1 to act, repo=<name> for one, limit=<n>.
+	@uv run python scripts/agents-pointer-migrate.py $(if $(execute),--execute,) $(if $(repo),--repo $(repo),) $(if $(limit),--limit $(limit),)

@@ -1,5 +1,5 @@
-# Host-freshen play: homebrew, agent-compose, claude-hooks, repos, reconcile,
-# git, deptree in order, each tagged to run alone. Detail in docs/ansible.md.
+# Host-freshen play, roles run in the listed order, each tagged to run alone.
+# See docs/ansible.md for the per-role walkthrough.
 - name: Freshen host
   hosts: mac
   gather_facts: true
@@ -19,6 +19,8 @@
       tags: [repos]
     - role: reconcile
       tags: [reconcile]
+    - role: agents-pointer
+      tags: [agents-pointer]
     - role: git
       tags: [git]
     - role: deptree

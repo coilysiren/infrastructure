@@ -241,6 +241,10 @@ Kai's private tools. Both data files ship in `agentic-os-kai/data/`
 unparseable data degrades to a skip with a note, never a hard failure, and the
 module runs identically in check and apply mode.
 
+## The agents-pointer role
+
+Report-only convergence for the managed AGENTS.md workspace-pointer block (authored in `agentic-os#196`). It runs the agentic-os applier in `--dry-run` and surfaces any managed repo whose working tree lacks the current block. It never writes and never fails the run - informational like the git role's `needs_push`, because the block is committed to canonical once by `scripts/agents-pointer-migrate.py` (`coily agents-pointer-migrate`) and guarded from there on by the `agents-pointer` pre-commit hook. The migration is the rollout: per managed repo it files a same-repo Forgejo issue (the `closes-issue` hook needs one, with no bot bypass), renders the block, commits, and pushes to Forgejo, skipping any repo not clean-on-`main`. Dry-runs by default; `execute=1` to act. `tags=agents-pointer` scopes the role.
+
 ## Fleet-management rollout roles
 
 These four roles enforce the **authoring-vs-rollout** rule (see `agentic-os/AGENTS.md`): a tool or validator is authored in its home repo, and the rollout that fans it across every checkout is an ansible role here. Install-time mass mutation never lives in `coily setup` or a brew post-install.

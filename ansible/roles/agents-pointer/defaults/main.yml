@@ -1,0 +1,4 @@
+# Fleet-static defaults for the agents-pointer check role. See docs/ansible.md.
+
+# The agentic-os checkout that ships the applier + generator (agentic-os#196).
+agents_pointer_aos_root: "{{ ansible_env.HOME }}/projects/coilyco-flight-deck/agentic-os"

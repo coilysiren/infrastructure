@@ -71,6 +71,9 @@ commands:
   ansible-mac-seed:
     run: make ansible-mac-seed
     description: Seed ansible/group_vars/mac.yml from this machine's live brew leaves/casks/taps.
+  agents-pointer-migrate:
+    run: make agents-pointer-migrate
+    description: One-time rollout - render the managed AGENTS.md pointer block into every managed repo's canonical Forgejo main. Dry run by default; args - execute=1 to act, repo=<name> for one, limit=<n>. Ongoing drift is the agents-pointer pre-commit hook's job.
 
 # ssh-passthrough targets (coilyco-bridge/coily#187 ph2): `coily ssh <alias> -- <args>`.
 # Remote coily's lockdown is the boundary. working_dir is a git toplevel for audit scope.
