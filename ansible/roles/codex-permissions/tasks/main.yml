@@ -1,0 +1,35 @@
+- name: Ensure the Codex config directory exists
+  ansible.builtin.file:
+    path: "{{ ansible_facts.env.HOME }}/.codex"
+    state: directory
+    mode: "0700"
+
+- name: Select the scoped Codex permission profile
+  ansible.builtin.lineinfile:
+    path: "{{ ansible_facts.env.HOME }}/.codex/config.toml"
+    regexp: '^default_permissions\s*='
+    line: 'default_permissions = "{{ codex_permissions_profile }}"'
+    insertbefore: '^\['
+    firstmatch: true
+    create: true
+    mode: "0600"
+
+- name: Manage the scoped Codex permission profile
+  ansible.builtin.blockinfile:
+    path: "{{ ansible_facts.env.HOME }}/.codex/config.toml"
+    marker: "# {mark} ANSIBLE MANAGED CODEX SCOPED PERMISSIONS"
+    insertafter: EOF
+    block: |
+      [permissions.{{ codex_permissions_profile }}]
+      description = "Kai's scoped project access"
+      extends = ":workspace"
+
+      [permissions.{{ codex_permissions_profile }}.workspace_roots]
+      {% for path in codex_permissions_allowed_roots %}
+      {{ path | to_json }} = true
+      {% endfor %}
+
+      [permissions.{{ codex_permissions_profile }}.filesystem]
+      {% for path in codex_permissions_denied_paths %}
+      {{ path | to_json }} = "deny"
+      {% endfor %}

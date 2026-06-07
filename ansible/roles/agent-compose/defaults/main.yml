@@ -5,8 +5,8 @@
 agent_compose_kai_root: "{{ ansible_env.HOME }}/projects/coilyco-bridge/agentic-os-kai"
 agent_compose_aos_root: "{{ ansible_env.HOME }}/projects/coilyco-flight-deck/agentic-os"
 
-# Sources composed in order: public base, then private overlay (inlined verbatim
-# into COMPOSED.md). Default is the personal-machine pair; work macs override.
+# Sources considered in order. Harness frontmatter keeps the bridge-private
+# overlay in Claude without entering Codex or OpenClaw composed context.
 agent_compose_sources:
   - "{{ agent_compose_aos_root }}/AGENTS.md"
   - "{{ agent_compose_kai_root }}/AGENTS.md"

@@ -11,6 +11,8 @@
       tags: [default-apps, tooling]
     - role: agent-compose
       tags: [agent-compose]
+    - role: codex-permissions
+      tags: [codex-permissions]
     - role: claude-hooks
       tags: [claude-hooks, hooks]
     - role: repos

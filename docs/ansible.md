@@ -64,7 +64,7 @@ to `ansible/ansible.cfg` so playbooks run from the repo root.
 - **`library/repo_deptree.py`** - the read-only dep-tree validator the `deptree`
   role calls (FAIL on flight-deck -> bridge `dependsOn` edges).
 - **`roles/homebrew/`**, **`roles/default-apps/`**, **`roles/agent-compose/`**,
-  **`roles/repos/`**, **`roles/reconcile/`**, **`roles/git/`**,
+  **`roles/codex-permissions/`**, **`roles/repos/`**, **`roles/reconcile/`**, **`roles/git/`**,
   **`roles/deptree/`** - the units of work, detailed below.
 - **`roles/fleet-orgs/`**, **`roles/lockdown/`**, **`roles/precommit-hooks/`**,
   **`roles/repo-data/`** - the fleet-management rollout roles, detailed below.
@@ -128,10 +128,12 @@ Owns the per-machine cross-harness context config. It renders
 `~/.config/agent-compose/agent-compose.yaml` from `agent_compose_scopes`
 (per host class in group_vars) plus the fleet-static sources / load points in
 `roles/agent-compose/defaults/main.yml`, then runs the composer
-(`python3 -m agentic_os.agent_compose`) to write `COMPOSED.md` and point each
-harness's global load point (Claude Code `~/.claude/CLAUDE.md`, Codex
-`~/.codex/AGENTS.md`) at it by symlink. The only per-machine bit is the scope
-list, which is why this is an Ansible var lookup rather than a hand-edited file.
+(`python3 -m agentic_os.agent_compose`) and points each harness's global load
+point (Claude Code `~/.claude/CLAUDE.md`, Codex `~/.codex/AGENTS.md`) at its
+output by symlink. Shared source slices use `COMPOSED.md`; differing
+`harnesses` frontmatter produces `COMPOSED.<harness>.md`. The only per-machine
+bit is the scope list, which is why this is an Ansible var lookup rather than a
+hand-edited file.
 The composer is **idempotent and opt-in** (no config => no-op) and backs up any
 pre-existing real load-point file to `<name>.bak`. In check mode it runs
 `--dry-run` and mutates nothing.
@@ -140,6 +142,15 @@ A source composes onto a host iff its declared scopes intersect the host's
 `agent_compose_scopes`, so one source set is correct fleet-wide. Personal Macs
 run `[kai-private]` today; a work Mac would want `[work, kai-public]` in its own
 group/host_vars, never private.
+
+## The codex-permissions role
+
+Manages a named profile in `~/.codex/config.toml` that extends Codex's workspace
+defaults while narrowing Kai's project access. `coilyco-flight-deck` and
+`coilysiren` are explicit workspace roots. `coilyco-bridge`, Claude's config,
+the Claude-only composed context, and the composer source config are denied.
+The profile becomes the user-level `default_permissions`, so new Codex sessions
+inherit the boundary even when launched from the projects umbrella.
 
 ## The repos role
 
