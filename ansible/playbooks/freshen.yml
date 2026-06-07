@@ -9,6 +9,8 @@
       tags: [homebrew, tooling]
     - role: default-apps
       tags: [default-apps, tooling]
+    - role: lan-hosts
+      tags: [lan-hosts, hosts]
     - role: agent-compose
       tags: [agent-compose]
     - role: claude-hooks
