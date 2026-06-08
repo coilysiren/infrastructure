@@ -13,11 +13,20 @@ cmd="$(jq -r '.tool_input.command // empty' 2>/dev/null || true)"
 hosts='{{ o2r_nudge_fleet_hosts | join("|") }}'
 hit=0
 
+# Strip single- and double-quoted spans before matching. ssh/scp/rsync words and
+# fleet host names routinely ride inside quoted args that are NOT node-targeting
+# invocations - issue titles ("...ssh on kai-desktop-tower"), --description "SSH
+# public key...", commit/issue bodies. A real `ssh kai@host` invocation is
+# unquoted and survives the strip. Without this, the raw-command match false-fired
+# on nearly every `coily ops aws/forgejo` call during the 2026-06-05 sshd work.
+stripped="$(printf '%s' "$cmd" | sed -E "s/'[^']*'//g; s/\"[^\"]*\"//g")"
+
 # ssh/scp/rsync as a command word, plus a fleet host or the kai@ remote user.
 # (coily's ssh passthrough was removed, so any ssh is bare - agentic-os-kai
-# AGENTS, "SSH into kai-server".)
-if printf '%s' "$cmd" | grep -Eiq '(^|[^[:alnum:]_-])(ssh|scp|rsync)([[:space:]]|$)'; then
-  printf '%s' "$cmd" | grep -Eiq "(kai@|${hosts})" && hit=1
+# AGENTS, "SSH into kai-server".) The trailing [[:space:]]|$ already spares
+# ssh-keygen / ssh-add / ssh-public-key (hyphen, not space, follows).
+if printf '%s' "$stripped" | grep -Eiq '(^|[^[:alnum:]_-])(ssh|scp|rsync)([[:space:]]|$)'; then
+  printf '%s' "$stripped" | grep -Eiq "(kai@|${hosts})" && hit=1
 fi
 
 [ "$hit" -eq 0 ] && exit 0
