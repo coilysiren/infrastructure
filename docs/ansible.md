@@ -205,10 +205,29 @@ without current remote-tracking refs (fetch touches no working tree). Repos are
 **data looped inside the module** (a bounded `parallel` thread pool, default 8),
 not inventory hosts, so the sweep composes into the one `mac` play.
 
-A repo flagged in `action_required` (dirty tree, in-progress op, detached HEAD,
-mirror-drift, or a blocked pull) needs a human - the sweep surfaces it, never
-touches it. Because it runs after `repos`, a repo cloned in the same pass is
-swept too.
+### Freshness gate (fails the run)
+
+A repo flagged in `action_required` needs a human - the sweep surfaces it, never
+touches it. The set is the hard, host-is-not-fresh signals: **uncommitted /
+untracked** changes, **stashed** work, an **unmerged local branch** (work parked
+off the default branch, repo-recall's land-or-delete signal), an **in-progress
+op**, **detached HEAD**, **mirror-drift**, or a **blocked pull** (a `--ff-only`
+or rebase that could not happen automatically, reported `BLOCKED`). The git role
+prints these, and the play's `post_tasks` **freshness gate** (`ansible.builtin.fail`)
+then fails the whole `freshen` run on any of them - so `coily ansible-freshen`
+goes red, in check mode too, until the host is clean. The gate is deferred to
+`post_tasks` (not raised inside the git role) so every role still converges and
+all reports print before the run goes red; it is a no-op when `git` is tagged out
+(the `repo_sweep` fact is undefined).
+
+**`needs_push` (informational, never fails).** Commits on the default branch not
+yet on `origin` are a clean `git push` away, not a freshness failure. They are
+reported separately - `N repo(s) have unpushed commits on the default branch` -
+and deliberately kept out of `action_required`. Being merely ahead of origin
+informs Kai to push; it does not block a fresh host.
+
+Because the git role runs after `repos`, a repo cloned in the same pass is swept
+too.
 
 ## The reconcile role
 

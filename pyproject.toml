@@ -7,6 +7,7 @@ dependencies = [
     "ansible",
     "boto3",
     "jinja2",
+    "pipx>=1.14.0",
     "requests",
     "watchdog",
 ]

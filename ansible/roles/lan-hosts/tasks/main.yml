@@ -1,0 +1,22 @@
+# Pin fleet hostnames to LAN IPs in /etc/hosts, gated on being home. blockinfile
+# keeps one managed marker block, so it is idempotent and cleanly removable.
+- name: Detect home LAN (an address in the home /24 is present)
+  when: lan_hosts_enabled | bool
+  ansible.builtin.set_fact:
+    lan_hosts_at_home: >-
+      {{ ansible_all_ipv4_addresses
+         | select('match', '^' ~ (lan_hosts_home_ipv4_prefix | regex_escape))
+         | list | length > 0 }}
+
+# present at home, absent off-LAN - so a freshen while travelling self-cleans.
+- name: Pin LAN hostnames in /etc/hosts
+  when: lan_hosts_enabled | bool
+  become: true
+  ansible.builtin.blockinfile:
+    path: /etc/hosts
+    marker: "# {mark} ANSIBLE MANAGED: lan-hosts"
+    state: "{{ 'present' if lan_hosts_at_home else 'absent' }}"
+    block: |
+      {% for pin in lan_hosts_pins %}
+      {{ pin.ip }} {{ pin.name }}
+      {% endfor %}

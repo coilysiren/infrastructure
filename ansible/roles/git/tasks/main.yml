@@ -20,9 +20,20 @@
   ansible.builtin.debug:
     msg: "{{ repo_sweep.summaries }}"
 
-- name: Report repos needing manual action
+# Surface the blockers here; the play-end freshness gate (freshen.yml post_tasks)
+# is what actually fails the run, so the rest of the host still converges first.
+- name: Report repos needing manual action (run fails on these at the end)
   ansible.builtin.debug:
     msg: >-
-      {{ repo_sweep.action_required | length }} repo(s) need attention:
+      {{ repo_sweep.action_required | length }} repo(s) need manual action
+      (uncommitted/stash/unmerged-branch/in-progress-op/detached/drift/blocked-pull):
       {{ repo_sweep.action_required | join(', ') }}
   when: repo_sweep.action_required | length > 0
+
+# Informational only - a clean push away, never fails the run.
+- name: Report repos with local commits to push
+  ansible.builtin.debug:
+    msg: >-
+      {{ repo_sweep.needs_push | length }} repo(s) have unpushed commits on the
+      default branch - push when ready: {{ repo_sweep.needs_push | join(', ') }}
+  when: repo_sweep.needs_push | length > 0

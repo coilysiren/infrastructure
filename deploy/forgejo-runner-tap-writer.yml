@@ -110,6 +110,9 @@ spec:
               git config --system \
                 credential.https://forgejo.coilysiren.me.useHttpPath false
               exec forgejo-runner daemon
+          # daemon reads .runner from its workdir, which the init container
+          # writes to /data, so start there too (see forgejo-runner.yml).
+          workingDir: /data
           volumeMounts:
             - name: data
               mountPath: /data
