@@ -300,10 +300,16 @@ once Homebrew ships a fixed Tahoe bottle.
 
 ## Adding a host
 
-Add the host under the `mac` group in `inventory/hosts.yml`. A new Mac picks up
-both the Homebrew baseline and the agent-compose config; set its
-`agent_compose_scopes` if it is not a personal machine. Linux / kai-server roles
-are future work - the inventory and roles layout already accommodates more groups.
+On a bare host, run `bootstrap.sh` (the one script that survived the setup.sh
+retirement): it installs uv, clones the anchor repos (infrastructure, agentic-os,
+agentic-os-kai), `uv sync`s, and hands off to the freshen play, which converges
+everything else. Prereqs: git auth to forgejo and AWS credentials. After that,
+re-converge anytime with `coily ansible-freshen`.
+
+The inventory is a bare `localhost`; the freshen play's `group_by` classifies it
+into `mac` or `linux` by OS, so the same inventory is correct on any machine.
+Per-OS declarations (brew baseline, agent-compose scopes) live in
+`group_vars/{mac,linux}.yml`; set `agent_compose_scopes` on a non-personal host.
 
 ## See also
 
