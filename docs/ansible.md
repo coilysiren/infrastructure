@@ -35,9 +35,10 @@ to `ansible/ansible.cfg` so playbooks run from the repo root.
 - **`ansible.cfg`** - repo-local config: inventory + roles paths, yaml-formatted
   task results (`result_format=yaml`, since the old `community.general.yaml`
   stdout callback was removed in v12), host-key checking off, retry files off.
-- **`inventory/hosts.yml`** - the `mac` group. Today just `localhost` over a
-  local connection (ansible drives the box it runs on, no SSH). New Macs are
-  added here; remote ones need `ansible_host` + tailnet SSH reachability.
+- **`inventory/hosts.yml`** - bare `localhost` over a local connection (ansible
+  drives the box it runs on, no SSH). The freshen play's first task `group_by`s
+  it into the `mac` or `linux` group by `ansible_system`, so one inventory is
+  correct on any machine. Remote hosts would need `ansible_host` + tailnet SSH.
 - **`inventory/group_vars/mac.yml`** - the declared baseline for the `mac` group:
   `homebrew_taps`, `homebrew_installed_packages`, `homebrew_cask_apps`,
   `agent_compose_scopes`, and `system_python3_packages` (pip packages
@@ -45,16 +46,20 @@ to `ansible/ansible.cfg` so playbooks run from the repo root.
   hooks that `import yaml` against it don't crash - see the homebrew role).
   Auto-loaded because it sits next to the inventory (the reason it lives under
   `inventory/`, not `ansible/`).
+- **`inventory/group_vars/linux.yml`** - the `linux` baseline (kai-server). Brew
+  lists are empty until linuxbrew is seeded; `default_app_editor_bundle_id` is
+  empty so the macOS-only default-apps role skips cleanly.
 - **`inventory/group_vars/all.yml`** - fleet-wide vars for the `repos` role
   (`repos_owner`, `repos_forgejo_api`, `repos_forgejo_token_ssm`,
   `repos_recent_days`, `repos_forgejo_only`, `repos_known_orgs`, `repos_root`).
   All meaningful names; the Forgejo PAT is resolved from SSM at runtime.
-- **`playbooks/freshen.yml`** - the host-freshen play. Runs `fleet-orgs`,
-  `homebrew`, `default-apps`, `agent-compose`, `claude-hooks`, `repos`,
-  `reconcile`, `git`, `lockdown`, `precommit-hooks`, `repo-data`, and `deptree`
-  in order, each tagged
-  so you can run one in isolation (e.g. `tags=git`). `fleet-orgs` carries the
-  `always` tag so tag-scoped runs still resolve the org list first.
+- **`playbooks/freshen.yml`** - a `group_by` classify play (OS -> mac/linux),
+  then the host-freshen play. Runs `fleet-orgs`, `shell`, `homebrew`,
+  `default-apps`, `agent-compose`, `codex-permissions`, `claude-hooks`, `repos`,
+  `reconcile`, `agents-pointer`, `git`, `lockdown`, `precommit-hooks`,
+  `repo-data`, and `deptree` in order, each tagged so you can run one in
+  isolation (e.g. `tags=git`). `fleet-orgs` carries the `always` tag so
+  tag-scoped runs still resolve the org list first.
 - **`library/repo_registry.py`** - the read-only discovery module the `repos`
   role calls (local custom module, found via `library = library` in ansible.cfg).
 - **`library/repo_status.py`** - the per-repo git sweep module the `git` role
@@ -63,11 +68,15 @@ to `ansible/ansible.cfg` so playbooks run from the repo root.
   role calls (move/remove drifted checkouts to match origin org; check-aware).
 - **`library/repo_deptree.py`** - the read-only dep-tree validator the `deptree`
   role calls (FAIL on flight-deck -> bridge `dependsOn` edges).
-- **`roles/homebrew/`**, **`roles/default-apps/`**, **`roles/agent-compose/`**,
-  **`roles/codex-permissions/`**, **`roles/repos/`**, **`roles/reconcile/`**, **`roles/git/`**,
-  **`roles/deptree/`** - the units of work, detailed below.
+- **`roles/shell/`**, **`roles/homebrew/`**, **`roles/default-apps/`**,
+  **`roles/agent-compose/`**, **`roles/codex-permissions/`**, **`roles/repos/`**,
+  **`roles/reconcile/`**, **`roles/git/`**, **`roles/deptree/`** - the units of work, detailed below.
 - **`roles/fleet-orgs/`**, **`roles/lockdown/`**, **`roles/precommit-hooks/`**,
   **`roles/repo-data/`** - the fleet-management rollout roles, detailed below.
+
+## The shell role
+
+Symlinks the host shell config, the ansible-native replacement for `agentic-os/setup.sh`'s `ensure_link`. Points `~/.zshrc -> agentic-os/shell/zshrc` and `~/.bashrc -> agentic-os/shell/bashrc` (both source the shared `shell/common.sh`), the `gpg-ssm` wrapper and the `~/.local/bin` PATH helpers (`verbatim-echo`, `anthropic-pulse`, `github-pulse`, `git-diff-global`), and on macOS `~/.hammerspoon/init.lua`. A pre-existing regular `~/.zshrc` / `~/.bashrc` is backed up to `<path>.bak` before linking, matching setup.sh's first-run behaviour. Uses `ansible.builtin.file` with `state: link`, so it is idempotent and check-mode honest. Host branching is by `ansible_system` (the gpg-ssm `.cmd` variant and hammerspoon are guarded).
 
 ## The homebrew role
 

@@ -1,0 +1,12 @@
+# Host-config symlinks owned by the shell role: zsh + bash entry points, the
+# gpg-ssm wrapper, PATH helpers, hammerspoon. See docs/ansible.md.
+
+shell_aos_root: "{{ ansible_env.HOME }}/projects/coilyco-flight-deck/agentic-os"
+shell_local_bin: "{{ ansible_env.HOME }}/.local/bin"
+
+# scripts/<name>.sh -> ~/.local/bin/<name> (suffix dropped, bare-name invoke).
+shell_path_helpers:
+  - verbatim-echo
+  - anthropic-pulse
+  - github-pulse
+  - git-diff-global

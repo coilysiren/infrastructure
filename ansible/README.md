@@ -10,14 +10,16 @@ reconcile of local clones against the live repo layout. The Ansible port of
 ```
 ansible/
 ├── ansible.cfg                     # repo-local config (inventory, roles, library, yaml output)
-├── inventory/hosts.yml             # `mac` group -> localhost over a local connection
+├── inventory/hosts.yml             # localhost (local conn); freshen group_by's it into mac/linux
 ├── inventory/group_vars/mac.yml    # declared taps / formulae / casks + agent_compose_scopes
+├── inventory/group_vars/linux.yml  # linux baseline (kai-server); empty brew lists until seeded
 ├── inventory/group_vars/all.yml    # fleet-wide repos role vars (owner, forgejo, ssm path)
 ├── library/repo_registry.py        # read-only repo-layout discovery module
 ├── library/repo_status.py          # per-repo git sweep module (fetch/status/drift; pull on apply)
 ├── library/repo_reconcile.py       # move/remove drifted checkouts to match origin org (check-aware)
 ├── library/repo_deptree.py         # read-only cross-org dep-tree validator
-├── playbooks/freshen.yml           # freshen a host (homebrew + agent-compose + repos + reconcile + git + deptree)
+├── playbooks/freshen.yml           # group_by OS, then freshen (shell + homebrew + agent-compose + repos + ...)
+├── roles/shell/                    # symlink zsh + bash trees, gpg-ssm, PATH helpers, hammerspoon
 ├── roles/homebrew/                 # taps + formulae + casks via community.general
 ├── roles/agent-compose/            # render ~/.config/agent-compose + converge harness symlinks
 ├── roles/repos/                    # discover + clone repos absent from the local layout
