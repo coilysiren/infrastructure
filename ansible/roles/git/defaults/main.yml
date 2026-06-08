@@ -1,3 +1,2 @@
 # Parallel fetch/pull workers for the per-repo sweep (network-bound). Bump on a
-# fat link, drop to 1 to serialize.
 git_sweep_parallel: 8

@@ -1,4 +1,3 @@
 # default-apps role defaults. Real values live in inventory/group_vars/mac.yml.
-# Empty here so the role is a no-op on hosts that don't declare a handler.
 default_app_editor_bundle_id: ""
 default_app_editor_extensions: []

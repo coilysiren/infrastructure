@@ -1,5 +1,4 @@
 # Tailnet HTTPS exposure of the SigNoz UI via a standalone ts-signoz proxy Deployment
-# (helm-managed pod, no sidecar). Authkey from SSM. See docs/tailscale.md.
 ---
 apiVersion: v1
 kind: Service
@@ -9,8 +8,6 @@ metadata:
   labels:
     app: signoz-tailscale
 spec:
-  # In-cluster routing target for the ts-signoz serve proxy. Selects the
-  # helm-managed signoz app pod.
   type: ClusterIP
   selector:
     app.kubernetes.io/instance: signoz
@@ -56,8 +53,6 @@ subjects:
     name: ts-signoz
     namespace: observability
 ---
-# Serve config for the ts sidecar HTTPS termination; containerboot expands
-# ${TS_CERT_DOMAIN} at start. Proxies to signoz-tailscale. See docs/tailscale.md.
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -114,7 +109,6 @@ spec:
         app: ts-signoz
     spec:
       serviceAccountName: ts-signoz
-      # Pin to kai-server for /dev/net/tun, same as ntfy and vmsingle.
       nodeSelector:
         kubernetes.io/hostname: kai-server
       containers:
@@ -131,8 +125,6 @@ spec:
               value: "true"
             - name: TS_EXTRA_ARGS
               value: "--accept-dns=false"
-            # Terminate HTTPS on :443 and reverse-proxy to signoz; containerboot
-            # substitutes ${TS_CERT_DOMAIN} at startup. See docs/tailscale.md.
             - name: TS_SERVE_CONFIG
               value: /etc/ts-serve/serve-config.json
             - name: TS_AUTHKEY

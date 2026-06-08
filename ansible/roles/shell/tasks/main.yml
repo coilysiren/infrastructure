@@ -1,5 +1,4 @@
 # Converge host shell config: symlink zsh + bash trees, gpg-ssm, PATH helpers,
-# (mac) hammerspoon. Ansible-native ensure_link replacement. See docs/ansible.md.
 
 - name: Ensure ~/.local/bin exists
   ansible.builtin.file:
@@ -7,8 +6,6 @@
     state: directory
     mode: "0755"
 
-# Back up a pre-existing regular dotfile (not our symlink) before linking, the
-# way setup.sh moved it to <path>.bak on first run.
 - name: Stat the shell rc files
   ansible.builtin.stat:
     path: "{{ ansible_env.HOME }}/{{ item }}"

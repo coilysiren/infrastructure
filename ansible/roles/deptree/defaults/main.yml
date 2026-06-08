@@ -1,5 +1,4 @@
 # Cross-org dep-tree data, both shipped in the agentic-os-kai repo's data dir.
-# Override deptree_kai_root per host if its layout differs. See docs/ansible.md.
 deptree_kai_root: "{{ ansible_env.HOME }}/projects/coilyco-bridge/agentic-os-kai"
 deptree_catalog_graph: "{{ deptree_kai_root }}/data/catalog-graph.json"
 deptree_split_decisions: "{{ deptree_kai_root }}/data/repo-split-decisions.yaml"

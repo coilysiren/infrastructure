@@ -1,5 +1,4 @@
 # Per-repo command allowlist for infrastructure, loaded by pkg/repocfg in this checkout.
-# Local kubectl/helm/terraform dev verbs (via Make). systemd ops live in coily core.
 
 commands:
   k3s-list-dns:
@@ -75,8 +74,6 @@ commands:
     run: make agents-pointer-migrate
     description: One-time rollout - render the managed AGENTS.md pointer block into every managed repo's canonical Forgejo main. Dry run by default; args - execute=1 to act, repo=<name> for one, limit=<n>. Ongoing drift is the agents-pointer pre-commit hook's job.
 
-# ssh-passthrough targets (coilyco-bridge/coily#187 ph2): `coily ssh <alias> -- <args>`.
-# Remote coily's lockdown is the boundary. working_dir is a git toplevel for audit scope.
 ssh:
   targets:
     kai-server:
@@ -84,8 +81,6 @@ ssh:
       host: kai-server
       working_dir: /home/kai/projects/coilysiren/infrastructure
 
-# Catalog metadata for the cross-repo knowledge graph.
-# Schema: coilyco-bridge/agentic-os-kai#420 (tracker).
 catalog:
   kind: Component
   type: configuration

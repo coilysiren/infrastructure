@@ -1,5 +1,4 @@
 # 2FAuth (self-hosted TOTP manager) on kai-server k3s. Tailnet-only in-pod
-# tailscale sidecar. Details: docs/k3s-deploy-notes.md. Apply: kubectl apply -f.
 ---
 apiVersion: v1
 kind: Namespace
@@ -12,8 +11,6 @@ metadata:
   name: 2fauth
   namespace: 2fauth
 ---
-# Lets the ts sidecar persist its device identity in the TS_KUBE_SECRET
-# state Secret. Scoped to that one Secret name, same shape as repo-recall.
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
@@ -42,8 +39,6 @@ subjects:
     name: 2fauth
     namespace: 2fauth
 ---
-# SQLite DB + app data. Tiny: 2FAuth is one SQLite file. local-path is
-# the k3s built-in single-node provisioner.
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
@@ -75,8 +70,6 @@ spec:
         app: 2fauth
     spec:
       serviceAccountName: 2fauth
-      # Pin to kai-server: the ts sidecar needs /dev/net/tun, and
-      # local-path pins the volume to one node anyway.
       nodeSelector:
         kubernetes.io/hostname: kai-server
       securityContext:
@@ -96,8 +89,6 @@ spec:
               value: sqlite
             - name: DB_DATABASE
               value: /2fauth/database.sqlite
-            # Encrypts the TOTP secrets at rest. Sourced from SSM
-            # /coilysiren/2fauth/app-key via the ExternalSecret below.
             - name: APP_KEY
               valueFrom:
                 secretKeyRef:
@@ -123,8 +114,6 @@ spec:
               port: 8000
             initialDelaySeconds: 30
             periodSeconds: 30
-        # tailscale sidecar in kernel mode. Pod gains a tailnet IP, so
-        # tailnet peers reach the app container's :8000 at `2fauth`.
         - name: ts
           image: tailscale/tailscale:v1.78.1
           env:
@@ -160,7 +149,6 @@ spec:
           persistentVolumeClaim:
             claimName: 2fauth-data
 ---
-# APP_KEY for the app container. Sourced from SSM /coilysiren/2fauth/app-key.
 apiVersion: external-secrets.io/v1
 kind: ExternalSecret
 metadata:
@@ -183,8 +171,6 @@ spec:
       remoteRef:
         key: /coilysiren/2fauth/app-key
 ---
-# TS_AUTHKEY for the ts sidecar. Sourced from SSM
-# /coilysiren/2fauth/ts-authkey, minted by terraform/tailscale/.
 apiVersion: external-secrets.io/v1
 kind: ExternalSecret
 metadata:
@@ -207,8 +193,6 @@ spec:
       remoteRef:
         key: /coilysiren/2fauth/ts-authkey
 ---
-# ClusterIP for in-cluster routing only. Tailnet exposure is the ts
-# sidecar's WireGuard interface, not a Service annotation.
 apiVersion: v1
 kind: Service
 metadata:

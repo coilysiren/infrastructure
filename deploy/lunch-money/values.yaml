@@ -1,17 +1,13 @@
 # Real kai-server Helm values for lunch-money-k8s (chart source: coilyco-flight-deck/
-# lunch-money-k8s). Deploy steps in README.md. See docs/k3s-deploy-notes.md.
 
 image:
   repository: docker.io/coilysiren/lunch-money-k8s
   tag: latest
-  # Always, because tag is the moving `latest`; the homelab rolls from main.
   pullPolicy: Always
 
-# Token comes from the ExternalSecret in secret.yml, not from the chart.
 lunchMoney:
   existingSecret: lunch-money-token
 
-# kai-server is the only native-Linux node; pin to it like repo-recall does.
 nodeSelector:
   kubernetes.io/hostname: kai-server
 

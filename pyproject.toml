@@ -56,7 +56,10 @@ excludes = [
 ]
 
 [tool.agentic-os.code-comments]
-# Enabled at agentic-os v0.14.0 (#217). The deploy/terraform/workflow YAML and
-# scripts/** shell+Python comment debt grandfathered there is now retired (#125),
-# so the whole tree is held to the rule with no excludes.
-excludes = []
+# Enabled at agentic-os v0.14.0 (#217), tree cleaned at v0.16.0 (#276). The only
+# exclude is the managed-hooks marker file: its BEGIN/END comments are structural,
+# required by apply-agentic-os-hooks.py at fixed positions, so they cannot move to
+# line 1. agentic-os excludes its own .pre-commit-config.yaml for the same reason.
+excludes = [
+    ".pre-commit-config.yaml",
+]

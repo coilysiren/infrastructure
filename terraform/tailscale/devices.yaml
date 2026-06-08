@@ -1,5 +1,4 @@
 # Physical tailnet devices mapped to IaC tags via tailscale_device_tags.
-# tag:server (kai-server only), tag:physical (all), tag:<host>. See docs/tailscale.md.
 devices:
   kai-server:
     - tag:server

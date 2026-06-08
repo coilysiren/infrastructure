@@ -1,13 +1,9 @@
 # Helm values for signoz/signoz (pinned in scripts/k8s/signoz.py): self-hosted OTel
-# traces/logs/metrics on ClickHouse. Private, tailnet-only, pinned to kai-server.
 
-# ClickHouse - the telemetry store. Single shard, single replica.
 clickhouse:
   enabled: true
   nodeSelector:
     kubernetes.io/hostname: kai-server
-  # The Altinity clickhouse-operator reconciles the install; pin it to kai-server
-  # too, since on a flaky WSL2 node it stalls and blocks ClickHouse bringup.
   clickhouseOperator:
     nodeSelector:
       kubernetes.io/hostname: kai-server
@@ -24,8 +20,6 @@ clickhouse:
     limits:
       cpu: "4"
       memory: 8Gi
-  # ZooKeeper coordinates the ClickHouse cluster. Bundled with the
-  # clickhouse subchart, so its config nests here.
   zookeeper:
     enabled: true
     replicaCount: 1
@@ -45,15 +39,12 @@ clickhouse:
         cpu: 500m
         memory: 1Gi
 
-# SigNoz app - the query service and UI/frontend. Service port 8080 is
-# what the ts-signoz proxy forwards to.
 signoz:
   nodeSelector:
     kubernetes.io/hostname: kai-server
   service:
     type: ClusterIP
     port: 8080
-  # SQLite-backed local state (saved views, dashboards, users).
   persistence:
     enabled: true
     storageClass: local-path
@@ -61,7 +52,6 @@ signoz:
       - ReadWriteOnce
     size: 1Gi
   env:
-    # Disable the bundled usage-stats phone-home. Kai wants this private.
     signoz_analytics_enabled: false
   resources:
     requests:
@@ -71,8 +61,6 @@ signoz:
       cpu: "1"
       memory: 1Gi
 
-# OTel collector - the ingest front door that shippers point at. No public ingress;
-# reachable in-cluster and over the tailnet only.
 otelCollector:
   nodeSelector:
     kubernetes.io/hostname: kai-server
@@ -84,8 +72,6 @@ otelCollector:
       cpu: "1"
       memory: 1Gi
 
-# Schema migrator - the init Job that creates and migrates the ClickHouse
-# telemetry schema. Runs as a Helm hook on install/upgrade, then exits.
 telemetryStoreMigrator:
   enabled: true
   nodeSelector:

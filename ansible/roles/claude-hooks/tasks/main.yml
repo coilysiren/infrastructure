@@ -1,5 +1,4 @@
 # Converge Claude Code harness hooks into ~/.claude/settings.json (today: the
-# advisory o2r cross-node PreToolUse nudge). See docs/ansible.md.
 - name: Ensure the Claude hook script directory exists
   ansible.builtin.file:
     path: "{{ o2r_nudge_dir }}"
@@ -20,8 +19,6 @@
     marker: o2r-nudge.sh
     state: present
 
-# Agent self-name (statusLine + SessionStart hook) and session-pulse SessionStart
-# hook. Wraps the idempotent agentic-os mergers; --dry-run drives check mode.
 - name: Wire the agent self-name into settings.json
   ansible.builtin.command:
     cmd: "python3 {{ claude_hooks_aos_scripts }}/install-agent-name.py{{ ' --dry-run' if ansible_check_mode else '' }}"

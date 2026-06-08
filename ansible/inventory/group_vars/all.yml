@@ -1,17 +1,12 @@
 # Fleet-wide vars for the repos role. Plaintext-safe; the Forgejo PAT resolves
-# from SSM at runtime, sent only to the canonical host. See docs/ansible.md.
 repos_owner: coilysiren
 repos_forgejo_api: https://forgejo.coilysiren.me/api/v1
 repos_forgejo_token_ssm: /forgejo/api-token
 repos_recent_days: 7
 repos_forgejo_only:
   - inbox
-# Sibling org dirs holding local clones. Static fallback only: the fleet-orgs
-# role overrides this at runtime from SSM. See docs/ansible.md.
 repos_known_orgs:
   - coilysiren
   - coilyco-bridge
   - coilyco-flight-deck
-# Checkout root for this host. Override per-host (e.g. Windows X:\) as the fleet
-# grows beyond the Mac control host.
 repos_root: "~/projects/coilysiren"

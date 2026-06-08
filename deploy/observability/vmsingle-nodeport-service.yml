@@ -1,5 +1,4 @@
 # NodePort sibling so host-userspace on kai-server reaches vmsingle via localhost:30428,
-# bypassing the broken on-host tailnet loopback. See §7 of docs/k3s-deploy-notes.md.
 apiVersion: v1
 kind: Service
 metadata:

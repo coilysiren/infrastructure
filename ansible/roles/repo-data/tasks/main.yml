@@ -1,5 +1,4 @@
 # Run the agentic-os-kai repo-data collectors, passing the resolved org list via
-# COILYSIREN_FLEET_ORGS. Skipped in check mode (no dry-run). See docs/ansible.md.
 - name: Run repo-data collectors
   ansible.builtin.command:
     cmd: "make -C {{ repo_data_kai_root }} {{ item }}"

@@ -1,5 +1,4 @@
 # Roll the agentic-os pre-commit suite into every on-disk repo across the fleet
-# orgs. Mirrors apply-agentic-os-hooks.py. See docs/ansible.md.
 - name: Resolve the projects parent dir (holds the org checkout dirs)
   ansible.builtin.set_fact:
     precommit_projects_parent: "{{ (repos_root | regex_replace('^~', ansible_env.HOME)) | dirname }}"

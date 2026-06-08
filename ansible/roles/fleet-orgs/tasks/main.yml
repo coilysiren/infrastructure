@@ -1,5 +1,4 @@
 # Resolve the fleet org list and override repos_known_orgs so every later role
-# walks the same set (env fast-path, then SSM, else static). See docs/ansible.md.
 - name: Fast-path the fleet org list from the environment
   ansible.builtin.set_fact:
     fleet_orgs: "{{ ((ansible_env.COILYSIREN_FLEET_ORGS | default('')) | regex_replace(',', ' ')).split() | list }}"

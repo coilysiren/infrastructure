@@ -1,8 +1,5 @@
 # Git remote-sync + mirror-drift sweep across every local clone. repo_status
-# does the per-repo work; this role renders rows. See docs/ansible.md.
 
-# Linear-history default for interactive pulls; repo_status passes --rebase
-# explicitly and never depends on this. Detail in docs/ansible.md (git role).
 - name: Default git pull to rebase globally
   community.general.git_config:
     name: pull.rebase
@@ -20,8 +17,6 @@
   ansible.builtin.debug:
     msg: "{{ repo_sweep.summaries }}"
 
-# Surface the blockers here; the play-end freshness gate (freshen.yml post_tasks)
-# is what actually fails the run, so the rest of the host still converges first.
 - name: Report repos needing manual action (run fails on these at the end)
   ansible.builtin.debug:
     msg: >-
@@ -30,7 +25,6 @@
       {{ repo_sweep.action_required | join(', ') }}
   when: repo_sweep.action_required | length > 0
 
-# Informational only - a clean push away, never fails the run.
 - name: Report repos with local commits to push
   ansible.builtin.debug:
     msg: >-

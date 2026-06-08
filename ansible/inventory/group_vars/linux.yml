@@ -1,8 +1,5 @@
 # Declared baseline for the `linux` group (kai-server, ser8, Linux control
-# hosts). Cross-platform subset of mac.yml; additive. See docs/ansible.md.
 
-# Third-party taps {name, url?}. Private Forgejo taps need an explicit url.
-# coily, o2r, ward, mcporter ship no linux bottle and build from source.
 homebrew_taps:
   - name: coilyco-flight-deck/otel-a2a-relay-cli
     url: https://forgejo.coilysiren.me/coilyco-flight-deck/otel-a2a-relay-cli
@@ -13,8 +10,6 @@ homebrew_taps:
   - name: steipete/tap
   - name: terraform-linters/tap
 
-# Top-level formulae (brew leaves). Cross-platform subset of mac.yml plus the
-# k3s / terraform / security tooling kai-server runs. See docs/ansible.md.
 homebrew_installed_packages:
   - asdf
   - ast-grep
@@ -61,7 +56,6 @@ homebrew_installed_packages:
   - nmap
   - oath-toolkit
   - ouch
-  # pinentry-mac on mac.yml; linux uses the portable pinentry.
   - pinentry
   - pipx
   - procs
@@ -78,7 +72,6 @@ homebrew_installed_packages:
   - stern
   - tailwindcss
   - tfenv
-  # tflint ships from the terraform-linters tap, not homebrew-core.
   - terraform-linters/tap/tflint
   - tokei
   - tree
@@ -95,14 +88,11 @@ homebrew_installed_packages:
   - zlib
   - zoxide
 
-# linuxbrew has no casks; GUI apps from mac.yml do not apply to headless hosts.
 homebrew_cask_apps: []
 homebrew_cask_apps_absent: []
 homebrew_installed_packages_absent: []
 
-# python-kasa (mac.yml) is bound to the home-1 strip, not a fleet-linux default.
 pipx_packages: []
 
-# default-apps is macOS-only (duti); empty bundle id skips the whole role.
 default_app_editor_bundle_id: ""
 default_app_editor_extensions: []

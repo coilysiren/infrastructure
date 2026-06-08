@@ -1,11 +1,8 @@
 # Helm values for victoria-metrics-agent: scrapes node-exporter :9100, remote-writes
-# to vmsingle. Relabel rule keeps the tailnet IP off graphs. See docs/k3s-deploy-notes.md.
 
-# Pin to kai-server alongside the rest of the stack.
 nodeSelector:
   kubernetes.io/hostname: kai-server
 
-# Where to ship the scraped samples.
 remoteWrite:
   - url: http://victoria-metrics-victoria-metrics-single-server.observability.svc:8428/api/v1/write
 
@@ -17,8 +14,6 @@ resources:
     cpu: 500m
     memory: 256Mi
 
-# Scrape config in Prometheus format. The chart wraps this into vmagent's
-# `-promscrape.config` flag.
 config:
   global:
     scrape_interval: 30s
@@ -29,13 +24,10 @@ config:
           namespaces:
             names: [observability]
       relabel_configs:
-        # Only scrape the prometheus-node-exporter Service endpoints.
         - source_labels: [__meta_kubernetes_service_label_app_kubernetes_io_name]
           regex: prometheus-node-exporter
           action: keep
-        # Friendly node name as `instance`, never the tailnet IP.
         - source_labels: [__meta_kubernetes_endpoint_node_name]
           target_label: instance
-        # Drop labels that just add noise to graphs.
         - action: labeldrop
           regex: (pod|namespace|service|container)

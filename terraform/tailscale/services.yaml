@@ -1,5 +1,4 @@
 # Services joining the tailnet via a tag:k8s sidecar, each minting a tailnet key into SSM.
-# Add, apply, then wire the sidecar. Remove only after it is gone. See docs/tailscale.md.
 services:
   - 2fauth
   - repo-recall

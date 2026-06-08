@@ -1,15 +1,10 @@
 # Helm values for the prometheus-node-exporter chart. DaemonSet on both nodes;
-# defaults disable systemd/processes/login collectors (leak vectors for graphs).
 
-# Disable wifi/infiniband (no signal, label-heavy); hwmon stays on for temps. The
-# textfile collector reads the hostPath below.
 extraArgs:
   - --no-collector.wifi
   - --no-collector.infiniband
   - --collector.textfile.directory=/var/lib/node-exporter/textfile
 
-# Read-only host mount for the textfile collector. Host systemd scripts (currently
-# thermal-heartbeat) drop *.prom files here every 30s, read on the next scrape.
 extraHostVolumeMounts:
   - name: textfile
     hostPath: /var/lib/node-exporter/textfile
@@ -24,16 +19,10 @@ resources:
     cpu: 100m
     memory: 64Mi
 
-# Tolerate any node taints so it lands on both kai-server and
-# kai-desktop-tower (and any future node).
 tolerations:
   - effect: NoSchedule
     operator: Exists
 
 service:
-  # vmagent in the observability namespace discovers via labels; default
-  # service shape is fine.
   port: 9100
 
-# Chart default label `app.kubernetes.io/name=prometheus-node-exporter` is what the
-# vmagent scrape config matches on (see vmagent-values.yml).

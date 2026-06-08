@@ -1,5 +1,4 @@
 # Deployable repos getting a federated identity + TS_CLIENT_ID / TS_AUDIENCE pair (main).
-# Add repos as they migrate off the long-lived oauth SSM pair. See docs/tailscale.md.
 repos:
   - "coilyco-flight-deck/backend"
   - "coilyco-flight-deck/eco-jobs-tracker"

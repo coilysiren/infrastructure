@@ -1,12 +1,7 @@
 # Inert by default: the role is committed for review but writes nothing until
-# this flips to true. Pending an impl decision (/etc/hosts vs ssh-alias).
 lan_hosts_enabled: false
 
-# LAN hostname pins written into /etc/hosts while on the home LAN. The tailnet
-# path to kai-server is flaky on this LAN, so prefer its LAN IP. See docs/ansible.md.
 lan_hosts_pins:
   - { name: kai-server, ip: 192.168.0.194 }
 
-# Only pin when an address in this /24 is present (i.e. at home). Off-LAN the
-# pins shadow the tailnet path wrongly, so a freshen there removes them.
 lan_hosts_home_ipv4_prefix: "192.168.0."

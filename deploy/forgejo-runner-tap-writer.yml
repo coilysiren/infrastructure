@@ -1,5 +1,4 @@
 # Forgejo Actions "tap-writer" runner: host-executor, DinD-free, for homebrew
-# tap bumps via `runs-on: tap-writer`. Details: docs/k3s-deploy-notes.md §7.
 ---
 apiVersion: external-secrets.io/v1beta1
 kind: ExternalSecret
@@ -15,13 +14,9 @@ spec:
     name: forgejo-tap-writer-secrets
     creationPolicy: Owner
   data:
-    # Admin token, used ONLY by the initContainer to mint a registration
-    # token. Not exposed to jobs.
     - secretKey: api-token
       remoteRef:
         key: /forgejo/api-token
-    # CI release token (write:repository). The credential helper reads this;
-    # jobs never see it in env.
     - secretKey: tap-token
       remoteRef:
         key: /forgejo/ci-release-token
@@ -43,8 +38,6 @@ spec:
         app: forgejo-runner-tap-writer
     spec:
       initContainers:
-        # Mint a per-pod registration token via the admin API, register with a
-        # single label + host executor; skips if already registered.
         - name: register
           image: data.forgejo.org/forgejo/runner:12
           env:
@@ -110,8 +103,6 @@ spec:
               git config --system \
                 credential.https://forgejo.coilysiren.me.useHttpPath false
               exec forgejo-runner daemon
-          # daemon reads .runner from its workdir, which the init container
-          # writes to /data, so start there too (see forgejo-runner.yml).
           workingDir: /data
           volumeMounts:
             - name: data

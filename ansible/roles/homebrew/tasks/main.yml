@@ -1,5 +1,4 @@
 # Homebrew convergence via community.general modules. Taps are {name, url?};
-# private Forgejo taps need an explicit url. check_mode: false rationale in docs.
 - name: Ensure Homebrew taps are present
   community.general.homebrew_tap:
     name: "{{ item.name }}"
@@ -18,13 +17,9 @@
   community.general.homebrew_cask:
     name: "{{ item }}"
     state: present
-    # accept_external_apps avoids reinstall churn when an app was first
-    # installed outside brew (common for Chrome / Docker Desktop).
     accept_external_apps: true
   loop: "{{ homebrew_cask_apps }}"
 
-# Removal surface: declared-absent formulae/casks are uninstalled, so a tool can
-# be retired fleet-wide instead of lingering. Idempotent. See docs/ansible.md.
 - name: Ensure Homebrew formulae are absent
   community.general.homebrew:
     name: "{{ homebrew_installed_packages_absent | default([]) }}"
@@ -37,8 +32,6 @@
     state: absent
   loop: "{{ homebrew_cask_apps_absent | default([]) }}"
 
-# Force hook deps into the brew system python3 (its own pip3, not ansible's
-# uv-env python) so `language: system` pre-commit hooks work. Why: docs/ansible.md.
 - name: Ensure Homebrew system python3 carries language-system pre-commit hook deps
   ansible.builtin.pip:
     name: "{{ system_python3_packages }}"
@@ -47,8 +40,6 @@
     extra_args: --break-system-packages
   when: system_python3_packages | default([]) | length > 0
 
-# Python CLIs as pipx apps (isolated venvs), backed by the brew `pipx` formula.
-# `present` is the idempotent install alias. Why pipx not brew: docs/ansible.md.
 - name: Ensure pipx applications are present
   community.general.pipx:
     name: "{{ item }}"

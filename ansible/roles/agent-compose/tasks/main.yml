@@ -1,5 +1,4 @@
 # Converge agent-compose: render the per-machine config, then run the composer
-# to write COMPOSED.md + harness load-point symlinks. See docs/ansible.md.
 - name: Ensure agent-compose config directory exists
   ansible.builtin.file:
     path: "{{ ansible_env.HOME }}/.config/agent-compose"
@@ -12,8 +11,6 @@
     dest: "{{ ansible_env.HOME }}/.config/agent-compose/agent-compose.yaml"
     mode: "0644"
 
-# Module form + PYTHONPATH (mirrors setup.sh) so it works off-PATH. Check mode
-# runs --dry-run and mutates nothing.
 - name: Compose COMPOSED.md and converge harness symlinks
   ansible.builtin.command:
     cmd: "python3 -m agentic_os.agent_compose{{ ' --dry-run' if ansible_check_mode else '' }}"

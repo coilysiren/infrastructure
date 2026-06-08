@@ -1,5 +1,4 @@
 # Fleet-wide lockdown convergence, moved out of `coily setup` per the
-# authoring-vs-rollout rule. Detail in docs/ansible.md.
 - name: Re-baseline per-repo lockdown across each fleet org
   ansible.builtin.command:
     cmd: >-

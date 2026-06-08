@@ -1,5 +1,4 @@
 # Report-only convergence: never writes, just surfaces repos whose AGENTS.md lacks
-# the current pointer block. Informational like needs_push. Detail in docs/ansible.md.
 - name: Survey managed repos for a missing or drifted AGENTS.md pointer block
   ansible.builtin.command:
     cmd: "python3 scripts/apply-agents-pointer.py --dry-run"

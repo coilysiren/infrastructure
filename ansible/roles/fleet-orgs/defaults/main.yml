@@ -1,3 +1,2 @@
 # SSM param holding the fleet org list (comma-separated). General config, not a
-# secret, but SSM-managed per doctrine. Full detail in docs/ansible.md.
 fleet_orgs_ssm: /coilysiren/fleet/orgs

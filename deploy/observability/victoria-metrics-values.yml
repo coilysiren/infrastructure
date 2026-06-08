@@ -1,5 +1,4 @@
 # Helm values for victoria-metrics-single: one vmsingle StatefulSet + PVC, tailnet-only,
-# no public ingress. OTLP producers push over the tailnet. See docs/k3s-deploy-notes.md.
 
 server:
   retentionPeriod: 1  # months. Default; cheap on disk per the sizing math.
@@ -14,14 +13,8 @@ server:
     limits:
       cpu: 1000m
       memory: 1Gi
-  # Pin to kai-server. kai-desktop-tower is the second node but the
-  # observability stack lives with the rest of the cluster substrate.
   nodeSelector:
     kubernetes.io/hostname: kai-server
-  # Tailnet exposure via the standalone ts-vmsingle Deployment in
-  # vmsingle-tailscale-service.yml (chart's primary Service is headless).
   service:
     type: ClusterIP
 
-# vmagent ships as a separate chart (see vmagent-values.yml). vmalert/alertmanager
-# off for v1 until there's an alert worth paging on.

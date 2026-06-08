@@ -1,6 +1,4 @@
 ---
-# Repoint Homebrew python@3.14's pyexpat.so at Homebrew's expat, then re-sign
-# so dyld accepts the modified Mach-O. Full rationale in docs/ansible.md.
 
 - name: Patch Homebrew python@3.14 pyexpat for macOS Tahoe
   hosts: localhost

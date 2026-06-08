@@ -1,18 +1,12 @@
 # Pre-commit suite rollout, the ansible reimplementation of
-# agentic-os/scripts/apply-agentic-os-hooks.py. Keep in lockstep. See docs/ansible.md.
 
-# Pinned agentic-os release tag the managed block references. Bump on release.
 precommit_hooks_rev: v0.14.0
 
-# Canonical Forgejo upstream (source of truth, not the GitHub mirror).
 precommit_hooks_repo_url: https://forgejo.coilysiren.me/coilyco-flight-deck/agentic-os
 
-# Markers carry the 2-space indent (block sits under `repos:`) so blockinfile
-# refreshes the existing script-written block in place. See docs/ansible.md.
 precommit_hooks_marker_begin: "  # BEGIN managed by agentic-os/scripts/apply-agentic-os-hooks.py"
 precommit_hooks_marker_end: "  # END managed by agentic-os/scripts/apply-agentic-os-hooks.py"
 
-# Default hook IDs (lockstep with the script's DEFAULT_HOOK_IDS).
 precommit_hooks_default_ids:
   - catalog-doc-size
   - catalog-trifecta
@@ -31,17 +25,13 @@ precommit_hooks_default_ids:
   - conventional-commit
   - trufflehog
 
-# eco-* repos skip code-comments (Unity / C# conventions).
 precommit_hooks_eco_skips:
   - code-comments
 
-# The source repo dogfoods via repo: local; never self-stamp it.
 precommit_hooks_source_repo: agentic-os
 
-# A repo carrying this marker at its root opts out, fail-closed.
 precommit_hooks_ignore_marker: .agentic-os-ignore
 
-# Legacy per-hook managed blocks to strip on contact (begin .*? end).
 precommit_hooks_legacy_block_markers:
   - "# BEGIN managed by agentic-os-kai/scripts/apply-catalog-block-hook.py"
   - "# BEGIN managed by agentic-os-kai/scripts/apply-catalog-doc-size-hook.py"
@@ -49,7 +39,6 @@ precommit_hooks_legacy_block_markers:
   - "# BEGIN managed by agentic-os-kai/scripts/apply-skill-discipline-hooks.py"
   - "# BEGIN managed by agentic-os-kai/scripts/apply-commit-msg-hook.py"
 
-# Legacy stamped validator copies to delete (validators ship from agentic_os now).
 precommit_hooks_legacy_stamped_scripts:
   - scripts/check-catalog-block.py
   - scripts/check-catalog-doc-size.py

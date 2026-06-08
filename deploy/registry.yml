@@ -1,5 +1,4 @@
 # In-cluster OCI registry (NodePort 30500, insecure http) for homelab deploys.
-# Ref scheme 192.168.0.194:30500/<name>:<sha>. Details: docs/k3s-deploy-notes.md §11.
 ---
 apiVersion: v1
 kind: Namespace
@@ -16,8 +15,6 @@ spec:
   storageClassName: local-path
   resources:
     requests:
-      # Layer blobs for a handful of small services. local-path lands on
-      # kai-server's NVMe; bump if image churn outgrows it.
       storage: 20Gi
 ---
 apiVersion: apps/v1
@@ -33,16 +30,12 @@ spec:
     matchLabels:
       app: registry
   strategy:
-    # RWO PVC: the old pod must release the volume before the new one
-    # mounts it. Recreate avoids the two-pods-one-volume deadlock.
     type: Recreate
   template:
     metadata:
       labels:
         app: registry
     spec:
-      # Co-locate with the puller (kai-server) so a pull never crosses the
-      # node boundary, and so the PVC's local-path volume binds here.
       nodeSelector:
         kubernetes.io/hostname: kai-server
       containers:
@@ -51,7 +44,6 @@ spec:
           env:
             - name: REGISTRY_HTTP_ADDR
               value: ":5000"
-            # Allow blob deletion so a future GC/prune job can reclaim space.
             - name: REGISTRY_STORAGE_DELETE_ENABLED
               value: "true"
           ports:

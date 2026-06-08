@@ -17,8 +17,6 @@
 - name: Manage the scoped Codex permission profile
   ansible.builtin.blockinfile:
     path: "{{ ansible_facts.env.HOME }}/.codex/config.toml"
-    # create so the task does not error in check mode, where the lineinfile
-    # above has not yet written the file (a fresh host with no Codex install).
     create: true
     mode: "0600"
     marker: "# {mark} ANSIBLE MANAGED CODEX SCOPED PERMISSIONS"

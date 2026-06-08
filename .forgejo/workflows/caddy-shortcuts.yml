@@ -1,10 +1,6 @@
 name: caddy-shortcuts
 
-# Daily regen of caddy/sites/*.caddy from siblings' coily.yaml tailnet.shortcut decls.
-# Design in coilyco-flight-deck/infrastructure#129; kai-server reload is still manual.
 
-# Reads siblings via the Forgejo API; the auto-injected GITHUB_TOKEN is a Forgejo token
-# giving rate-limit headroom and read access, and is reused for the commit-back push.
 
 on:
   schedule:
@@ -32,8 +28,6 @@ jobs:
           yq --version
 
       - name: regenerate snippets
-        # No FORGEJO_TOKEN: GITHUB_TOKEN is repo-scoped, so the script reads sibling
-        # coily.yaml anonymously (public only). Private siblings need a broader token.
         run: |
           uv run python scripts/generate-caddy-shortcuts.py
 

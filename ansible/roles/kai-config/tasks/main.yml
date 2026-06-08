@@ -1,17 +1,13 @@
 # Converge agentic-os-kai host config: merged mcporter + Claude settings, forgejo
-# credential helper. Wraps the idempotent kai scripts setup.sh used to call.
 
 - name: Stat the agentic-os-kai scripts dir
   ansible.builtin.stat:
     path: "{{ kai_config_scripts }}"
   register: kai_config_scripts_stat
 
-# All tasks no-op on a host without the agentic-os-kai checkout (e.g. a work mac).
 - name: Converge agentic-os-kai host config
   when: kai_config_scripts_stat.stat.exists
   block:
-    # merge-mcporter rewrites the target every run with idempotent content, so
-    # report change by content checksum, not the script's always-"wrote" output.
     - name: Checksum the mcporter config before merge
       ansible.builtin.stat:
         path: "{{ ansible_env.HOME }}/.mcporter/mcporter.json"

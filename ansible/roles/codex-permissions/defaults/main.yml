@@ -1,5 +1,4 @@
 # Codex may work across the public flight-deck and personal coilysiren trees.
-# Bridge-private source, Claude config, and composer topology stay unreadable.
 codex_permissions_profile: kai-scoped
 codex_permissions_allowed_roots:
   - "{{ ansible_facts.env.HOME }}/projects/coilyco-flight-deck"

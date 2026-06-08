@@ -1,13 +1,10 @@
 # OpenClaw gateway on k3s (kai-desktop-tower-wsl, loopback-only, Windows Ollama).
-# Apply resolves <TOWER_WIN_TAILNET_FQDN> from SSM. Details: docs/k3s-deploy-notes.md.
 ---
 apiVersion: v1
 kind: Namespace
 metadata:
   name: openclaw
 ---
-# Syncs OPENCLAW_GATEWAY_TOKEN from SSM into the openclaw-secrets Secret via the
-# cluster-scoped aws-parameter-store ClusterSecretStore (deploy/secretstore.yml).
 apiVersion: external-secrets.io/v1beta1
 kind: ExternalSecret
 metadata:
@@ -112,8 +109,6 @@ spec:
       labels:
         app: openclaw
     spec:
-      # Pin to the WSL2 tower node to co-locate with the Windows-side Ollama
-      # (and GPU) it calls; kai-server can't reach it the same way.
       nodeSelector:
         kubernetes.io/hostname: kai-desktop-tower-wsl
       automountServiceAccountToken: false

@@ -1,42 +1,30 @@
 # Helm values for the grafana-community/grafana chart (the old grafana/helm-charts
-# was deprecated 2026-01-30). Public at grafana.coilysiren.me, login required.
 
-# Pin to kai-server alongside the rest of the stack.
 nodeSelector:
   kubernetes.io/hostname: kai-server
 
-# Persistence for the SQLite db (dashboards, users, API keys).
 persistence:
   enabled: true
   size: 2Gi
   storageClassName: local-path
 
-# Off: fsGroup below handles ownership at mount time. With chart-12.x defaults the
-# init-chown-data container runs as non-root and hits Permission denied on subdirs.
 initChownData:
   enabled: false
 
-# Chart-default uid/gid 472 so kubelet's fsGroup step matches the grafana process
-# (and existing 10.5.x PVC files), making this a no-op for our volume.
 securityContext:
   runAsUser: 472
   runAsGroup: 472
   fsGroup: 472
 
-# Admin user/password come from the `grafana-admin` Secret, synced from SSM by
-# admin-password-externalsecret.yml in this directory.
 admin:
   existingSecret: grafana-admin
   userKey: admin-user
   passwordKey: admin-password
 
-# Anonymous viewer OFF; public visitors land on the login page. To expose specific
-# dashboards later, scope via folder permissions rather than enabling globally.
 grafana.ini:
   auth.anonymous:
     enabled: false
   security:
-    # Disable user sign-up; only admin-created accounts.
     disable_initial_admin_creation: false
     cookie_secure: true
     cookie_samesite: strict
@@ -46,7 +34,6 @@ grafana.ini:
     reporting_enabled: false
     check_for_updates: false
 
-# Pre-provisioned datasource pointing at vmsingle's HTTP API in-cluster.
 datasources:
   datasources.yaml:
     apiVersion: 1
@@ -54,17 +41,12 @@ datasources:
       - name: VictoriaMetrics
         type: prometheus
         access: proxy
-        # Service name is the chart default: <release>-victoria-metrics-single-server
         url: http://victoria-metrics-victoria-metrics-single-server.observability.svc:8428
         isDefault: true
         jsonData:
           timeInterval: 30s
-          # VM is Prometheus-API-compatible; this hint helps Grafana pick the
-          # right query syntax.
           prometheusType: Prometheus
 
-# Auto-import "Node Exporter Full" (1860) on first boot. All other dashboards live in
-# terraform/grafana/; don't re-add JSON here or the provisioner stomps API-managed copies.
 dashboardProviders:
   dashboardproviders.yaml:
     apiVersion: 1
@@ -85,8 +67,6 @@ dashboards:
       revision: 37
       datasource: VictoriaMetrics
 
-# Public ingress on grafana.coilysiren.me, traefik + cert-manager DNS-01.
-# Mirrors the canonical shape from infrastructure/docs/k3s-deploy-notes.md §5.
 ingress:
   enabled: true
   ingressClassName: traefik
@@ -100,8 +80,6 @@ ingress:
         - grafana.coilysiren.me
       secretName: grafana-tls
 
-# No tailnet exposure for the UI; it's already on the public ingress and
-# logging in over WAN is fine.
 service:
   type: ClusterIP
 

@@ -1,8 +1,6 @@
 # Repo-data collectors authored in agentic-os-kai. This role is the rollout layer
-# that replaces the GitHub Actions daily crons. See docs/ansible.md.
 repo_data_kai_root: "{{ (repos_root | regex_replace('^~', ansible_env.HOME)) | dirname }}/coilyco-bridge/agentic-os-kai"
 
-# Make targets to invoke, in order. catalog-graph first (digests read it).
 repo_data_targets:
   - build-catalog-graph
   - sync-repo-registry

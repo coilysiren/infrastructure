@@ -1,5 +1,4 @@
 # agentic-os-kai host config the role converges: merged mcporter + Claude
-# settings, and the SSM-backed forgejo credential helper. See docs/ansible.md.
 
 kai_config_scripts: "{{ ansible_env.HOME }}/projects/coilyco-bridge/agentic-os-kai/scripts"
 kai_config_forgejo_helper: "{{ kai_config_scripts }}/git-credential-forgejo-ssm.sh"

@@ -1,11 +1,6 @@
 # Declared baseline for the `mac` group, seeded by `coily ansible-mac-seed`.
-# Additive (never uninstalls); hand-curate after seeding. See docs/ansible.md.
 
-# agent-compose source selection. `mac` = personal machines, so the role
-# default (public base + private overlay). A work mac overrides in its group.
 
-# Third-party taps {name, url?}. Private Forgejo taps need an explicit url; the
-# bare name resolves to a nonexistent github.com/<user>/homebrew-<repo>.
 homebrew_taps:
   - name: coilyco-flight-deck/otel-a2a-relay-cli
     url: https://forgejo.coilysiren.me/coilyco-flight-deck/otel-a2a-relay-cli
@@ -18,13 +13,10 @@ homebrew_taps:
   - name: coilyco-bridge/coily
     url: https://forgejo.coilysiren.me/coilyco-bridge/coily
   - name: getsentry/tools
-  # homebrew/services dropped: tap deprecated and emptied (merged into core), so
-  # tapping errors. `brew services` still works tap-free.
   - name: openhue/cli
   - name: steipete/tap
   - name: terraform-linters/tap
 
-# Top-level formulae (brew leaves), not their dependencies.
 homebrew_installed_packages:
   - asdf
   - ast-grep
@@ -33,14 +25,8 @@ homebrew_installed_packages:
   - bat
   - bottom
   - coilyco-flight-deck/otel-a2a-relay-cli/o2r
-  # repo-recall skipped: re-pointed upstream tag breaks brew tag-integrity.
-  # - coilyco-flight-deck/repo-recall/repo-recall
 
-  # session-lattice-puller skipped: formula depends on the dead pre-migration org path.
-  # - coilyco-flight-deck/session-lattice/session-lattice-puller
   - coilyco-flight-deck/ward/ward
-  # agent-guard/agent-guard dropped: orphaned keg, tap renamed it to `ward`
-  # (#197). `brew uninstall coilysiren/agent-guard/agent-guard` to clear it.
   - coilyco-bridge/coily/coily
   - cryptography
   - diff-pdf
@@ -108,8 +94,6 @@ homebrew_installed_packages:
   - tailscale
   - tailwindcss
   - tfenv
-  # tflint left homebrew-core; it ships from the terraform-linters tap now,
-  # so the bare name no longer resolves. Qualified to its tap.
   - terraform-linters/tap/tflint
   - tokei
   - tree
@@ -126,13 +110,10 @@ homebrew_installed_packages:
   - zlib
   - zoxide
 
-# GUI apps + tools installed as casks.
 homebrew_cask_apps:
   - android-platform-tools
   - aptakube
   - blender
-  # codex skipped: already an npm global (@openai/codex), cask refuses to clobber it.
-  # - codex
   - corelocationcli
   - docker
   - docker-desktop
@@ -145,43 +126,29 @@ homebrew_cask_apps:
   - ngrok
   - obsidian
   - orbstack
-  # powershell dropped from casks: no `powershell` cask exists (it's the formula,
-  # declared above). The bogus cask entry failed the casks task.
   - proxyman
   - tableplus
   - tailscale-app
   - visual-studio-code
-  # Warp Preview only -- Stable dropped so Preview is the sole claimant for the
-  # dynamic-UTI dev files duti can't set. See default-apps role, docs/ansible.md.
   - warp@preview
 
-# Casks/formulae to uninstall fleet-wide (homebrew role, state: absent). warp is
-# Stable -- retired in favour of warp@preview. See default-apps role.
 homebrew_cask_apps_absent:
   - warp
 homebrew_installed_packages_absent: []
 
-# pip packages force-installed into the brew system python3 so `language: system`
-# pre-commit hooks that import them don't crash. Rationale: docs/ansible.md.
 system_python3_packages:
   - PyYAML
 
-# Python CLIs installed via pipx (isolated venvs). python-kasa ships the `kasa`
-# command for the home-1 Kasa HS300 smart strip (machine-power-strip skill).
 pipx_packages:
   - python-kasa
 
-# Default file-type handlers (default-apps role, via duti). Editor-shaped files
-# open in Warp Preview. Rationale and the dynamic-UTI caveat: docs/ansible.md.
 default_app_editor_bundle_id: dev.warp.Warp-Preview
 default_app_editor_extensions:
-  # plain text, logs, docs
   - txt
   - text
   - log
   - md
   - markdown
-  # data / config
   - json
   - yaml
   - yml
@@ -189,16 +156,13 @@ default_app_editor_extensions:
   - csv
   - tsv
   - sql
-  # shell
   - sh
   - bash
   - zsh
-  # web / styles (not html/xhtml -- those stay in the browser)
   - css
   - js
   - mjs
   - ts
-  # compiled-language sources with real UTIs
   - c
   - h
   - cpp
@@ -210,6 +174,5 @@ default_app_editor_extensions:
   - pl
   - php
   - java
-  # diffs
   - diff
   - patch

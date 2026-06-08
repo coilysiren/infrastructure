@@ -1,5 +1,4 @@
 # Converge the Claude/Codex skill surface via agentic-os-kai's mount-skills.sh.
-# Skipped in check mode (no dry-run), no-op without the checkout. See docs/ansible.md.
 
 - name: Stat the skill-mount script
   ansible.builtin.stat:

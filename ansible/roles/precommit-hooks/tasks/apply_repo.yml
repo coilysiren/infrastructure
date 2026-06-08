@@ -1,5 +1,4 @@
 # Per-repo strip + upsert + install. Mirrors apply_to_repo() in
-# apply-agentic-os-hooks.py. repo_dir is the absolute repo path.
 - name: "{{ repo_dir | basename }}: stat opt-out marker"
   ansible.builtin.stat:
     path: "{{ repo_dir }}/{{ precommit_hooks_ignore_marker }}"

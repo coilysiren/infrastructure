@@ -1,5 +1,4 @@
 # Forgejo Actions runners on kai-server k3s: StatefulSet with per-pod DinD.
-# Unpinned - schedules on any Ready node. Details: docs/k3s-deploy-notes.md §7.
 ---
 apiVersion: external-secrets.io/v1beta1
 kind: ExternalSecret
@@ -25,7 +24,6 @@ metadata:
   name: forgejo-runner
   namespace: forgejo
 spec:
-  # One pod = one concurrent job. Bump to scale.
   replicas: 2
   serviceName: forgejo-runner
   selector:
@@ -37,8 +35,6 @@ spec:
         app: forgejo-runner
     spec:
       initContainers:
-        # Mints a per-pod registration token via the admin API and writes the
-        # .runner state file; skips if already registered (restarts mustn't re-register).
         - name: register
           image: data.forgejo.org/forgejo/runner:12
           env:
@@ -82,8 +78,6 @@ spec:
           image: data.forgejo.org/forgejo/runner:12
           command: ["forgejo-runner", "daemon"]
           env:
-            # dind sidecar listens on tcp 2375 when TLS_CERTDIR="".
-            # Same pod = localhost works.
             - name: DOCKER_HOST
               value: tcp://localhost:2375
           workingDir: /data
@@ -97,14 +91,10 @@ spec:
           volumeMounts:
             - name: data
               mountPath: /data
-        # Per-pod dockerd. Privileged because dind needs it. Talks to
-        # the runner over the pod's loopback at tcp 2375, TLS off.
         - name: dind
           image: docker:28-dind
           securityContext:
             privileged: true
-          # --insecure-registry: the in-cluster registry (deploy/registry.yml)
-          # serves plain http, so dockerd needs it allowlisted to push.
           args:
             - "--insecure-registry=192.168.0.194:30500"
           env:
