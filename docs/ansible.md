@@ -56,7 +56,7 @@ to `ansible/ansible.cfg` so playbooks run from the repo root.
 - **`playbooks/freshen.yml`** - a `group_by` classify play (OS -> mac/linux),
   then the host-freshen play. Runs `fleet-orgs`, `shell`, `homebrew`,
   `default-apps`, `agent-compose`, `codex-permissions`, `claude-hooks`,
-  `kai-config`, `repos`, `reconcile`, `agents-pointer`, `git`, `lockdown`, `precommit-hooks`,
+  `kai-config`, `repos`, `reconcile`, `skills`, `agents-pointer`, `git`, `lockdown`, `precommit-hooks`,
   `repo-data`, and `deptree` in order, each tagged so you can run one in
   isolation (e.g. `tags=git`). `fleet-orgs` carries the `always` tag so
   tag-scoped runs still resolve the org list first.
@@ -151,6 +151,10 @@ A source composes onto a host iff its declared scopes intersect the host's
 `agent_compose_scopes`, so one source set is correct fleet-wide. Personal Macs
 run `[kai-private]` today; a work Mac would want `[work, kai-public]` in its own
 group/host_vars, never private.
+
+## The skills role
+
+Converges the Claude/Codex skill surface by running agentic-os-kai's idempotent `mount-skills.sh`: empties the always-global `~/.claude/skills`, self-mounts agentic-os-kai's own skills into its `.claude/skills`, aggregates the `repo-<name>` pointer skills across the org dirs, and pulls per-repo capabilities. The script rebuilds symlinks each run and has no dry-run, so the role skips it in check mode (like repo-data) and no-ops on a host without the agentic-os-kai checkout. Replaces agentic-os-kai/setup.sh's skill section.
 
 ## The claude-hooks role
 

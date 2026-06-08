@@ -37,6 +37,8 @@
       tags: [repos]
     - role: reconcile
       tags: [reconcile]
+    - role: skills
+      tags: [skills]
     - role: agents-pointer
       tags: [agents-pointer]
     - role: git

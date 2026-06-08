@@ -1,0 +1,4 @@
+# Skill-surface convergence. Runs agentic-os-kai's idempotent mount-skills.sh
+# (empty global dir, self-mount, repo-pointer aggregation, capability pull).
+
+skills_mount_script: "{{ ansible_env.HOME }}/projects/coilyco-bridge/agentic-os-kai/scripts/mount-skills.sh"
