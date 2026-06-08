@@ -1,0 +1,75 @@
+# Converge host shell config: symlink zsh + bash trees, gpg-ssm, PATH helpers,
+# (mac) hammerspoon. Ansible-native ensure_link replacement. See docs/ansible.md.
+
+- name: Ensure ~/.local/bin exists
+  ansible.builtin.file:
+    path: "{{ shell_local_bin }}"
+    state: directory
+    mode: "0755"
+
+# Back up a pre-existing regular dotfile (not our symlink) before linking, the
+# way setup.sh moved it to <path>.bak on first run.
+- name: Stat the shell rc files
+  ansible.builtin.stat:
+    path: "{{ ansible_env.HOME }}/{{ item }}"
+  loop:
+    - .zshrc
+    - .bashrc
+  register: shell_rc_stat
+
+- name: Back up pre-existing regular rc files
+  ansible.builtin.copy:
+    src: "{{ item.stat.path }}"
+    dest: "{{ item.stat.path }}.bak"
+    remote_src: true
+    mode: preserve
+  loop: "{{ shell_rc_stat.results }}"
+  loop_control:
+    label: "{{ item.item }}"
+  when: item.stat.exists and item.stat.isreg and not item.stat.islnk
+
+- name: Symlink the zsh entry point
+  ansible.builtin.file:
+    src: "{{ shell_aos_root }}/shell/zshrc"
+    dest: "{{ ansible_env.HOME }}/.zshrc"
+    state: link
+    force: true
+
+- name: Symlink the bash entry point
+  ansible.builtin.file:
+    src: "{{ shell_aos_root }}/shell/bashrc"
+    dest: "{{ ansible_env.HOME }}/.bashrc"
+    state: link
+    force: true
+
+- name: Symlink the gpg-ssm wrapper (mac/linux)
+  ansible.builtin.file:
+    src: "{{ shell_aos_root }}/scripts/gpg-ssm"
+    dest: "{{ shell_local_bin }}/gpg-ssm"
+    state: link
+    force: true
+  when: ansible_system in ['Linux', 'Darwin']
+
+- name: Symlink the gpg-ssm wrapper (windows .cmd)
+  ansible.builtin.file:
+    src: "{{ shell_aos_root }}/scripts/gpg-ssm.cmd"
+    dest: "{{ shell_local_bin }}/gpg-ssm.cmd"
+    state: link
+    force: true
+  when: ansible_system not in ['Linux', 'Darwin']
+
+- name: Symlink PATH helpers (suffix dropped for bare-name invoke)
+  ansible.builtin.file:
+    src: "{{ shell_aos_root }}/scripts/{{ item }}.sh"
+    dest: "{{ shell_local_bin }}/{{ item }}"
+    state: link
+    force: true
+  loop: "{{ shell_path_helpers }}"
+
+- name: Symlink hammerspoon init (mac push-to-talk voice auto-enter)
+  ansible.builtin.file:
+    src: "{{ shell_aos_root }}/hammerspoon/init.lua"
+    dest: "{{ ansible_env.HOME }}/.hammerspoon/init.lua"
+    state: link
+    force: true
+  when: ansible_system == 'Darwin'

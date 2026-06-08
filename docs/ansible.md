@@ -35,9 +35,10 @@ to `ansible/ansible.cfg` so playbooks run from the repo root.
 - **`ansible.cfg`** - repo-local config: inventory + roles paths, yaml-formatted
   task results (`result_format=yaml`, since the old `community.general.yaml`
   stdout callback was removed in v12), host-key checking off, retry files off.
-- **`inventory/hosts.yml`** - the `mac` group. Today just `localhost` over a
-  local connection (ansible drives the box it runs on, no SSH). New Macs are
-  added here; remote ones need `ansible_host` + tailnet SSH reachability.
+- **`inventory/hosts.yml`** - bare `localhost` over a local connection (ansible
+  drives the box it runs on, no SSH). The freshen play's first task `group_by`s
+  it into the `mac` or `linux` group by `ansible_system`, so one inventory is
+  correct on any machine. Remote hosts would need `ansible_host` + tailnet SSH.
 - **`inventory/group_vars/mac.yml`** - the declared baseline for the `mac` group:
   `homebrew_taps`, `homebrew_installed_packages`, `homebrew_cask_apps`,
   `agent_compose_scopes`, and `system_python3_packages` (pip packages
@@ -45,16 +46,27 @@ to `ansible/ansible.cfg` so playbooks run from the repo root.
   hooks that `import yaml` against it don't crash - see the homebrew role).
   Auto-loaded because it sits next to the inventory (the reason it lives under
   `inventory/`, not `ansible/`).
+- **`inventory/group_vars/linux.yml`** - the `linux` baseline (kai-server, ser8).
+  Seeded with the cross-platform subset of `mac.yml`: the CLI toolkit plus the
+  k3s (`helm`, `stern`), terraform (`tfenv`, `tflint`), and security (`grype`,
+  `trufflehog`) tooling, and the source-built fleet tools (`coily`, `o2r`,
+  `ward`, `mcporter`, which ship no linux bottle). Dropped: GUI casks, macOS-only
+  formulae (`duti`, `lima`, `pinentry-mac`, `scrcpy`, `diff-pdf`),
+  `system_python3_packages` (its pip path is macOS-only), and the workstation
+  dev toolchains (`docker`, `tailscale`, JVM, .NET) that a host re-adds in its
+  own group/host_vars when needed. `default_app_editor_bundle_id` is empty, so
+  the macOS-only default-apps role skips cleanly.
 - **`inventory/group_vars/all.yml`** - fleet-wide vars for the `repos` role
   (`repos_owner`, `repos_forgejo_api`, `repos_forgejo_token_ssm`,
   `repos_recent_days`, `repos_forgejo_only`, `repos_known_orgs`, `repos_root`).
   All meaningful names; the Forgejo PAT is resolved from SSM at runtime.
-- **`playbooks/freshen.yml`** - the host-freshen play. Runs `fleet-orgs`,
-  `homebrew`, `default-apps`, `agent-compose`, `claude-hooks`, `repos`,
-  `reconcile`, `git`, `lockdown`, `precommit-hooks`, `repo-data`, and `deptree`
-  in order, each tagged
-  so you can run one in isolation (e.g. `tags=git`). `fleet-orgs` carries the
-  `always` tag so tag-scoped runs still resolve the org list first.
+- **`playbooks/freshen.yml`** - a `group_by` classify play (OS -> mac/linux),
+  then the host-freshen play. Runs `fleet-orgs`, `shell`, `homebrew`,
+  `default-apps`, `agent-compose`, `codex-permissions`, `claude-hooks`,
+  `kai-config`, `repos`, `reconcile`, `skills`, `agents-pointer`, `git`, `lockdown`, `precommit-hooks`,
+  `repo-data`, and `deptree` in order, each tagged so you can run one in
+  isolation (e.g. `tags=git`). `fleet-orgs` carries the `always` tag so
+  tag-scoped runs still resolve the org list first.
 - **`library/repo_registry.py`** - the read-only discovery module the `repos`
   role calls (local custom module, found via `library = library` in ansible.cfg).
 - **`library/repo_status.py`** - the per-repo git sweep module the `git` role
@@ -63,11 +75,15 @@ to `ansible/ansible.cfg` so playbooks run from the repo root.
   role calls (move/remove drifted checkouts to match origin org; check-aware).
 - **`library/repo_deptree.py`** - the read-only dep-tree validator the `deptree`
   role calls (FAIL on flight-deck -> bridge `dependsOn` edges).
-- **`roles/homebrew/`**, **`roles/default-apps/`**, **`roles/agent-compose/`**,
-  **`roles/codex-permissions/`**, **`roles/repos/`**, **`roles/reconcile/`**, **`roles/git/`**,
-  **`roles/deptree/`** - the units of work, detailed below.
+- **`roles/shell/`**, **`roles/homebrew/`**, **`roles/default-apps/`**,
+  **`roles/agent-compose/`**, **`roles/codex-permissions/`**, **`roles/repos/`**,
+  **`roles/reconcile/`**, **`roles/git/`**, **`roles/deptree/`** - the units of work, detailed below.
 - **`roles/fleet-orgs/`**, **`roles/lockdown/`**, **`roles/precommit-hooks/`**,
   **`roles/repo-data/`** - the fleet-management rollout roles, detailed below.
+
+## The shell role
+
+Symlinks the host shell config, the ansible-native replacement for `agentic-os/setup.sh`'s `ensure_link`. Points `~/.zshrc -> agentic-os/shell/zshrc` and `~/.bashrc -> agentic-os/shell/bashrc` (both source the shared `shell/common.sh`), the `gpg-ssm` wrapper and the `~/.local/bin` PATH helpers (`verbatim-echo`, `anthropic-pulse`, `github-pulse`, `git-diff-global`), and on macOS `~/.hammerspoon/init.lua`. A pre-existing regular `~/.zshrc` / `~/.bashrc` is backed up to `<path>.bak` before linking, matching setup.sh's first-run behaviour. Uses `ansible.builtin.file` with `state: link`, so it is idempotent and check-mode honest. Host branching is by `ansible_system` (the gpg-ssm `.cmd` variant and hammerspoon are guarded).
 
 ## The homebrew role
 
@@ -142,6 +158,18 @@ A source composes onto a host iff its declared scopes intersect the host's
 `agent_compose_scopes`, so one source set is correct fleet-wide. Personal Macs
 run `[kai-private]` today; a work Mac would want `[work, kai-public]` in its own
 group/host_vars, never private.
+
+## The skills role
+
+Converges the Claude/Codex skill surface by running agentic-os-kai's idempotent `mount-skills.sh`: empties the always-global `~/.claude/skills`, self-mounts agentic-os-kai's own skills into its `.claude/skills`, aggregates the `repo-<name>` pointer skills across the org dirs, and pulls per-repo capabilities. The script rebuilds symlinks each run and has no dry-run, so the role skips it in check mode (like repo-data) and no-ops on a host without the agentic-os-kai checkout. Replaces agentic-os-kai/setup.sh's skill section.
+
+## The claude-hooks role
+
+Converges Claude Code harness wiring in `~/.claude/settings.json`. Renders the o2r cross-node nudge hook script and wires it as a `PreToolUse` Bash hook via the `claude_settings_hook` module. It also runs the idempotent agentic-os mergers `install-agent-name.py` (statusLine + SessionStart self-name) and `install-session-pulse.py` (SessionStart pulse hook) - wrapped, not reimplemented, with `--dry-run` driving check mode. These two replace the corresponding `agentic-os/setup.sh` steps.
+
+## The kai-config role
+
+Converges agentic-os-kai host config, the ansible-native replacement for that repo's `setup.sh` config steps. Runs `merge-mcporter.py` (home `~/.mcporter/mcporter.json` from the coilysiren + kapwing sources) and `merge-claude-settings.py` (cross-machine shared rules), and wires the SSM-backed forgejo HTTPS credential helper via `community.general.git_config`. mcporter rewrites identical content every run, so the role reports change by content checksum (before/after stat), not the script's always-"wrote" output. The whole role is a no-op on a host without the agentic-os-kai checkout (a `block` guarded on the scripts dir).
 
 ## The codex-permissions role
 
@@ -298,10 +326,16 @@ once Homebrew ships a fixed Tahoe bottle.
 
 ## Adding a host
 
-Add the host under the `mac` group in `inventory/hosts.yml`. A new Mac picks up
-both the Homebrew baseline and the agent-compose config; set its
-`agent_compose_scopes` if it is not a personal machine. Linux / kai-server roles
-are future work - the inventory and roles layout already accommodates more groups.
+On a bare host, run `bootstrap.sh` (the one script that survived the setup.sh
+retirement): it installs uv, clones the anchor repos (infrastructure, agentic-os,
+agentic-os-kai), `uv sync`s, and hands off to the freshen play, which converges
+everything else. Prereqs: git auth to forgejo and AWS credentials. After that,
+re-converge anytime with `coily ansible-freshen`.
+
+The inventory is a bare `localhost`; the freshen play's `group_by` classifies it
+into `mac` or `linux` by OS, so the same inventory is correct on any machine.
+Per-OS declarations (brew baseline, agent-compose scopes) live in
+`group_vars/{mac,linux}.yml`; set `agent_compose_scopes` on a non-personal host.
 
 ## See also
 

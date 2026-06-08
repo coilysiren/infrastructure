@@ -6,7 +6,8 @@ repos_forgejo_token_ssm: /forgejo/api-token
 repos_recent_days: 7
 repos_forgejo_only:
   - inbox
-# Sibling org dirs under the checkout root's parent that hold local clones.
+# Sibling org dirs holding local clones. Static fallback only: the fleet-orgs
+# role overrides this at runtime from SSM. See docs/ansible.md.
 repos_known_orgs:
   - coilysiren
   - coilyco-bridge

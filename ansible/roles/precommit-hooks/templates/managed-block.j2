@@ -1,0 +1,6 @@
+  - repo: {{ precommit_hooks_repo_url }}
+    rev: {{ precommit_hooks_rev }}
+    hooks:
+{% for h in repo_hook_ids %}
+      - id: {{ h }}
+{% endfor %}
