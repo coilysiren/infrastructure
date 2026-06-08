@@ -1,0 +1,34 @@
+# Roll the agentic-os pre-commit suite into every on-disk repo across the fleet
+# orgs. Mirrors apply-agentic-os-hooks.py. See docs/ansible.md.
+- name: Resolve the projects parent dir (holds the org checkout dirs)
+  ansible.builtin.set_fact:
+    precommit_projects_parent: "{{ (repos_root | regex_replace('^~', ansible_env.HOME)) | dirname }}"
+
+- name: Discover repo working trees under each fleet org
+  ansible.builtin.find:
+    paths: "{{ repos_known_orgs | map('regex_replace', '^(.*)$', precommit_projects_parent ~ '/\\1') | list }}"
+    file_type: directory
+    recurse: false
+  register: precommit_org_children
+
+- name: Keep only git working trees
+  ansible.builtin.stat:
+    path: "{{ item.path }}/.git"
+  loop: "{{ precommit_org_children.files }}"
+  loop_control:
+    label: "{{ item.path }}"
+  register: precommit_git_stats
+
+- name: Build the candidate repo list
+  ansible.builtin.set_fact:
+    precommit_repos: >-
+      {{ precommit_git_stats.results
+         | selectattr('stat.exists')
+         | map(attribute='item.path') | list }}
+
+- name: Apply the managed pre-commit block per repo
+  ansible.builtin.include_tasks: apply_repo.yml
+  loop: "{{ precommit_repos }}"
+  loop_control:
+    loop_var: repo_dir
+    label: "{{ repo_dir | basename }}"

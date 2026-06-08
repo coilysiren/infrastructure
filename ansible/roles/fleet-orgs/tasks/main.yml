@@ -1,0 +1,37 @@
+# Resolve the fleet org list and override repos_known_orgs so every later role
+# walks the same set (env fast-path, then SSM, else static). See docs/ansible.md.
+- name: Fast-path the fleet org list from the environment
+  ansible.builtin.set_fact:
+    fleet_orgs: "{{ ((ansible_env.COILYSIREN_FLEET_ORGS | default('')) | regex_replace(',', ' ')).split() | list }}"
+  when: (ansible_env.COILYSIREN_FLEET_ORGS | default('')) | trim | length > 0
+
+- name: Resolve the fleet org list from SSM
+  ansible.builtin.command:
+    cmd: "coily ops aws ssm get-parameter --name {{ fleet_orgs_ssm }} --query Parameter.Value --output text"
+  register: fleet_orgs_ssm_raw
+  changed_when: false
+  check_mode: false
+  failed_when: false
+  when: fleet_orgs is not defined or fleet_orgs | length == 0
+
+- name: Set the fleet org fact from SSM
+  ansible.builtin.set_fact:
+    fleet_orgs: "{{ (fleet_orgs_ssm_raw.stdout | regex_replace(',', ' ')).split() | list }}"
+  when:
+    - fleet_orgs is not defined or fleet_orgs | length == 0
+    - fleet_orgs_ssm_raw is defined
+    - (fleet_orgs_ssm_raw.rc | default(1)) == 0
+    - (fleet_orgs_ssm_raw.stdout | default('')) | trim | length > 0
+
+- name: Fall back to the static repos_known_orgs
+  ansible.builtin.set_fact:
+    fleet_orgs: "{{ repos_known_orgs }}"
+  when: fleet_orgs is not defined or fleet_orgs | length == 0
+
+- name: Override repos_known_orgs with the resolved fleet org list
+  ansible.builtin.set_fact:
+    repos_known_orgs: "{{ fleet_orgs }}"
+
+- name: Report resolved fleet orgs
+  ansible.builtin.debug:
+    msg: "fleet orgs: {{ fleet_orgs | join(', ') }}"

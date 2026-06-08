@@ -1,0 +1,20 @@
+# Fleet-wide lockdown convergence, moved out of `coily setup` per the
+# authoring-vs-rollout rule. Detail in docs/ansible.md.
+- name: Re-baseline per-repo lockdown across each fleet org
+  ansible.builtin.command:
+    cmd: >-
+      coily lockdown --recursive --path {{ repos_root | dirname }}/{{ item }}
+      {{ '--apply --replace' if not ansible_check_mode else '' }}
+  loop: "{{ repos_known_orgs }}"
+  loop_control:
+    label: "{{ item }}"
+  register: lockdown_recursive
+  changed_when: lockdown_recursive.rc == 0 and not ansible_check_mode
+  check_mode: false
+
+- name: Converge the user-level lockdown
+  ansible.builtin.command:
+    cmd: "coily lockdown --user {{ '--apply' if not ansible_check_mode else '' }}"
+  register: lockdown_user
+  changed_when: lockdown_user.rc == 0 and not ansible_check_mode
+  check_mode: false

@@ -1,10 +1,12 @@
-# Host-freshen play, roles run in the listed order, each tagged to run alone.
-# See docs/ansible.md for the per-role walkthrough.
+# Host-freshen play, roles run in listed order (fleet-orgs first, always tag, so
+# the org list resolves before any role walks it). See docs/ansible.md.
 - name: Freshen host
   hosts: mac
   gather_facts: true
   become: false
   roles:
+    - role: fleet-orgs
+      tags: [fleet-orgs, always]
     - role: homebrew
       tags: [homebrew, tooling]
     - role: default-apps
@@ -23,5 +25,11 @@
       tags: [agents-pointer]
     - role: git
       tags: [git]
+    - role: lockdown
+      tags: [lockdown]
+    - role: precommit-hooks
+      tags: [precommit-hooks, hooks]
+    - role: repo-data
+      tags: [repo-data]
     - role: deptree
       tags: [deptree]

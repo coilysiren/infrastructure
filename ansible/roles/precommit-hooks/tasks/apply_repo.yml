@@ -1,0 +1,76 @@
+# Per-repo strip + upsert + install. Mirrors apply_to_repo() in
+# apply-agentic-os-hooks.py. repo_dir is the absolute repo path.
+- name: "{{ repo_dir | basename }}: stat opt-out marker"
+  ansible.builtin.stat:
+    path: "{{ repo_dir }}/{{ precommit_hooks_ignore_marker }}"
+  register: precommit_ignore_stat
+
+- name: "{{ repo_dir | basename }}: skip flags"
+  ansible.builtin.set_fact:
+    precommit_skip: >-
+      {{ (repo_dir | basename) == precommit_hooks_source_repo
+         or precommit_ignore_stat.stat.exists }}
+    repo_hook_ids: >-
+      {{ precommit_hooks_default_ids
+         | reject('in', precommit_hooks_eco_skips if (repo_dir | basename) is match('^eco') else [])
+         | list }}
+
+- name: "{{ repo_dir | basename }}: stat .pre-commit-config.yaml"
+  ansible.builtin.stat:
+    path: "{{ repo_dir }}/.pre-commit-config.yaml"
+  register: precommit_cfg_stat
+  when: not precommit_skip
+
+- name: "{{ repo_dir | basename }}: seed an empty config when absent"
+  ansible.builtin.copy:
+    dest: "{{ repo_dir }}/.pre-commit-config.yaml"
+    content: "repos:\n"
+    mode: "0644"
+  when:
+    - not precommit_skip
+    - not precommit_cfg_stat.stat.exists
+
+- name: "{{ repo_dir | basename }}: strip legacy managed blocks"
+  ansible.builtin.replace:
+    path: "{{ repo_dir }}/.pre-commit-config.yaml"
+    regexp: "[ ]*{{ item | regex_escape }}[\\s\\S]*?{{ (item | regex_replace('# BEGIN ', '# END ')) | regex_escape }}[ ]*\\n?"
+    replace: ""
+  loop: "{{ precommit_hooks_legacy_block_markers }}"
+  loop_control:
+    label: "{{ item }}"
+  when: not precommit_skip
+
+- name: "{{ repo_dir | basename }}: upsert the agentic-os managed block"
+  ansible.builtin.blockinfile:
+    path: "{{ repo_dir }}/.pre-commit-config.yaml"
+    marker: "{mark}"
+    marker_begin: "{{ precommit_hooks_marker_begin }}"
+    marker_end: "{{ precommit_hooks_marker_end }}"
+    block: "{{ lookup('template', 'managed-block.j2') }}"
+    insertafter: "^repos:"
+  register: precommit_block
+  when: not precommit_skip
+
+- name: "{{ repo_dir | basename }}: drop legacy stamped scripts"
+  ansible.builtin.file:
+    path: "{{ repo_dir }}/{{ item }}"
+    state: absent
+  loop: "{{ precommit_hooks_legacy_stamped_scripts }}"
+  loop_control:
+    label: "{{ item }}"
+  when: not precommit_skip
+
+- name: "{{ repo_dir | basename }}: install pre-commit hook types"
+  ansible.builtin.command:
+    cmd: >-
+      pre-commit install
+      --hook-type pre-commit
+      --hook-type commit-msg
+      --hook-type prepare-commit-msg
+    chdir: "{{ repo_dir }}"
+  register: precommit_install
+  changed_when: "'installed at' in precommit_install.stdout or 'overwriting' in precommit_install.stdout"
+  check_mode: false
+  when:
+    - not precommit_skip
+    - precommit_block is changed
