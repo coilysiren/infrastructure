@@ -1,0 +1,46 @@
+# Converge agentic-os-kai host config: merged mcporter + Claude settings, forgejo
+# credential helper. Wraps the idempotent kai scripts setup.sh used to call.
+
+- name: Stat the agentic-os-kai scripts dir
+  ansible.builtin.stat:
+    path: "{{ kai_config_scripts }}"
+  register: kai_config_scripts_stat
+
+# All tasks no-op on a host without the agentic-os-kai checkout (e.g. a work mac).
+- name: Converge agentic-os-kai host config
+  when: kai_config_scripts_stat.stat.exists
+  block:
+    # merge-mcporter rewrites the target every run with idempotent content, so
+    # report change by content checksum, not the script's always-"wrote" output.
+    - name: Checksum the mcporter config before merge
+      ansible.builtin.stat:
+        path: "{{ ansible_env.HOME }}/.mcporter/mcporter.json"
+      register: kai_config_mcp_before
+
+    - name: Merge the home mcporter config (coilysiren + kapwing sources)
+      ansible.builtin.command:
+        cmd: "python3 {{ kai_config_scripts }}/merge-mcporter.py{{ ' --dry-run' if ansible_check_mode else '' }}"
+      changed_when: false
+      check_mode: false
+
+    - name: Report mcporter change by content checksum
+      ansible.builtin.stat:
+        path: "{{ ansible_env.HOME }}/.mcporter/mcporter.json"
+      register: kai_config_mcp_after
+      changed_when: >-
+        kai_config_mcp_before.stat.checksum | default('')
+        != kai_config_mcp_after.stat.checksum | default('')
+
+    - name: Merge cross-machine Claude settings
+      ansible.builtin.command:
+        cmd: "python3 {{ kai_config_scripts }}/merge-claude-settings.py{{ ' --dry-run' if ansible_check_mode else '' }}"
+      register: kai_config_settings
+      changed_when: "'unchanged' not in kai_config_settings.stdout"
+      check_mode: false
+
+    - name: Wire the SSM-backed forgejo HTTPS credential helper
+      community.general.git_config:
+        name: "credential.https://forgejo.coilysiren.me.helper"
+        scope: global
+        value: "!{{ kai_config_forgejo_helper }}"
+      when: kai_config_forgejo_helper is exists

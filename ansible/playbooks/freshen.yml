@@ -31,6 +31,8 @@
       tags: [codex-permissions]
     - role: claude-hooks
       tags: [claude-hooks, hooks]
+    - role: kai-config
+      tags: [kai-config]
     - role: repos
       tags: [repos]
     - role: reconcile

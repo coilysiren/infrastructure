@@ -19,3 +19,19 @@
     command: "{{ o2r_nudge_script }}"
     marker: o2r-nudge.sh
     state: present
+
+# Agent self-name (statusLine + SessionStart hook) and session-pulse SessionStart
+# hook. Wraps the idempotent agentic-os mergers; --dry-run drives check mode.
+- name: Wire the agent self-name into settings.json
+  ansible.builtin.command:
+    cmd: "python3 {{ claude_hooks_aos_scripts }}/install-agent-name.py{{ ' --dry-run' if ansible_check_mode else '' }}"
+  register: claude_hooks_agent_name
+  changed_when: "'already wired' not in claude_hooks_agent_name.stdout"
+  check_mode: false
+
+- name: Wire the session-pulse SessionStart hook into settings.json
+  ansible.builtin.command:
+    cmd: "python3 {{ claude_hooks_aos_scripts }}/install-session-pulse.py{{ ' --dry-run' if ansible_check_mode else '' }}"
+  register: claude_hooks_session_pulse
+  changed_when: "'already wired' not in claude_hooks_session_pulse.stdout"
+  check_mode: false

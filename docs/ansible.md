@@ -55,8 +55,8 @@ to `ansible/ansible.cfg` so playbooks run from the repo root.
   All meaningful names; the Forgejo PAT is resolved from SSM at runtime.
 - **`playbooks/freshen.yml`** - a `group_by` classify play (OS -> mac/linux),
   then the host-freshen play. Runs `fleet-orgs`, `shell`, `homebrew`,
-  `default-apps`, `agent-compose`, `codex-permissions`, `claude-hooks`, `repos`,
-  `reconcile`, `agents-pointer`, `git`, `lockdown`, `precommit-hooks`,
+  `default-apps`, `agent-compose`, `codex-permissions`, `claude-hooks`,
+  `kai-config`, `repos`, `reconcile`, `agents-pointer`, `git`, `lockdown`, `precommit-hooks`,
   `repo-data`, and `deptree` in order, each tagged so you can run one in
   isolation (e.g. `tags=git`). `fleet-orgs` carries the `always` tag so
   tag-scoped runs still resolve the org list first.
@@ -151,6 +151,14 @@ A source composes onto a host iff its declared scopes intersect the host's
 `agent_compose_scopes`, so one source set is correct fleet-wide. Personal Macs
 run `[kai-private]` today; a work Mac would want `[work, kai-public]` in its own
 group/host_vars, never private.
+
+## The claude-hooks role
+
+Converges Claude Code harness wiring in `~/.claude/settings.json`. Renders the o2r cross-node nudge hook script and wires it as a `PreToolUse` Bash hook via the `claude_settings_hook` module. It also runs the idempotent agentic-os mergers `install-agent-name.py` (statusLine + SessionStart self-name) and `install-session-pulse.py` (SessionStart pulse hook) - wrapped, not reimplemented, with `--dry-run` driving check mode. These two replace the corresponding `agentic-os/setup.sh` steps.
+
+## The kai-config role
+
+Converges agentic-os-kai host config, the ansible-native replacement for that repo's `setup.sh` config steps. Runs `merge-mcporter.py` (home `~/.mcporter/mcporter.json` from the coilysiren + kapwing sources) and `merge-claude-settings.py` (cross-machine shared rules), and wires the SSM-backed forgejo HTTPS credential helper via `community.general.git_config`. mcporter rewrites identical content every run, so the role reports change by content checksum (before/after stat), not the script's always-"wrote" output. The whole role is a no-op on a host without the agentic-os-kai checkout (a `block` guarded on the scripts dir).
 
 ## The codex-permissions role
 
