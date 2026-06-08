@@ -1,12 +1,106 @@
-# Declared baseline for the `linux` group (kai-server and any Linux control
-# host). agent-compose + repos vars come from the role defaults / all.yml.
+# Declared baseline for the `linux` group (kai-server, ser8, Linux control
+# hosts). Cross-platform subset of mac.yml; additive. See docs/ansible.md.
 
-# Homebrew on Linux (linuxbrew) is not yet curated; empty lists keep the
-# homebrew role a no-op until seeded. Track growth in docs/ansible.md.
-homebrew_taps: []
-homebrew_installed_packages: []
+# Third-party taps {name, url?}. Private Forgejo taps need an explicit url.
+# coily, o2r, ward, mcporter ship no linux bottle and build from source.
+homebrew_taps:
+  - name: coilyco-flight-deck/otel-a2a-relay-cli
+    url: https://forgejo.coilysiren.me/coilyco-flight-deck/otel-a2a-relay-cli
+  - name: coilyco-flight-deck/ward
+    url: https://forgejo.coilysiren.me/coilyco-flight-deck/ward
+  - name: coilyco-bridge/coily
+    url: https://forgejo.coilysiren.me/coilyco-bridge/coily
+  - name: steipete/tap
+  - name: terraform-linters/tap
+
+# Top-level formulae (brew leaves). Cross-platform subset of mac.yml plus the
+# k3s / terraform / security tooling kai-server runs. See docs/ansible.md.
+homebrew_installed_packages:
+  - asdf
+  - ast-grep
+  - atuin
+  - awscli
+  - bat
+  - bottom
+  - coilyco-flight-deck/otel-a2a-relay-cli/o2r
+  - coilyco-flight-deck/ward/ward
+  - coilyco-bridge/coily/coily
+  - cryptography
+  - direnv
+  - dive
+  - doggo
+  - duf
+  - dust
+  - erdtree
+  - eza
+  - fd
+  - flyctl
+  - fping
+  - gh
+  - git-delta
+  - git-filter-repo
+  - git-lfs
+  - glow
+  - golangci-lint
+  - googleworkspace-cli
+  - grpcurl
+  - grype
+  - helm
+  - httpie
+  - imagemagick
+  - jq
+  - json2tsv
+  - librsvg
+  - mcp-grafana
+  - micro
+  - mise
+  - mkcert
+  - mtr
+  - navi
+  - nethogs
+  - nmap
+  - oath-toolkit
+  - ouch
+  # pinentry-mac on mac.yml; linux uses the portable pinentry.
+  - pinentry
+  - pipx
+  - procs
+  - pyenv
+  - python@3.12
+  - repomix
+  - ruff
+  - ruby
+  - rust
+  - scc
+  - sd
+  - starship
+  - steipete/tap/mcporter
+  - stern
+  - tailwindcss
+  - tfenv
+  # tflint ships from the terraform-linters tap, not homebrew-core.
+  - terraform-linters/tap/tflint
+  - tokei
+  - tree
+  - trippy
+  - trufflehog
+  - uutils-coreutils
+  - uutils-diffutils
+  - uutils-findutils
+  - uv
+  - watch
+  - watchexec
+  - wget
+  - yq
+  - zlib
+  - zoxide
+
+# linuxbrew has no casks; GUI apps from mac.yml do not apply to headless hosts.
 homebrew_cask_apps: []
 homebrew_cask_apps_absent: []
+homebrew_installed_packages_absent: []
+
+# python-kasa (mac.yml) is bound to the home-1 strip, not a fleet-linux default.
 pipx_packages: []
 
 # default-apps is macOS-only (duti); empty bundle id skips the whole role.

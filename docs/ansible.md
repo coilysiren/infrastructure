@@ -46,9 +46,16 @@ to `ansible/ansible.cfg` so playbooks run from the repo root.
   hooks that `import yaml` against it don't crash - see the homebrew role).
   Auto-loaded because it sits next to the inventory (the reason it lives under
   `inventory/`, not `ansible/`).
-- **`inventory/group_vars/linux.yml`** - the `linux` baseline (kai-server). Brew
-  lists are empty until linuxbrew is seeded; `default_app_editor_bundle_id` is
-  empty so the macOS-only default-apps role skips cleanly.
+- **`inventory/group_vars/linux.yml`** - the `linux` baseline (kai-server, ser8).
+  Seeded with the cross-platform subset of `mac.yml`: the CLI toolkit plus the
+  k3s (`helm`, `stern`), terraform (`tfenv`, `tflint`), and security (`grype`,
+  `trufflehog`) tooling, and the source-built fleet tools (`coily`, `o2r`,
+  `ward`, `mcporter`, which ship no linux bottle). Dropped: GUI casks, macOS-only
+  formulae (`duti`, `lima`, `pinentry-mac`, `scrcpy`, `diff-pdf`),
+  `system_python3_packages` (its pip path is macOS-only), and the workstation
+  dev toolchains (`docker`, `tailscale`, JVM, .NET) that a host re-adds in its
+  own group/host_vars when needed. `default_app_editor_bundle_id` is empty, so
+  the macOS-only default-apps role skips cleanly.
 - **`inventory/group_vars/all.yml`** - fleet-wide vars for the `repos` role
   (`repos_owner`, `repos_forgejo_api`, `repos_forgejo_token_ssm`,
   `repos_recent_days`, `repos_forgejo_only`, `repos_known_orgs`, `repos_root`).
