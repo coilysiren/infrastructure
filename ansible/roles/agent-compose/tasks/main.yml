@@ -1,4 +1,22 @@
 # Converge agent-compose: render the per-machine config, then run the composer
+# to write COMPOSED.md + harness load-point symlinks. See docs/ansible.md.
+
+# Work hosts resolve the employer projects subdir from SSM (set in group_vars)
+# so the name stays out of tracked vars. Skipped on hosts that leave the SSM
+# path empty (personal macs), and in check mode the read is harmless + cached.
+- name: Resolve the work overlay subdir from SSM
+  ansible.builtin.command:
+    cmd: "coily ops aws ssm get-parameter --name {{ agent_compose_work_subdir_ssm }} --query Parameter.Value --output text"
+  register: agent_compose_work_subdir
+  changed_when: false
+  check_mode: false
+  when: agent_compose_work_subdir_ssm | length > 0
+
+- name: Set the work overlay root from the resolved subdir
+  ansible.builtin.set_fact:
+    agent_compose_work_root: "{{ ansible_env.HOME }}/projects/{{ agent_compose_work_subdir.stdout | trim }}"
+  when: agent_compose_work_subdir_ssm | length > 0
+
 - name: Ensure agent-compose config directory exists
   ansible.builtin.file:
     path: "{{ ansible_env.HOME }}/.config/agent-compose"

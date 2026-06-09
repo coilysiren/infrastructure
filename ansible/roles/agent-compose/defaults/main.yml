@@ -3,6 +3,16 @@
 agent_compose_kai_root: "{{ ansible_env.HOME }}/projects/coilyco-bridge/agentic-os-kai"
 agent_compose_aos_root: "{{ ansible_env.HOME }}/projects/coilyco-flight-deck/agentic-os"
 
+# Work overlay root, off by default so personal Macs never touch it. A work host
+# sets agent_compose_work_subdir_ssm (in its group_vars) to an SSM param holding
+# the local projects subdir for the employer workspace. The role resolves it at
+# converge time and fills agent_compose_work_root, so the employer name lives in
+# SSM and the rendered host-local config, never in tracked vars. See docs/ansible.md.
+agent_compose_work_subdir_ssm: ""
+agent_compose_work_root: ""
+
+# Sources composed in order: public base, then private overlay (inlined verbatim
+# into COMPOSED.md). Default is the personal-machine pair; work macs override.
 agent_compose_sources:
   - "{{ agent_compose_aos_root }}/AGENTS.md"
   - "{{ agent_compose_kai_root }}/AGENTS.md"

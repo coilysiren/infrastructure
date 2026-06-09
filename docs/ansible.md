@@ -141,23 +141,30 @@ The hard constraint: **LaunchServices only accepts a handler for a real UTI.** E
 ## The agent-compose role
 
 Owns the per-machine cross-harness context config. It renders
-`~/.config/agent-compose/agent-compose.yaml` from `agent_compose_scopes`
-(per host class in group_vars) plus the fleet-static sources / load points in
+`~/.config/agent-compose/agent-compose.yaml` from `agent_compose_sources`
+(per host class in group_vars) plus the fleet-static load points in
 `roles/agent-compose/defaults/main.yml`, then runs the composer
-(`python3 -m agentic_os.agent_compose`) and points each harness's global load
-point (Claude Code `~/.claude/CLAUDE.md`, Codex `~/.codex/AGENTS.md`) at its
-output by symlink. Shared source slices use `COMPOSED.md`; differing
-`harnesses` frontmatter produces `COMPOSED.<harness>.md`. The only per-machine
-bit is the scope list, which is why this is an Ansible var lookup rather than a
-hand-edited file.
+(`python3 -m agentic_os.agent_compose`) to write `COMPOSED.md` and point each
+harness's global load point (Claude Code `~/.claude/CLAUDE.md`, Codex
+`~/.codex/AGENTS.md`) at it by symlink. The only per-machine bit is the source
+list, which is why this is an Ansible var lookup rather than a hand-edited file.
 The composer is **idempotent and opt-in** (no config => no-op) and backs up any
 pre-existing real load-point file to `<name>.bak`. In check mode it runs
 `--dry-run` and mutates nothing.
 
-A source composes onto a host iff its declared scopes intersect the host's
-`agent_compose_scopes`, so one source set is correct fleet-wide. Personal Macs
-run `[kai-private]` today; a work Mac would want `[work, kai-public]` in its own
-group/host_vars, never private.
+Per-host source selection scopes the fleet, so the composer's own scope-filtering
+is left off and `agent_compose_sources` is a flat ordered list. The `mac` group's
+default is the personal-machine pair (public base + kai-private overlay). The
+`work` child group (`group_vars/work.yml`) is for employer-owned machines: public
+base + a work overlay, **never kai-private**.
+
+The work overlay lives in the employer workspace, so its path carries the
+employer name, which must not land in tracked vars. `work.yml` instead names an
+SSM param (`agent_compose_work_subdir_ssm`) holding the local projects subdir.
+The role resolves it at converge time (`coily ops aws ssm get-parameter`) into
+`agent_compose_work_root`, so the name surfaces only in SSM and the host-local
+rendered config, both untracked. A personal mac leaves the SSM path empty and the
+resolve step is skipped.
 
 ## The skills role
 
@@ -326,16 +333,18 @@ once Homebrew ships a fixed Tahoe bottle.
 
 ## Adding a host
 
+Add the host under the `mac` group in `inventory/hosts.yml`. A personal Mac goes
+straight under `mac` and picks up both the Homebrew baseline and the default
+(public base + kai-private) agent-compose config. An employer-owned Mac goes
+under the `work` child group instead, so it inherits the Homebrew baseline but
+swaps kai-private for the work overlay. Linux / kai-server roles are future work
+- the inventory and roles layout already accommodates more groups.
+
 On a bare host, run `bootstrap.sh` (the one script that survived the setup.sh
 retirement): it installs uv, clones the anchor repos (infrastructure, agentic-os,
 agentic-os-kai), `uv sync`s, and hands off to the freshen play, which converges
 everything else. Prereqs: git auth to forgejo and AWS credentials. After that,
 re-converge anytime with `coily ansible-freshen`.
-
-The inventory is a bare `localhost`; the freshen play's `group_by` classifies it
-into `mac` or `linux` by OS, so the same inventory is correct on any machine.
-Per-OS declarations (brew baseline, agent-compose scopes) live in
-`group_vars/{mac,linux}.yml`; set `agent_compose_scopes` on a non-personal host.
 
 ## See also
 

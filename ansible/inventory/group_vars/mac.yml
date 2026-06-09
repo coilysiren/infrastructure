@@ -1,5 +1,10 @@
 # Declared baseline for the `mac` group, seeded by `coily ansible-mac-seed`.
 
+# agent-compose source selection lives per host class. `mac` itself is the
+# personal-machine baseline (role default: public base + kai-private overlay).
+# Employer-owned macs join the `work` child group (group_vars/work.yml), which
+# drops kai-private and adds a work overlay. The control host today is a work
+# mac, so no host currently uses this `mac`-level default.
 
 homebrew_taps:
   - name: coilyco-flight-deck/otel-a2a-relay-cli
