@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Bare-host bootstrap: the one surviving script after setup.sh was retired.
-# Seeds a host until ansible can take over, then runs the freshen play.
+# Seeds a host until ansible can take over, then runs the sync play.
 
 # Prereqs the operator provides first: git auth to forgejo.coilysiren.me (SSH key
 # or a cached PAT) and AWS credentials (the roles read SSM). See docs/ansible.md.
@@ -12,7 +12,7 @@ set -euo pipefail
 PROJECTS="${PROJECTS_ROOT:-$HOME/projects}"
 FORGEJO="https://forgejo.coilysiren.me"
 
-# Anchor repos the freshen play's early roles (shell, agent-compose, kai-config,
+# Anchor repos the sync play's early roles (shell, agent-compose, kai-config,
 # skills) read before the repos role would clone the rest. org/name pairs.
 ANCHORS=(
   "coilyco-flight-deck/infrastructure"
@@ -47,10 +47,10 @@ INFRA="$PROJECTS/coilyco-flight-deck/infrastructure"
 echo "bootstrap: uv sync in $INFRA"
 ( cd "$INFRA" && uv sync )
 
-# 4. Hand off to ansible. From here the freshen play converges everything,
+# 4. Hand off to ansible. From here the sync play converges everything,
 # including cloning any remaining repos via the repos role.
-echo "bootstrap: converging host via ansible freshen (apply)"
-( cd "$INFRA" && uv run python scripts/ansible/freshen.py apply )
+echo "bootstrap: converging host via ansible sync (apply)"
+( cd "$INFRA" && uv run python scripts/ansible/sync.py apply )
 
 echo "bootstrap: done. Host is ansible-managed; re-converge anytime with"
-echo "  coily ansible-freshen            # or: uv run python scripts/ansible/freshen.py apply"
+echo "  coily ansible-sync            # or: uv run python scripts/ansible/sync.py apply"

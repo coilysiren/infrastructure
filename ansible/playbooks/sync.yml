@@ -55,7 +55,7 @@
       tags: [deptree]
 
   post_tasks:
-    - name: Fail the freshen run on repos needing manual action
+    - name: Fail the sync run on repos needing manual action
       ansible.builtin.fail:
         msg: >-
           Host is not fresh: {{ repo_sweep.action_required | length }} repo(s)

@@ -17,12 +17,12 @@ to `ansible/ansible.cfg` so playbooks run from the repo root.
 
 ## Verbs
 
-- **`coily ansible-freshen`** - freshen this host: Homebrew + agent-compose +
+- **`coily ansible-sync`** - sync this host: Homebrew + agent-compose +
   repo clone + layout reconcile + git remote-sync sweep + cross-org dep-tree
   check. Defaults to **check mode** (`--check --diff`): mutates nothing, prints
   the plan. `action=apply` converges for real. Scope to one role with
   `tags=<csv>` (e.g. `tags=git`), which the verb forwards to
-  `ansible-playbook --tags`. (Backed by `scripts/ansible/freshen.py`; the
+  `ansible-playbook --tags`. (Backed by `scripts/ansible/sync.py`; the
   Ansible port of `agentic-os-kai/scripts/up-to-date.py`.)
 - **`coily ansible-mac-seed`** - capture the live machine's `brew leaves`, casks,
   and third-party taps into `inventory/group_vars/mac.yml`, so a subsequent check
@@ -36,7 +36,7 @@ to `ansible/ansible.cfg` so playbooks run from the repo root.
   task results (`result_format=yaml`, since the old `community.general.yaml`
   stdout callback was removed in v12), host-key checking off, retry files off.
 - **`inventory/hosts.yml`** - bare `localhost` over a local connection (ansible
-  drives the box it runs on, no SSH). The freshen play's first task `group_by`s
+  drives the box it runs on, no SSH). The sync play's first task `group_by`s
   it into the `mac` or `linux` group by `ansible_system`, so one inventory is
   correct on any machine. Remote hosts would need `ansible_host` + tailnet SSH.
 - **`inventory/group_vars/mac.yml`** - the declared baseline for the `mac` group:
@@ -60,8 +60,8 @@ to `ansible/ansible.cfg` so playbooks run from the repo root.
   (`repos_owner`, `repos_forgejo_api`, `repos_forgejo_token_ssm`,
   `repos_recent_days`, `repos_forgejo_only`, `repos_known_orgs`, `repos_root`).
   All meaningful names; the Forgejo PAT is resolved from SSM at runtime.
-- **`playbooks/freshen.yml`** - a `group_by` classify play (OS -> mac/linux),
-  then the host-freshen play. Runs `fleet-orgs`, `shell`, `homebrew`,
+- **`playbooks/sync.yml`** - a `group_by` classify play (OS -> mac/linux),
+  then the host-sync play. Runs `fleet-orgs`, `shell`, `homebrew`,
   `default-apps`, `agent-compose`, `codex-permissions`, `claude-hooks`,
   `kai-config`, `repos`, `reconcile`, `skills`, `agents-pointer`, `git`, `lockdown`, `precommit-hooks`,
   `repo-data`, and `deptree` in order, each tagged so you can run one in
@@ -249,7 +249,7 @@ off the default branch, repo-recall's land-or-delete signal), an **in-progress
 op**, **detached HEAD**, **mirror-drift**, or a **blocked pull** (a `--ff-only`
 or rebase that could not happen automatically, reported `BLOCKED`). The git role
 prints these, and the play's `post_tasks` **freshness gate** (`ansible.builtin.fail`)
-then fails the whole `freshen` run on any of them - so `coily ansible-freshen`
+then fails the whole `sync` run on any of them - so `coily ansible-sync`
 goes red, in check mode too, until the host is clean. The gate is deferred to
 `post_tasks` (not raised inside the git role) so every role still converges and
 all reports print before the run goes red; it is a no-op when `git` is tagged out
@@ -342,9 +342,9 @@ swaps kai-private for the work overlay. Linux / kai-server roles are future work
 
 On a bare host, run `bootstrap.sh` (the one script that survived the setup.sh
 retirement): it installs uv, clones the anchor repos (infrastructure, agentic-os,
-agentic-os-kai), `uv sync`s, and hands off to the freshen play, which converges
+agentic-os-kai), `uv sync`s, and hands off to the sync play, which converges
 everything else. Prereqs: git auth to forgejo and AWS credentials. After that,
-re-converge anytime with `coily ansible-freshen`.
+re-converge anytime with `coily ansible-sync`.
 
 ## See also
 

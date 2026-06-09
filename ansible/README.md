@@ -1,6 +1,6 @@
 # ansible
 
-First-class Ansible for the coilysiren fleet. `coily ansible-freshen` brings a
+First-class Ansible for the coilysiren fleet. `coily ansible-sync` brings a
 host up to date: Homebrew state, the agent-compose context config, and a
 reconcile of local clones against the live repo layout. The Ansible port of
 `agentic-os-kai/scripts/up-to-date.py`; built to grow into Linux / kai-server.
@@ -10,7 +10,7 @@ reconcile of local clones against the live repo layout. The Ansible port of
 ```
 ansible/
 ├── ansible.cfg                     # repo-local config (inventory, roles, library, yaml output)
-├── inventory/hosts.yml             # localhost (local conn); freshen group_by's it into mac/linux
+├── inventory/hosts.yml             # localhost (local conn); sync group_by's it into mac/linux
 ├── inventory/group_vars/mac.yml    # declared taps / formulae / casks + agent_compose_scopes
 ├── inventory/group_vars/linux.yml  # linux baseline (kai-server); empty brew lists until seeded
 ├── inventory/group_vars/all.yml    # fleet-wide repos role vars (owner, forgejo, ssm path)
@@ -18,7 +18,7 @@ ansible/
 ├── library/repo_status.py          # per-repo git sweep module (fetch/status/drift; pull on apply)
 ├── library/repo_reconcile.py       # move/remove drifted checkouts to match origin org (check-aware)
 ├── library/repo_deptree.py         # read-only cross-org dep-tree validator
-├── playbooks/freshen.yml           # group_by OS, then freshen (shell + homebrew + agent-compose + repos + ...)
+├── playbooks/sync.yml           # group_by OS, then sync (shell + homebrew + agent-compose + repos + ...)
 ├── roles/shell/                    # symlink zsh + bash trees, gpg-ssm, PATH helpers, hammerspoon
 ├── roles/homebrew/                 # taps + formulae + casks via community.general
 ├── roles/agent-compose/            # render ~/.config/agent-compose + converge harness symlinks
@@ -32,9 +32,9 @@ ansible/
 
 ```bash
 coily ansible-mac-seed                       # capture this Mac's brew state into group_vars/mac.yml
-coily ansible-freshen                        # dry run (--check --diff), mutates nothing
-coily ansible-freshen action=apply           # converge for real
-coily ansible-freshen tags=git               # scope to one role (here: the git sweep)
+coily ansible-sync                        # dry run (--check --diff), mutates nothing
+coily ansible-sync action=apply           # converge for real
+coily ansible-sync tags=git               # scope to one role (here: the git sweep)
 ```
 
 Ansible ships as the `ansible` dependency in the repo's `pyproject.toml`

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Run ansible/playbooks/freshen.yml to bring this host up to date.
+"""Run ansible/playbooks/sync.yml to bring this host up to date.
 
 action (argv[1], default `check`):
   check  - dry run with --check --diff, mutates nothing, shows the plan
@@ -42,7 +42,7 @@ def main():
     flags = " --check --diff" if action == "check" else ""
     if tags:
         flags += f" --tags {tags}"
-    run(f"ansible-playbook ansible/playbooks/freshen.yml{flags}", env=env)
+    run(f"ansible-playbook ansible/playbooks/sync.yml{flags}", env=env)
     return 0
 
 

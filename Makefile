@@ -20,7 +20,7 @@ DEFAULT_GOAL := help
 	lunch-money \
 	terraform-aws-inventory \
 	host-watch \
-	ansible-freshen \
+	ansible-sync \
 	ansible-mac-seed \
 	agents-pointer-migrate
 
@@ -94,8 +94,8 @@ host-watch: ## Watch a tailnet host's SSH and capture a host-diag.sh snapshot on
 claude-remote-control-install: ## (Re)install the kai-server remote-control daemon, node-tooling-ensure units, and self-heal settings. Idempotent; recovers a latched daemon. Run on kai-server.
 	bash scripts/claude-remote-control-install.sh
 
-ansible-freshen: ## Freshen this host (homebrew + agent-compose + repos + git sweep) via ansible/playbooks/freshen.yml. Args - action=check|apply (default check), tags=<csv> to scope.
-	@uv run python scripts/ansible/freshen.py $(or $(action),check) $(if $(tags),tags=$(tags),)
+ansible-sync: ## Freshen this host (homebrew + agent-compose + repos + git sweep) via ansible/playbooks/sync.yml. Args - action=check|apply (default check), tags=<csv> to scope.
+	@uv run python scripts/ansible/sync.py $(or $(action),check) $(if $(tags),tags=$(tags),)
 
 ansible-mac-seed: ## Seed ansible/group_vars/mac.yml from this machine's live brew leaves/casks/taps.
 	@uv run python scripts/ansible/seed_mac_brew.py
