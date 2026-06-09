@@ -37,37 +37,44 @@
       register: ollama_pull
       changed_when: ollama_pull.rc == 0
 
-    - name: Read the current OLLAMA_KEEP_ALIVE from the launchd plist
+    - name: Read the current ollama server env values from the launchd plist
       ansible.builtin.command:
         cmd: >-
           /usr/libexec/PlistBuddy
-          -c "Print :EnvironmentVariables:OLLAMA_KEEP_ALIVE"
+          -c "Print :EnvironmentVariables:{{ item.key }}"
           {{ ollama_plist }}
-      register: ollama_keep_alive_current
+      loop: "{{ ollama_service_env | dict2items }}"
+      loop_control:
+        label: "{{ item.key }}"
+      register: ollama_env_current
       changed_when: false
       failed_when: false
 
-    - name: Add OLLAMA_KEEP_ALIVE to the plist when absent
+    - name: Pin the ollama server env keys in the plist
       ansible.builtin.command:
         cmd: >-
-          /usr/libexec/PlistBuddy
-          -c "Add :EnvironmentVariables:OLLAMA_KEEP_ALIVE string {{ ollama_keep_alive }}"
+          /usr/libexec/PlistBuddy -c
+          "{{ ('Add :EnvironmentVariables:' ~ item.item.key ~ ' string ')
+              if item.rc != 0
+              else ('Set :EnvironmentVariables:' ~ item.item.key ~ ' ') }}{{ item.item.value }}"
           {{ ollama_plist }}
-      when: ollama_keep_alive_current.rc != 0
-      register: ollama_keep_alive_add
-      changed_when: ollama_keep_alive_add.rc == 0
+      loop: "{{ ollama_env_current.results }}"
+      loop_control:
+        label: "{{ item.item.key }}"
+      when: (item.rc != 0) or ((item.stdout | trim) != (item.item.value | string))
+      register: ollama_env_pin
+      changed_when: ollama_env_pin.rc == 0
 
-    - name: Set OLLAMA_KEEP_ALIVE in the plist when drifted
+    - name: Remove OLLAMA_DEBUG from the plist when disabled
       ansible.builtin.command:
         cmd: >-
           /usr/libexec/PlistBuddy
-          -c "Set :EnvironmentVariables:OLLAMA_KEEP_ALIVE {{ ollama_keep_alive }}"
+          -c "Delete :EnvironmentVariables:OLLAMA_DEBUG"
           {{ ollama_plist }}
-      when:
-        - ollama_keep_alive_current.rc == 0
-        - (ollama_keep_alive_current.stdout | trim) != (ollama_keep_alive | string)
-      register: ollama_keep_alive_set
-      changed_when: ollama_keep_alive_set.rc == 0
+      when: not (ollama_debug | bool)
+      register: ollama_debug_remove
+      changed_when: ollama_debug_remove.rc == 0
+      failed_when: false
 
     - name: Reload the ollama launchd service to apply env changes
       ansible.builtin.shell: |
@@ -76,7 +83,7 @@
         launchctl bootout "gui/$uid/homebrew.mxcl.ollama" 2>/dev/null || true
         sleep 1
         launchctl bootstrap "gui/$uid" "{{ ollama_plist }}"
-      when: (ollama_keep_alive_add is changed) or (ollama_keep_alive_set is changed)
+      when: (ollama_env_pin is changed) or (ollama_debug_remove is changed)
       changed_when: true
 
     - name: Wait for ollama to accept connections after reload
@@ -84,7 +91,7 @@
         host: 127.0.0.1
         port: 11434
         timeout: 60
-      when: (ollama_keep_alive_add is changed) or (ollama_keep_alive_set is changed)
+      when: (ollama_env_pin is changed) or (ollama_debug_remove is changed)
 
 - name: Deploy the opencode config for the local ollama endpoint
   when:

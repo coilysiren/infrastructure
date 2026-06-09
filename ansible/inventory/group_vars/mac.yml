@@ -141,6 +141,7 @@ homebrew_installed_packages_absent: []
 
 ollama_models:
   - qwen3.5:9b-mlx
+ollama_debug: true
 
 system_python3_packages:
   - PyYAML

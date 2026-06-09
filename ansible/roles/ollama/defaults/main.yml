@@ -2,4 +2,6 @@
 ollama_models: []
 ollama_opencode_model: "{{ ollama_models | first | default('') }}"
 ollama_keep_alive: 30m
+ollama_debug: false
 ollama_plist: "{{ ansible_env.HOME }}/Library/LaunchAgents/homebrew.mxcl.ollama.plist"
+ollama_service_env: "{{ {'OLLAMA_KEEP_ALIVE': ollama_keep_alive | string} | combine({'OLLAMA_DEBUG': '1'} if ollama_debug | bool else {}) }}"
