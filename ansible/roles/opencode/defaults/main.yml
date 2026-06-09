@@ -1,0 +1,3 @@
+# opencode (qwen-opencode) config; model from ollama_models. See docs/FEATURES.md.
+opencode_model: "{{ ollama_models | first | default('') }}"
+opencode_base_url: "http://localhost:11434/v1"

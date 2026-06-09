@@ -1,0 +1,15 @@
+# Converge the qwen-opencode opencode.json; binary + AGENTS.md owned by other roles.
+- name: Deploy the opencode config for the local Qwen endpoint
+  when: opencode_model | length > 0
+  block:
+    - name: Ensure the opencode config dir exists
+      ansible.builtin.file:
+        path: "{{ ansible_env.HOME }}/.config/opencode"
+        state: directory
+        mode: "0755"
+
+    - name: Render opencode.json pointed at the local Qwen model
+      ansible.builtin.template:
+        src: opencode.json.j2
+        dest: "{{ ansible_env.HOME }}/.config/opencode/opencode.json"
+        mode: "0644"
