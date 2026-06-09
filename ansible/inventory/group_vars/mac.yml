@@ -145,6 +145,8 @@ ollama_debug: true
 
 mac_proxy_enabled: true
 
+agent_compose_opencode_load_point: "{{ ansible_env.HOME }}/.config/opencode/AGENTS.md"  # local Qwen runs here
+
 system_python3_packages:
   - PyYAML
 

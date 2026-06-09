@@ -92,20 +92,3 @@
         port: 11434
         timeout: 60
       when: (ollama_env_pin is changed) or (ollama_debug_remove is changed)
-
-- name: Deploy the opencode config for the local ollama endpoint
-  when:
-    - ollama_models | length > 0
-    - ollama_opencode_model | length > 0
-  block:
-    - name: Ensure the opencode config dir exists
-      ansible.builtin.file:
-        path: "{{ ansible_env.HOME }}/.config/opencode"
-        state: directory
-        mode: "0755"
-
-    - name: Render opencode.json pointed at the local Qwen model
-      ansible.builtin.template:
-        src: opencode.json.j2
-        dest: "{{ ansible_env.HOME }}/.config/opencode/opencode.json"
-        mode: "0644"

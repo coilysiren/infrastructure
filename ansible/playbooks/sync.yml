@@ -23,6 +23,8 @@
       tags: [homebrew, tooling]
     - role: ollama
       tags: [ollama, tooling]
+    - role: opencode
+      tags: [opencode, tooling]
     - role: mac-proxy
       tags: [mac-proxy, tooling]
     - role: default-apps

@@ -13,7 +13,9 @@ agent_compose_sources:
 agent_compose_roots:
   - "{{ ansible_env.HOME }}/.config/agent-compose/sources"
 
+agent_compose_opencode_load_point: ""  # opt-in per host (see docs/FEATURES.md); aos-public slice only
+
 agent_compose_load_points:
   claude: "{{ ansible_env.HOME }}/.claude/CLAUDE.md"
   codex: "{{ ansible_env.HOME }}/.codex/AGENTS.md"
-  openclaw: ""
+  opencode: "{{ agent_compose_opencode_load_point }}"

@@ -61,8 +61,8 @@ to `ansible/ansible.cfg` so playbooks run from the repo root.
   `repos_recent_days`, `repos_forgejo_only`, `repos_known_orgs`, `repos_root`).
   All meaningful names; the Forgejo PAT is resolved from SSM at runtime.
 - **`playbooks/sync.yml`** - a `group_by` classify play (OS -> mac/linux),
-  then the host-sync play. Runs `fleet-orgs`, `shell`, `homebrew`,
-  `default-apps`, `agent-compose`, `codex-permissions`, `claude-hooks`,
+  then the host-sync play. Runs `fleet-orgs`, `shell`, `homebrew`, `ollama`,
+  `opencode`, `default-apps`, `agent-compose`, `codex-permissions`, `claude-hooks`,
   `kai-config`, `repos`, `reconcile`, `skills`, `agents-pointer`, `git`, `lockdown`, `precommit-hooks`,
   `repo-data`, and `deptree` in order, each tagged so you can run one in
   isolation (e.g. `tags=git`). `fleet-orgs` carries the `always` tag so

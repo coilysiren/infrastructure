@@ -19,6 +19,6 @@ roots:
 load_points:
   claude: {{ agent_compose_load_points.claude }}
   codex: {{ agent_compose_load_points.codex }}
-{% if agent_compose_load_points.openclaw | default('') | length > 0 %}
-  openclaw: {{ agent_compose_load_points.openclaw }}
+{% if agent_compose_load_points.opencode | default('') | length > 0 %}
+  opencode: {{ agent_compose_load_points.opencode }}
 {% endif %}
