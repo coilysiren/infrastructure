@@ -37,6 +37,55 @@
       register: ollama_pull
       changed_when: ollama_pull.rc == 0
 
+    - name: Read the current OLLAMA_KEEP_ALIVE from the launchd plist
+      ansible.builtin.command:
+        cmd: >-
+          /usr/libexec/PlistBuddy
+          -c "Print :EnvironmentVariables:OLLAMA_KEEP_ALIVE"
+          {{ ollama_plist }}
+      register: ollama_keep_alive_current
+      changed_when: false
+      failed_when: false
+
+    - name: Add OLLAMA_KEEP_ALIVE to the plist when absent
+      ansible.builtin.command:
+        cmd: >-
+          /usr/libexec/PlistBuddy
+          -c "Add :EnvironmentVariables:OLLAMA_KEEP_ALIVE string {{ ollama_keep_alive }}"
+          {{ ollama_plist }}
+      when: ollama_keep_alive_current.rc != 0
+      register: ollama_keep_alive_add
+      changed_when: ollama_keep_alive_add.rc == 0
+
+    - name: Set OLLAMA_KEEP_ALIVE in the plist when drifted
+      ansible.builtin.command:
+        cmd: >-
+          /usr/libexec/PlistBuddy
+          -c "Set :EnvironmentVariables:OLLAMA_KEEP_ALIVE {{ ollama_keep_alive }}"
+          {{ ollama_plist }}
+      when:
+        - ollama_keep_alive_current.rc == 0
+        - (ollama_keep_alive_current.stdout | trim) != (ollama_keep_alive | string)
+      register: ollama_keep_alive_set
+      changed_when: ollama_keep_alive_set.rc == 0
+
+    - name: Reload the ollama launchd service to apply env changes
+      ansible.builtin.shell: |
+        set -e
+        uid=$(id -u)
+        launchctl bootout "gui/$uid/homebrew.mxcl.ollama" 2>/dev/null || true
+        sleep 1
+        launchctl bootstrap "gui/$uid" "{{ ollama_plist }}"
+      when: (ollama_keep_alive_add is changed) or (ollama_keep_alive_set is changed)
+      changed_when: true
+
+    - name: Wait for ollama to accept connections after reload
+      ansible.builtin.wait_for:
+        host: 127.0.0.1
+        port: 11434
+        timeout: 60
+      when: (ollama_keep_alive_add is changed) or (ollama_keep_alive_set is changed)
+
 - name: Deploy the opencode config for the local ollama endpoint
   when:
     - ollama_models | length > 0
