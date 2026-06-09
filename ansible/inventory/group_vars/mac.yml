@@ -12,6 +12,7 @@ homebrew_taps:
     url: https://forgejo.coilysiren.me/coilyco-flight-deck/ward
   - name: coilyco-bridge/coily
     url: https://forgejo.coilysiren.me/coilyco-bridge/coily
+  - name: anomalyco/tap
   - name: getsentry/tools
   - name: openhue/cli
   - name: steipete/tap
@@ -72,6 +73,8 @@ homebrew_installed_packages:
   - nmap
   - nuget
   - oath-toolkit
+  - ollama
+  - anomalyco/tap/opencode
   - openhue/cli/openhue-cli
   - openjdk@11
   - ouch
@@ -135,6 +138,9 @@ homebrew_cask_apps:
 homebrew_cask_apps_absent:
   - warp
 homebrew_installed_packages_absent: []
+
+ollama_models:
+  - qwen3.5:9b-mlx
 
 system_python3_packages:
   - PyYAML

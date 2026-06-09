@@ -1,0 +1,3 @@
+# ollama defaults. MLX model list (empty off-mac skips); opencode model derives from it.
+ollama_models: []
+ollama_opencode_model: "{{ ollama_models | first | default('') }}"

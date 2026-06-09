@@ -1,0 +1,55 @@
+# Converge ollama service + declared MLX models. See docs/FEATURES.md.
+- name: Converge ollama server and models
+  when:
+    - ollama_models | length > 0
+    - not ansible_check_mode
+  block:
+    - name: Query ollama brew service status
+      ansible.builtin.command: brew services info ollama --json
+      register: ollama_service_info
+      changed_when: false
+      failed_when: false
+
+    - name: Ensure ollama brew service is running
+      ansible.builtin.command: brew services start ollama
+      when: >-
+        ollama_service_info.rc != 0
+        or (ollama_service_info.stdout | default('') | trim) == ''
+        or not ((ollama_service_info.stdout | from_json | first).running | default(false))
+      register: ollama_service_start
+      changed_when: ollama_service_start.rc == 0
+
+    - name: Wait for the ollama server to accept connections
+      ansible.builtin.wait_for:
+        host: 127.0.0.1
+        port: 11434
+        timeout: 60
+
+    - name: List models already pulled
+      ansible.builtin.command: ollama list
+      register: ollama_installed
+      changed_when: false
+
+    - name: Pull declared ollama models
+      ansible.builtin.command: "ollama pull {{ item }}"
+      loop: "{{ ollama_models }}"
+      when: item not in ollama_installed.stdout
+      register: ollama_pull
+      changed_when: ollama_pull.rc == 0
+
+- name: Deploy the opencode config for the local ollama endpoint
+  when:
+    - ollama_models | length > 0
+    - ollama_opencode_model | length > 0
+  block:
+    - name: Ensure the opencode config dir exists
+      ansible.builtin.file:
+        path: "{{ ansible_env.HOME }}/.config/opencode"
+        state: directory
+        mode: "0755"
+
+    - name: Render opencode.json pointed at the local Qwen model
+      ansible.builtin.template:
+        src: opencode.json.j2
+        dest: "{{ ansible_env.HOME }}/.config/opencode/opencode.json"
+        mode: "0644"

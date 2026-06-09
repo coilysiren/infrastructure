@@ -8,6 +8,7 @@
       ansible.builtin.group_by:
         key: "{{ 'mac' if ansible_system == 'Darwin' else 'linux' }}"
       changed_when: false
+      tags: [always]
 
 - name: Freshen host
   hosts: all
@@ -20,6 +21,8 @@
       tags: [shell]
     - role: homebrew
       tags: [homebrew, tooling]
+    - role: ollama
+      tags: [ollama, tooling]
     - role: default-apps
       tags: [default-apps, tooling]
     - role: lan-hosts
