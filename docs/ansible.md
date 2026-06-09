@@ -17,7 +17,7 @@ to `ansible/ansible.cfg` so playbooks run from the repo root.
 
 ## Verbs
 
-- **`coily ansible-sync`** - sync this host: Homebrew + agent-compose +
+- **`ward exec ansible-sync`** - sync this host: Homebrew + agent-compose +
   repo clone + layout reconcile + git remote-sync sweep + cross-org dep-tree
   check. Defaults to **check mode** (`--check --diff`): mutates nothing, prints
   the plan. `action=apply` converges for real. Scope to one role with
@@ -249,7 +249,7 @@ off the default branch, repo-recall's land-or-delete signal), an **in-progress
 op**, **detached HEAD**, **mirror-drift**, or a **blocked pull** (a `--ff-only`
 or rebase that could not happen automatically, reported `BLOCKED`). The git role
 prints these, and the play's `post_tasks` **freshness gate** (`ansible.builtin.fail`)
-then fails the whole `sync` run on any of them - so `coily ansible-sync`
+then fails the whole `sync` run on any of them - so `ward exec ansible-sync`
 goes red, in check mode too, until the host is clean. The gate is deferred to
 `post_tasks` (not raised inside the git role) so every role still converges and
 all reports print before the run goes red; it is a no-op when `git` is tagged out
@@ -344,7 +344,7 @@ On a bare host, run `bootstrap.sh` (the one script that survived the setup.sh
 retirement): it installs uv, clones the anchor repos (infrastructure, agentic-os,
 agentic-os-kai), `uv sync`s, and hands off to the sync play, which converges
 everything else. Prereqs: git auth to forgejo and AWS credentials. After that,
-re-converge anytime with `coily ansible-sync`.
+re-converge anytime with `ward exec ansible-sync`.
 
 ## See also
 

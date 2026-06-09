@@ -1,6 +1,6 @@
 # ansible
 
-First-class Ansible for the coilysiren fleet. `coily ansible-sync` brings a
+First-class Ansible for the coilysiren fleet. `ward exec ansible-sync` brings a
 host up to date: Homebrew state, the agent-compose context config, and a
 reconcile of local clones against the live repo layout. The Ansible port of
 `agentic-os-kai/scripts/up-to-date.py`; built to grow into Linux / kai-server.
@@ -32,9 +32,9 @@ ansible/
 
 ```bash
 coily ansible-mac-seed                       # capture this Mac's brew state into group_vars/mac.yml
-coily ansible-sync                        # dry run (--check --diff), mutates nothing
-coily ansible-sync action=apply           # converge for real
-coily ansible-sync tags=git               # scope to one role (here: the git sweep)
+ward exec ansible-sync                        # dry run (--check --diff), mutates nothing
+ward exec ansible-sync action=apply           # converge for real
+ward exec ansible-sync tags=git               # scope to one role (here: the git sweep)
 ```
 
 Ansible ships as the `ansible` dependency in the repo's `pyproject.toml`

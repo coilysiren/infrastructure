@@ -53,4 +53,4 @@ echo "bootstrap: converging host via ansible sync (apply)"
 ( cd "$INFRA" && uv run python scripts/ansible/sync.py apply )
 
 echo "bootstrap: done. Host is ansible-managed; re-converge anytime with"
-echo "  coily ansible-sync            # or: uv run python scripts/ansible/sync.py apply"
+echo "  ward exec ansible-sync            # or: uv run python scripts/ansible/sync.py apply"
