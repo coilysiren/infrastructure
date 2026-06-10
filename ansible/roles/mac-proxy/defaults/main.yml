@@ -1,0 +1,5 @@
+# mac-proxy defaults. Off everywhere; group_vars/mac.yml flips it on for macs.
+mac_proxy_enabled: false
+mac_proxy_dir: "{{ ansible_env.HOME }}/.config/mac-proxy"
+mac_proxy_ssm_param: /coilysiren/mac-proxy/ts-authkey
+mac_proxy_port: 1055

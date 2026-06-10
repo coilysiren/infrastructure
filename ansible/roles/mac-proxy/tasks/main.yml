@@ -1,0 +1,50 @@
+# Converge the mac-proxy SOCKS5 tailscale container. See docs/FEATURES.md.
+- name: Converge the mac-proxy SOCKS5 container
+  when:
+    - mac_proxy_enabled | bool
+    - not ansible_check_mode
+  block:
+    - name: Check for the docker CLI
+      ansible.builtin.shell: command -v docker
+      register: mac_proxy_docker
+      changed_when: false
+      failed_when: false
+
+    - name: Converge the compose file and container
+      when: mac_proxy_docker.rc == 0
+      block:
+        - name: Ensure the compose dir exists
+          ansible.builtin.file:
+            path: "{{ mac_proxy_dir }}"
+            state: directory
+            mode: "0755"
+
+        - name: Install the compose file
+          ansible.builtin.copy:
+            src: compose.yaml
+            dest: "{{ mac_proxy_dir }}/compose.yaml"
+            mode: "0644"
+          register: mac_proxy_compose
+
+        - name: Query the running container
+          ansible.builtin.command: docker ps --filter name=mac-proxy-tailscale --filter status=running -q
+          register: mac_proxy_running
+          changed_when: false
+          failed_when: false
+
+        - name: Bring up the proxy with the auth key injected from SSM
+          ansible.builtin.shell: |
+            TS_AUTHKEY="$(coily ops aws ssm get-parameter \
+              --name {{ mac_proxy_ssm_param }} --with-decryption \
+              --query Parameter.Value --output text)" docker compose up -d
+          args:
+            chdir: "{{ mac_proxy_dir }}"
+          when: mac_proxy_compose.changed or (mac_proxy_running.stdout | trim) == ''
+          register: mac_proxy_up
+          changed_when: mac_proxy_up.rc == 0
+
+        - name: Wait for the SOCKS5 listener
+          ansible.builtin.wait_for:
+            host: 127.0.0.1
+            port: "{{ mac_proxy_port }}"
+            timeout: 60

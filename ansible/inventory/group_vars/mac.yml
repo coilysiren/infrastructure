@@ -143,6 +143,8 @@ ollama_models:
   - qwen3.5:9b-mlx
 ollama_debug: true
 
+mac_proxy_enabled: true
+
 system_python3_packages:
   - PyYAML
 

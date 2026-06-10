@@ -1,0 +1,12 @@
+# Tailscale SOCKS5 proxy, userspace mode - host-VPN-safe (tooling-tailscale skill).
+services:
+  tailscale:
+    image: tailscale/tailscale:latest
+    hostname: mac-proxy
+    environment:
+      TS_AUTHKEY: ${TS_AUTHKEY}
+      TS_USERSPACE: "true"
+      TS_SOCKS5_SERVER: 0.0.0.0:1055
+    ports:
+      - "127.0.0.1:1055:1055"
+    restart: unless-stopped
