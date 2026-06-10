@@ -19,6 +19,16 @@ Type=simple
 Restart=always
 RestartSec=30
 User=kai
+# The daemon repaints its interactive TUI status screen (Capacity, Attached,
+# QR-code prompt) to stdout ~once per second. Under systemd (no tty) journald
+# captured every frame: ~570k lines per uptime-week from this one unit, a real
+# chunk of the 4GB journal. `claude remote-control` exposes no quiet/headless
+# flag, so drop stdout to null and keep only stderr (real errors) in the
+# journal. Use `claude remote-control --debug-file <path>` if deep diagnostics
+# are ever needed.
+# See https://forgejo.coilysiren.me/coilyco-flight-deck/infrastructure/issues/283
+StandardOutput=null
+StandardError=journal
 # projects is the umbrella parent of the org dirs (coilysiren,
 # coilyco-flight-deck, coilyco-bridge), not a repo itself, so
 # `--spawn worktree` cannot apply. All three hosts (kai-server, WSL,
