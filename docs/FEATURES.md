@@ -85,5 +85,6 @@ Baseline of `coilysiren/infrastructure`. Update when scope changes.
 - [README.md](../README.md) - human-facing intro.
 - [AGENTS.md](../AGENTS.md) - agent-facing operating rules.
 - [.coily/coily.yaml](../.coily/coily.yaml) - allowlisted commands.
+- [.ward/ward.yaml](../.ward/ward.yaml) - ward-allowlisted commands for this repo.
 
 Cross-reference convention from [coilysiren/agentic-os-kai#313](https://github.com/coilysiren/agentic-os-kai/issues/313).

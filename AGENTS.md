@@ -28,7 +28,7 @@ Confirm before kubectl writes and any cloud write that can clobber state (SSM `p
 
 ## Cross-repo contracts
 
-**Before touching any k3s / Tailscale / cert-manager thing, read [`docs/k3s-deploy-notes.md`](docs/k3s-deploy-notes.md).** It covers kai-server topology, the SSM parameter inventory, the six GitHub repo secrets every deployable repo needs, the canonical GHA workflow / k8s manifest / Makefile shapes, every trap hit across four repos with one-line fixes, a new-repo setup checklist, and a deploy-failure triage tree. When you resolve a new pitfall, add it to §7 and §9 there.
+**Before touching any k3s / Tailscale / cert-manager thing, read [`docs/k3s-deploy-notes.md`](docs/k3s-deploy-notes.md).** It covers kai-server topology, the SSM inventory, the six repo secrets every deployable repo needs, canonical GHA / k8s / Makefile shapes, traps with one-line fixes, a new-repo checklist, and a deploy-failure triage tree. When you resolve a new pitfall, add it to §7 and §9 there.
 
 ## Release
 
@@ -43,5 +43,6 @@ Commit directly to `main`, push after each commit, no per-push confirm (subject 
 - [README.md](README.md) - human-facing intro.
 - [docs/FEATURES.md](docs/FEATURES.md) - inventory of what ships today.
 - [.coily/coily.yaml](.coily/coily.yaml) - allowlisted commands. Agents route through coily, not bare `make` / `uv` / `python`.
+- [.ward/ward.yaml](.ward/ward.yaml) - ward command allowlist.
 
 Cross-reference convention from [coilysiren/agentic-os-kai#313](https://github.com/coilysiren/agentic-os-kai/issues/313).

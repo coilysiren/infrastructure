@@ -48,5 +48,6 @@ Dev commands are declared in [`.coily/coily.yaml`](.coily/coily.yaml). Run them 
 - [AGENTS.md](AGENTS.md) - agent-facing operating rules.
 - [docs/FEATURES.md](docs/FEATURES.md) - inventory of what ships today.
 - [.coily/coily.yaml](.coily/coily.yaml) - allowlisted commands. Agents route through coily, not bare `make` / `uv` / `python` / `npm` / `cargo` / `dotnet`.
+- [.ward/ward.yaml](.ward/ward.yaml) - ward-allowlisted commands for this repo.
 
 Cross-reference convention from [coilysiren/agentic-os-kai#313](https://github.com/coilysiren/agentic-os-kai/issues/313).

@@ -1,9 +1,4 @@
-# Converge agent-compose: render the per-machine config, then run the composer
-# to write COMPOSED.md + harness load-point symlinks. See docs/ansible.md.
-
-# Work hosts resolve the employer projects subdir from SSM (set in group_vars)
-# so the name stays out of tracked vars. Skipped on hosts that leave the SSM
-# path empty (personal macs), and in check mode the read is harmless + cached.
+# Converge agent-compose: render config, run the composer. See docs/ansible.md.
 - name: Resolve the work overlay subdir from SSM
   ansible.builtin.command:
     cmd: "coily ops aws ssm get-parameter --name {{ agent_compose_work_subdir_ssm }} --query Parameter.Value --output text"

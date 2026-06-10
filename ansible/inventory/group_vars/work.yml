@@ -1,12 +1,4 @@
-# Vars for the `work` group: employer-owned macs. Child of `mac`, so it inherits
-# the Homebrew baseline from mac.yml and overrides only the agent-compose source
-# selection here. See docs/ansible.md for the role walkthrough.
-
-# Work-host compose profile: public base + work overlay, NO kai-private overlay.
-# The work overlay path is built from agent_compose_work_root, which the role
-# resolves from the SSM param below at converge time. The employer name never
-# appears in this tracked file. It lives in SSM and the host-local rendered
-# config (~/.config/agent-compose/agent-compose.yaml), both untracked.
+# Vars for the work group (employer-owned macs). Overlay scheme: docs/ansible.md.
 agent_compose_work_subdir_ssm: /coilysiren/work/projects-subdir
 
 agent_compose_sources:
