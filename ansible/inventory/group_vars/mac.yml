@@ -131,6 +131,7 @@ homebrew_cask_apps:
   - hammerspoon
   - headlamp
   - intellij-idea-ce
+  - karabiner-elements
   - ngrok
   - obsidian
   - orbstack
