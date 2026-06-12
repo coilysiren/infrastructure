@@ -2,14 +2,14 @@
 """Run terraform against `terraform/tailscale/`.
 
 Single stack owning the full tailnet surface: ACL policy, per-physical
-device tags, federated identities for CI repos, per-service auth keys,
-and the SSM params holding those keys. Merged from the prior
-tailscale-{policy,oidc,devices} stacks.
+device tags, per-service auth keys, and the SSM params holding those
+keys. Merged from the prior tailscale-{policy,oidc,devices} stacks;
+the OIDC federated identities for CI repos are since retired.
 
-Admin OAuth pair comes from the operator's shell env
-(TAILSCALE_OAUTH_CLIENT_ID + TAILSCALE_OAUTH_CLIENT_SECRET), never SSM.
-all:write needed for tailscale_acl, tailscale_device_tags,
-tailscale_tailnet_key, and tailscale_federated_identity.
+Admin credentials come from the operator's shell env (TAILSCALE_API_KEY,
+or the TAILSCALE_OAUTH_CLIENT_ID + TAILSCALE_OAUTH_CLIENT_SECRET pair),
+never SSM. Admin scope needed for tailscale_acl, tailscale_device_tags,
+and tailscale_tailnet_key.
 
 Usage: terraform_tailscale.py [action]   # default: plan
 """

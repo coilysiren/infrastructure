@@ -14,7 +14,6 @@ DEFAULT_GOAL := help
 	terraform-tailscale-merge \
 	dump-tailscale-acl \
 	list-tailscale-devices \
-	sync-tailscale-oidc-secrets \
 	llama-deploy \
 	llama-deploy-secrets \
 	lunch-money \
@@ -67,9 +66,6 @@ dump-tailscale-acl: ## Dump current tailnet policy via admin OAuth (round-trip t
 
 list-tailscale-devices: ## List every tailnet device with hostname, user, tags, addresses.
 	@uv run python scripts/k8s/list_tailscale_devices.py
-
-sync-tailscale-oidc-secrets: ## Push TS_CLIENT_ID + TS_AUDIENCE to each repo in terraform/tailscale/repos.yaml via gh CLI live auth.
-	@uv run python scripts/k8s/sync_tailscale_oidc_secrets.py
 
 llama-deploy: ## Apply llama/deploy.yml into the llama namespace.
 	@uv run python scripts/llama/deploy.py

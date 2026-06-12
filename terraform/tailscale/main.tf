@@ -41,12 +41,6 @@ locals {
   devices  = yamldecode(file("${path.module}/devices.yaml")).devices
   services = yamldecode(file("${path.module}/services.yaml")).services
 
-  # Strip the owner prefix; OIDC subject adds its own "repo:coilysiren/".
-  repos = [
-    for slug in yamldecode(file("${path.module}/repos.yaml")).repos :
-    trimprefix(slug, "coilysiren/")
-  ]
-
   # Per-service tagOwners. Empty list -> only admin OAuth can assign,
   # which matches the terraform-managed-auth-key flow.
   #
@@ -208,22 +202,11 @@ resource "tailscale_device_tags" "physical" {
   depends_on = [tailscale_acl.policy]
 }
 
-# One federated identity per deployable repo. The OIDC-array shape: every
-# repo gets its own client_id / audience pair, scoped to a single subject
-# (branch ref). Tighten to job_workflow_ref once the agent-driven trigger
-# replaces the main-push trigger.
-resource "tailscale_federated_identity" "ci" {
-  for_each = toset(local.repos)
-
-  # Tailscale caps description at 50 chars and rejects punctuation like
-  # ":" (400 keys: description had invalid characters). Stick to letters,
-  # digits, hyphens, spaces.
-  description = "CI deploy ${each.key}"
-  issuer      = "https://token.actions.githubusercontent.com"
-  subject     = "repo:coilysiren/${each.key}:ref:refs/heads/main"
-  scopes      = ["auth_keys"]
-  tags        = ["tag:ci"]
-}
+# GHA -> Tailscale OIDC federated identities used to live here (one per
+# deployable repo, from repos.yaml). Retired: GitHub Actions no longer
+# joins the tailnet. The identities were deleted console-side first, so
+# removal here is config-only. tag:ci ACL rules linger pending the
+# follow-up audit.
 
 # One auth key per service. preauthorized = the device enrolls without
 # needing manual admin approval in the console. reusable + ephemeral =
@@ -301,18 +284,6 @@ resource "aws_ssm_parameter" "mac_proxy_authkey" {
 output "tagged_devices" {
   description = "map of device short name -> tag list applied"
   value       = local.devices
-}
-
-output "client_ids" {
-  description = "map of repo name -> TS_CLIENT_ID (the federated identity id, marked sensitive)"
-  value       = { for k, v in tailscale_federated_identity.ci : k => v.id }
-  sensitive   = true
-}
-
-output "audiences" {
-  description = "map of repo name -> TS_AUDIENCE (the OIDC aud claim, marked sensitive)"
-  value       = { for k, v in tailscale_federated_identity.ci : k => v.audience }
-  sensitive   = true
 }
 
 output "ssm_paths" {

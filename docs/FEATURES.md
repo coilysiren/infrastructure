@@ -74,7 +74,7 @@ Baseline of `coilysiren/infrastructure`. Update when scope changes.
 - **Sudoers for game-server ops** - `sudoers/kai-game-servers`. Not auto-deployed.
 - **Pre-commit hooks** - Lint + secret scan.
 - **Single source of truth** - `docs/k3s-deploy-notes.md` is authoritative for homelab topology, SSM inventory, GitHub secrets, deploy shapes, triage.
-- **Tailscale OIDC for CI** - `terraform/tailscale/` mints a per-repo federated identity. Replaces the long-lived shared OAuth pair. See `docs/tailscale.md`.
+- **Tailscale tailnet module** - `terraform/tailscale/` owns the full tailnet: ACL policy, per-physical device tags (`devices.yaml` drives SSH reachability), per-service auth keys. Admin credentials are operator-held per apply, never SSM. The GHA OIDC federated identities it once minted are retired. See `docs/tailscale.md`.
 
 ## Out of scope
 

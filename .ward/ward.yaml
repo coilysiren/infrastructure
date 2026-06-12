@@ -40,9 +40,6 @@ commands:
   list-tailscale-devices:
     run: make list-tailscale-devices
     description: List every tailnet device with hostname, user, tags, addresses.
-  sync-tailscale-oidc-secrets:
-    run: make sync-tailscale-oidc-secrets
-    description: Push TS_CLIENT_ID + TS_AUDIENCE to each repo in terraform/tailscale/repos.yaml via gh CLI live auth.
   llama-deploy:
     run: make llama-deploy
     description: Apply llama/deploy.yml into the llama namespace.

@@ -1,8 +1,0 @@
-# Deployable repos getting a federated identity + TS_CLIENT_ID / TS_AUDIENCE pair (main).
-repos:
-  - "coilyco-flight-deck/backend"
-  - "coilyco-flight-deck/eco-jobs-tracker"
-  - "coilysiren/eco-mcp"
-  - "coilyco-flight-deck/galaxy-gen"
-  - "coilysiren/personal-dashboard"
-  - "coilyco-flight-deck/repo-recall"

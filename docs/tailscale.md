@@ -1,35 +1,16 @@
-# Tailscale OIDC for CI deploys
+# Tailscale tailnet module
 
-Per-repo federated identities, no long-lived shared OAuth secret. Tracker: [coilyco-flight-deck/infrastructure#177](https://github.com/coilyco-flight-deck/infrastructure/issues/177).
-
-## Why
-
-Today every deployable repo carries the same `/tailscale/oauth-client-id` + `/tailscale/oath-secret` (typo) pair, synced to GH repo secrets. One leak grants `tag:ci` to every repo until manual rotation. Federated identity flips this: GitHub Actions mints a short-lived OIDC token, Tailscale verifies the subject claim, and only the matching `client_id` + `audience` ever sits in the repo. No long-lived bearer.
+`terraform/tailscale/` owns the tailnet: the full ACL policy, per-physical device tags, per-service auth keys, and the SSM params holding those keys.
 
 ## Topology
 
-- `tailscale_federated_identity` per repo, keyed by repo name. Subject `repo:coilysiren/<name>:ref:refs/heads/main`, scope `auth_keys`, tags `["tag:ci"]`.
-- `github_actions_secret.TS_CLIENT_ID` and `TS_AUDIENCE` per repo.
 - `tailscale_acl.policy` carries the **full tailnet ACL** (groups, tagOwners, acls, ssh, nodeAttrs). The resource is a singleton in the Tailscale provider - applying it replaces the entire policy document. All tailnet edits go through this module; the admin console is read-only from here on.
-
-Workflow side:
-
-```yaml
-permissions:
-  id-token: write
-  contents: read
-steps:
-  - uses: tailscale/github-action@v4
-    with:
-      oauth-client-id: ${{ secrets.TS_CLIENT_ID }}
-      audience: ${{ secrets.TS_AUDIENCE }}
-      tags: tag:ci
-      use-cache: 'true'
-```
+- `tailscale_device_tags.physical` per physical host, driven by `devices.yaml`. A host needs `tag:physical` there to be SSH-reachable from the other physicals (the `tag:physical -> tag:physical` ssh rule). Tagging requires the device to be user-authed at tag time.
+- `tailscale_tailnet_key.service` per k3s service, driven by `services.yaml`, stashed to `/coilysiren/<service>/ts-authkey` for the in-Pod sidecars.
 
 ## Admin credentials (operator-held, per-apply)
 
-The module needs admin scope on api.tailscale.com to manage ACLs + federated identities. The credential is **operator-held only - never SSM, never any agent-readable store**. The tailnet ACL is the boundary that decides which machines an agent can SSH into, so its write credential must not be readable by the agents operating under that boundary. (It previously lived at `/tailscale/admin/oauth-client-{id,secret}` under `alias/admin-only`; that pattern is retired and the params are gone.)
+The module needs admin scope on api.tailscale.com to rewrite the ACL. The credential is **operator-held only - never SSM, never any agent-readable store**. The tailnet ACL is the boundary that decides which machines an agent can SSH into, so its write credential must not be readable by the agents operating under that boundary. (It previously lived at `/tailscale/admin/oauth-client-{id,secret}` under `alias/admin-only`; that pattern is retired and the params are gone.)
 
 Easy default - a personal access token from Kai's admin account:
 
@@ -46,7 +27,7 @@ Distinct from the runtime CI OAuth clients under `/tailscale/oauth/<service>/` (
 
 ## Module
 
-`terraform/tailscale/`. Kai runs it (the env carries the admin pair, so this is a human-driven verb, not an agent one):
+`terraform/tailscale/`. Kai runs it (the env carries the admin credential, so this is a human-driven verb, not an agent one):
 
 ```
 ward exec terraform-tailscale action=init
@@ -56,11 +37,11 @@ ward exec terraform-tailscale action=apply
 
 The wrapper validates that `TAILSCALE_API_KEY` (or the OAuth pair) is exported and hands the env to terraform. State at `s3://coilysiren-assets/terraform-state/infrastructure/tailscale.tfstate` (native lockfile, same shape as `terraform/grafana/`).
 
-Adding a repo: append to `terraform.tfvars` `repos = [{ name = "<repo>" }, ...]` and re-apply.
+Adding a physical host: add it to `devices.yaml` with `tag:physical` plus a `tag:<hostname>` entry, register the new tag in `tagOwners` in `main.tf`, apply. Adding a k3s service: append to `services.yaml`, apply, wire the ExternalSecret to the minted `/coilysiren/<service>/ts-authkey`.
 
 ## Host-side prereqs on kai-server
 
-Not managed by this module, file follow-ups under #177:
+Not managed by this module:
 
 1. `sudo tailscale set --ssh` - enables Tailscale SSH (off by default).
 2. `kai-server` advertises `tag:homelab`. Approve in admin console after ACL applies.
@@ -78,20 +59,10 @@ Not managed by this module, file follow-ups under #177:
    sudo install -m 600 -o deploy -g deploy /etc/rancher/k3s/k3s.yaml /home/deploy/.kube/config
    ```
 
-## Subject tightening
+## Retired: GHA -> Tailscale OIDC
 
-Initial subject is the branch ref. Once an agent-driven trigger replaces the `push: main` trigger (dark-factory deploy from agent-opened PRs), switch `subject` in `main.tf` to `job_workflow_ref:coilysiren/<name>/.github/workflows/deploy.yml@refs/heads/main` so the token only validates from the named workflow file.
-
-## Migration off the long-lived OAuth pair
-
-Per repo:
-
-1. Add to `repos` list, apply.
-2. Workflow swaps `oauth-secret: ${{ secrets.TS_OAUTH_SECRET }}` for the OIDC shape above.
-3. After a green deploy, drop the `TS_OAUTH_CLIENT_ID` / `TS_OAUTH_SECRET` repo secrets.
-4. When every consumer is migrated, retire `/tailscale/oauth-client-id` and `/tailscale/oath-secret` from SSM (`docs/k3s-deploy-notes.md` §6).
+The module used to mint one `tailscale_federated_identity` per deployable repo (from `repos.yaml`) so GitHub Actions could join the tailnet as `tag:ci` via OIDC, plus a `sync-tailscale-oidc-secrets` verb pushing `TS_CLIENT_ID` / `TS_AUDIENCE` to each repo. GitHub Actions no longer joins the tailnet, so the identities were deleted console-side and the resources, `repos.yaml`, and the sync verb are gone. The `tag:ci` / `group:ci` ACL rules linger pending a follow-up audit. History: [coilyco-flight-deck/infrastructure#177](https://github.com/coilyco-flight-deck/infrastructure/issues/177).
 
 ## See also
 
 - [docs/k3s-deploy-notes.md](k3s-deploy-notes.md) - homelab topology, SSM inventory.
-- [terraform/tailscale/README.md](../terraform/tailscale/README.md) - module shape and run instructions.
