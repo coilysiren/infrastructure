@@ -1,0 +1,4 @@
+# Personal class: adds kai-private over the public base. See docs/ansible.md.
+agent_compose_sources:
+  - "{{ agent_compose_aos_root }}/AGENTS.md"
+  - "{{ agent_compose_kai_root }}/AGENTS.md"

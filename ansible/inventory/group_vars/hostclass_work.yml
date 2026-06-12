@@ -1,4 +1,4 @@
-# Vars for the work group (employer-owned macs). Overlay scheme: docs/ansible.md.
+# Work class: swaps kai-private for the SSM-resolved overlay. See docs/ansible.md.
 agent_compose_work_subdir_ssm: /coilysiren/work/projects-subdir
 
 agent_compose_sources:

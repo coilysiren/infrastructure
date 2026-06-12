@@ -36,9 +36,20 @@ to `ansible/ansible.cfg` so playbooks run from the repo root.
   task results (`result_format=yaml`, since the old `community.general.yaml`
   stdout callback was removed in v12), host-key checking off, retry files off.
 - **`inventory/hosts.yml`** - bare `localhost` over a local connection (ansible
-  drives the box it runs on, no SSH). The sync play's first task `group_by`s
-  it into the `mac` or `linux` group by `ansible_system`, so one inventory is
-  correct on any machine. Remote hosts would need `ansible_host` + tailnet SSH.
+  drives the box it runs on, no SSH). The sync play's first tasks `group_by` it
+  into the `mac` or `linux` group by `ansible_system`, and into a host-class
+  group (`hostclass_work` | `hostclass_personal` | `hostclass_base`), so one
+  inventory is correct on any machine. Remote hosts would need `ansible_host` +
+  tailnet SSH.
+- **host class** - the agent-compose overlay is driven by `$AOS_HOST_CLASS`,
+  exported in a machine's `~/.shellrc.local` (sourced by the aos shell init, so
+  it reaches the interactive shell that launches the sync). `work` swaps in the
+  SSM-resolved employer overlay; `personal` adds the kai-private slice; unset
+  defaults **fail-safe** - Linux to `personal` (Kai's own boxes), Mac to `base`
+  (public slice only). That default is the leak guard: a fresh or mis-classed
+  employer Mac composes only the public base, never kai-private. The class group
+  is the single source of `agent_compose_sources`; the role default is the
+  public-base list. See `inventory/group_vars/hostclass_*.yml`.
 - **`inventory/group_vars/mac.yml`** - the declared baseline for the `mac` group:
   `homebrew_taps`, `homebrew_installed_packages`, `homebrew_cask_apps`,
   `agent_compose_scopes`, and `system_python3_packages` (pip packages
@@ -342,12 +353,14 @@ once Homebrew ships a fixed Tahoe bottle.
 
 ## Adding a host
 
-Add the host under the `mac` group in `inventory/hosts.yml`. A personal Mac goes
-straight under `mac` and picks up both the Homebrew baseline and the default
-(public base + kai-private) agent-compose config. An employer-owned Mac goes
-under the `work` child group instead, so it inherits the Homebrew baseline but
-swaps kai-private for the work overlay. Linux / kai-server roles are future work
-- the inventory and roles layout already accommodates more groups.
+The inventory stays a bare `localhost`; OS and host class are assigned by
+`group_by` at run time, so adding a host is just setting `$AOS_HOST_CLASS` on it.
+Export it in the host's `~/.shellrc.local`: `personal` for a Mac of Kai's (picks
+up the Homebrew baseline plus the kai-private overlay), `work` for an
+employer-owned Mac (Homebrew baseline, but swaps kai-private for the SSM-resolved
+work overlay). Leave it unset on a Linux box - those default to `personal`. Never
+leave an employer Mac unset and rely on a default: unset Mac is `base`
+(public-only) by design, so it is safe, but `work` is what gives it the overlay.
 
 On a bare host, run `bootstrap.sh` (the one script that survived the setup.sh
 retirement): it installs uv, clones the anchor repos (infrastructure, agentic-os,

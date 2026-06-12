@@ -10,6 +10,12 @@
       changed_when: false
       tags: [always]
 
+    - name: Add host to its class group from $AOS_HOST_CLASS, else fail-safe by OS
+      ansible.builtin.group_by:
+        key: "hostclass_{{ lookup('env', 'AOS_HOST_CLASS') or ('personal' if ansible_system != 'Darwin' else 'base') }}"
+      changed_when: false
+      tags: [always]
+
 - name: Freshen host
   hosts: all
   gather_facts: false
