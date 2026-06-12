@@ -731,6 +731,21 @@ One line per trap. Every fix here has a commit in some repo's history.
   included), then re-test cross-node reach before expecting runners to
   register. Until that lands the runners can't live on any worker node,
   and #151 forbids kai-server. (coilyco-flight-deck/infrastructure#163)
+  **UPDATE 2026-06-12**: this stalemate finally took CI fully down for
+  ~6 days. Stopgap was to return the runners to kai-server (delete the
+  stranded PVCs, evict the ghost worker nodes); see the change-log entry.
+  The durable fix is still #163, or move the main runners to the
+  DinD-free host-executor model the tap-writer uses (no privileged DinD =
+  no bridge churn = safe on kai-server, sidesteps #151 entirely).
+- **`forgejo-runner-tap-writer` pod CrashLoops with `ERROR: Unable to
+  open log: Permission denied` (exit 99) and never serves a job** → the
+  `forgejo/runner:12` image runs as uid 1000, but this StatefulSet's
+  host-executor startup script needs root: `apk add` (the toolchain
+  loop), `git config --system` (`/etc/gitconfig`), and writing the cred
+  helper to `/usr/local/bin`. The misleading "open log" string is apk's
+  non-root failure. Add `securityContext.runAsUser: 0` to the runner
+  container; the init container only writes to `/data` (777) so it stays
+  uid 1000. (coilyco-flight-deck/infrastructure#305)
 
 ## 8. First-time setup checklist for a new repo
 
@@ -1005,3 +1020,16 @@ Forgejo job as a kubeconfig secret pointing at
   unit's Main PID and its `Type=notify` `sd_notify READY` reaches
   systemd. Without it `systemctl restart k3s` hung forever in
   `activating` even though k3s was healthy. (#170)
+- 2026-06-12 — forgejo CI had been fully down ~6 days: the #151/#163
+  stalemate manifesting. The runner `local-path` PVCs were stranded on
+  `kai-desktop-tower-wsl` (node went NotReady), so `forgejo-runner-0`
+  hit `volume node affinity conflict` and StatefulSet ordering kept
+  `-1` from ever starting → 0/2 runners, every job queued. Stopgap:
+  deleted the stranded PVCs and let the StatefulSet re-provision on
+  kai-server (matches the current manifest — no nodeSelector), then
+  evicted the two NotReady ghost nodes (`kai-desktop-tower-wsl`,
+  `kai-macbook-pro-vm`). CI restored. Caveat: runners are back on
+  kai-server, re-arming #151's DinD host-network flap during CI runs;
+  durable fix is #163 (cross-node flannel) or the DinD-free
+  host-executor model. Separately fixed the long-broken tap-writer
+  runner — non-root `apk` (#305). (§7, #304)
