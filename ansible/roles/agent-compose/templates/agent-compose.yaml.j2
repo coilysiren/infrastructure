@@ -1,6 +1,6 @@
 # Managed by ansible (infrastructure/ansible/roles/agent-compose). Do not
 # hand-edit: change group_vars / role defaults and re-converge with
-# `coily ansible-mac action=apply`.
+# `ward exec ansible-sync action=apply tags=agent-compose`.
 #
 # Presence of this file activates agent-compose. It composes COMPOSED.md from
 # the sources below and points each harness global load point at it by symlink.
@@ -10,6 +10,12 @@ sources:
 {% for source in agent_compose_sources %}
   - {{ source }}
 {% endfor %}
+{% if agent_compose_roots | default([]) | length > 0 %}
+roots:
+{% for root in agent_compose_roots %}
+  - {{ root }}
+{% endfor %}
+{% endif %}
 load_points:
   claude: {{ agent_compose_load_points.claude }}
   codex: {{ agent_compose_load_points.codex }}

@@ -10,6 +10,9 @@ agent_compose_sources:
   - "{{ agent_compose_aos_root }}/AGENTS.md"
   - "{{ agent_compose_kai_root }}/AGENTS.md"
 
+agent_compose_roots:
+  - "{{ ansible_env.HOME }}/.config/agent-compose/sources"
+
 agent_compose_load_points:
   claude: "{{ ansible_env.HOME }}/.claude/CLAUDE.md"
   codex: "{{ ansible_env.HOME }}/.codex/AGENTS.md"

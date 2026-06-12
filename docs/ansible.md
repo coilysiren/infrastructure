@@ -144,7 +144,7 @@ Owns the per-machine cross-harness context config. It renders
 `~/.config/agent-compose/agent-compose.yaml` from `agent_compose_sources`
 (per host class in group_vars) plus the fleet-static load points in
 `roles/agent-compose/defaults/main.yml`, then runs the composer
-(`python3 -m agentic_os.agent_compose`) to write `COMPOSED.md` and point each
+(`python3 -m agentic_os.generators.generate_agent_compose`) to write `COMPOSED.md` and point each
 harness's global load point (Claude Code `~/.claude/CLAUDE.md`, Codex
 `~/.codex/AGENTS.md`) at it by symlink. The only per-machine bit is the source
 list, which is why this is an Ansible var lookup rather than a hand-edited file.
@@ -157,6 +157,15 @@ is left off and `agent_compose_sources` is a flat ordered list. The `mac` group'
 default is the personal-machine pair (public base + kai-private overlay). The
 `work` child group (`group_vars/work.yml`) is for employer-owned machines: public
 base + a work overlay, **never kai-private**.
+
+Beyond the per-host source list, the role wires the composer's `roots` discovery
+(forgejo #136): `agent_compose_roots` defaults to
+`~/.config/agent-compose/sources/`, the role ensures the directory exists, and
+the rendered config lists it under `roots`. Any `AGENTS.COMPOSE.md` dropped
+under that directory composes in after the explicit sources, with no config or
+converge needed for the file itself. This is the home for host-local doctrine
+that must stay uncommitted and outside every repo - personal overlays, host-only
+overrides - while still reaching every harness load point.
 
 The work overlay lives in the employer workspace, so its path carries the
 employer name, which must not land in tracked vars. `work.yml` instead names an

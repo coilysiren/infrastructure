@@ -18,6 +18,13 @@
     state: directory
     mode: "0755"
 
+- name: Ensure the host-local doctrine drop-dirs exist
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    mode: "0755"
+  loop: "{{ agent_compose_roots }}"
+
 - name: Render the per-machine agent-compose config
   ansible.builtin.template:
     src: agent-compose.yaml.j2
@@ -26,7 +33,7 @@
 
 - name: Compose COMPOSED.md and converge harness symlinks
   ansible.builtin.command:
-    cmd: "python3 -m agentic_os.agent_compose{{ ' --dry-run' if ansible_check_mode else '' }}"
+    cmd: "python3 -m agentic_os.generators.generate_agent_compose{{ ' --dry-run' if ansible_check_mode else '' }}"
   environment:
     PYTHONPATH: "{{ agent_compose_aos_root }}"
   register: agent_compose_run
