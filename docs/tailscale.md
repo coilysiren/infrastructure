@@ -27,17 +27,20 @@ steps:
       use-cache: 'true'
 ```
 
-## Admin OAuth client (operator-held, per-apply)
+## Admin credentials (operator-held, per-apply)
 
-The module needs admin scope on api.tailscale.com to manage ACLs + federated identities. The pair is **operator-held only - never SSM, never any agent-readable store**. The tailnet ACL is the boundary that decides which machines an agent can SSH into, so its write credential must not be readable by the agents operating under that boundary. (The pair previously lived at `/tailscale/admin/oauth-client-{id,secret}` under `alias/admin-only`; that pattern is retired and the params are gone.)
+The module needs admin scope on api.tailscale.com to manage ACLs + federated identities. The credential is **operator-held only - never SSM, never any agent-readable store**. The tailnet ACL is the boundary that decides which machines an agent can SSH into, so its write credential must not be readable by the agents operating under that boundary. (It previously lived at `/tailscale/admin/oauth-client-{id,secret}` under `alias/admin-only`; that pattern is retired and the params are gone.)
 
-1. Generate at <https://login.tailscale.com/admin/settings/trust-credentials> -> **Credential** -> **OAuth**. Scope `all:write`. Description "infrastructure terraform - tailscale-oidc module". Copy both halves immediately - the secret can't be retrieved after closing the dialog.
-2. Export both halves in the shell that runs the verb:
+Easy default - a personal access token from Kai's admin account:
+
+1. Generate at <https://login.tailscale.com/admin/settings/keys> -> **Generate access token**. Pick a short expiry, the token only needs to outlive the apply session.
+2. Export it in the shell that runs the verb:
    ```
-   export TAILSCALE_OAUTH_CLIENT_ID=FILL_ME_IN
-   export TAILSCALE_OAUTH_CLIENT_SECRET=FILL_ME_IN
+   export TAILSCALE_API_KEY=FILL_ME_IN
    ```
-3. Run the module verbs (below), then close the shell. Revoking the client in the console afterward and minting a fresh one per apply session is cheap and preferred.
+3. Run the module verbs (below), then close the shell. Revoke the token in the console if it has life left.
+
+Alternative - an OAuth client (`all:write`) from <https://login.tailscale.com/admin/settings/trust-credentials>, exported as `TAILSCALE_OAUTH_CLIENT_ID` + `TAILSCALE_OAUTH_CLIENT_SECRET`. Same handling, two halves instead of one. The wrapper accepts either form; the provider's `scopes` argument only applies to the OAuth flow and is inert under api-key auth.
 
 Distinct from the runtime CI OAuth clients under `/tailscale/oauth/<service>/` (narrow scopes) - those stay in SSM because they can't rewrite policy.
 
@@ -51,7 +54,7 @@ ward exec terraform-tailscale action=plan
 ward exec terraform-tailscale action=apply
 ```
 
-The wrapper validates `TAILSCALE_OAUTH_CLIENT_ID` + `TAILSCALE_OAUTH_CLIENT_SECRET` are exported and hands the env to terraform. State at `s3://coilysiren-assets/terraform-state/infrastructure/tailscale.tfstate` (native lockfile, same shape as `terraform/grafana/`).
+The wrapper validates that `TAILSCALE_API_KEY` (or the OAuth pair) is exported and hands the env to terraform. State at `s3://coilysiren-assets/terraform-state/infrastructure/tailscale.tfstate` (native lockfile, same shape as `terraform/grafana/`).
 
 Adding a repo: append to `terraform.tfvars` `repos = [{ name = "<repo>" }, ...]` and re-apply.
 

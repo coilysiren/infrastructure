@@ -42,11 +42,13 @@ def terraform_run(chdir, *, env=None, auto_approve=False):
 
 
 def tailscale_admin_bearer():
-    """Exchange the admin OAuth client_credentials for a short-lived bearer.
+    """Resolve a bearer for the Tailscale REST API at api.tailscale.com.
 
-    Returned token authorizes the Tailscale REST API at api.tailscale.com.
-    Used by helpers that need to hit the API directly rather than via the
-    terraform provider (dump_tailscale_acl, list_tailscale_devices, etc.).
+    A personal access token (TAILSCALE_API_KEY) is already a valid
+    bearer and returns as-is. An OAuth pair gets exchanged via
+    client_credentials for a short-lived access token. Used by helpers
+    that hit the API directly rather than via the terraform provider
+    (dump_tailscale_acl, list_tailscale_devices, etc.).
     """
     import base64  # pylint: disable=import-outside-toplevel
     import json as _json  # pylint: disable=import-outside-toplevel
@@ -54,6 +56,8 @@ def tailscale_admin_bearer():
     import urllib.request  # pylint: disable=import-outside-toplevel
 
     env = tailscale_admin_oauth_env()
+    if env.get("TAILSCALE_API_KEY"):
+        return env["TAILSCALE_API_KEY"]
     req = urllib.request.Request(
         "https://api.tailscale.com/api/v2/oauth/token",
         data=urllib.parse.urlencode({"grant_type": "client_credentials"}).encode(),
@@ -69,29 +73,32 @@ def tailscale_admin_bearer():
 
 
 def tailscale_admin_oauth_env():
-    """A copy of os.environ validated to carry the admin Tailscale OAuth
-    pair, ready to hand to terraform.
+    """A copy of os.environ validated to carry admin Tailscale API
+    credentials, ready to hand to terraform.
 
-    The admin pair (all:write scope) rewrites the tailnet ACL, the
-    boundary that decides which machines an agent can SSH into - so it
-    must never sit in SSM or any other agent-readable store. The
-    operator mints it in the Tailscale admin console and exports both
-    halves in the shell that runs the verb. Distinct from the runtime
-    CI clients under /tailscale/oauth/. Plaintext is passed via env,
-    never echoed or persisted.
+    Either form works, the provider reads both: TAILSCALE_API_KEY (a
+    personal access token from the admin console Keys page, the easy
+    default for human-run applies) or the TAILSCALE_OAUTH_CLIENT_ID +
+    TAILSCALE_OAUTH_CLIENT_SECRET pair (all:write). The credential
+    rewrites the tailnet ACL, the boundary that decides which machines
+    an agent can SSH into - so it must never sit in SSM or any other
+    agent-readable store. The operator exports it in the shell that
+    runs the verb. Distinct from the runtime CI clients under
+    /tailscale/oauth/. Plaintext is passed via env, never echoed or
+    persisted.
     """
     env = os.environ.copy()
-    missing = [
-        name
-        for name in ("TAILSCALE_OAUTH_CLIENT_ID", "TAILSCALE_OAUTH_CLIENT_SECRET")
-        if not env.get(name)
-    ]
-    if missing:
+    has_api_key = bool(env.get("TAILSCALE_API_KEY"))
+    has_oauth = bool(
+        env.get("TAILSCALE_OAUTH_CLIENT_ID") and env.get("TAILSCALE_OAUTH_CLIENT_SECRET")
+    )
+    if not (has_api_key or has_oauth):
         sys.exit(
-            "missing env: " + ", ".join(missing) + ". Mint an all:write OAuth "
-            "client at https://login.tailscale.com/admin/settings/trust-credentials "
-            "and export both halves in this shell. The admin pair stays out of SSM "
-            "by design (docs/tailscale.md)."
+            "missing env: export TAILSCALE_API_KEY (access token from "
+            "https://login.tailscale.com/admin/settings/keys) or the "
+            "TAILSCALE_OAUTH_CLIENT_ID + TAILSCALE_OAUTH_CLIENT_SECRET pair "
+            "in this shell. Admin creds stay out of SSM by design "
+            "(docs/tailscale.md)."
         )
     return env
 
