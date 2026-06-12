@@ -10,6 +10,12 @@ devices:
   kai-desktop-tower-wsl:
     - tag:physical
     - tag:kai-desktop-tower-wsl
+  kai-tower-3026:
+    - tag:physical
+    - tag:kai-tower-3026
+  kai-tower-3026-wsl:
+    - tag:physical
+    - tag:kai-tower-3026-wsl
   kai-windows-laptop:
     - tag:physical
     - tag:kai-windows-laptop
