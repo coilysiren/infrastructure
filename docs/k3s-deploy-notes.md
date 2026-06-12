@@ -1052,3 +1052,17 @@ Forgejo job as a kubeconfig secret pointing at
   flap. The "pod bridges flush host iptables" story was wrong
   (per-netns tables, nft backend); the original flap was an
   earlier-stack artifact. (#151)
+- 2026-06-12 — defense-in-depth for control-plane starvation: added
+  `--kubelet-arg=system-reserved=cpu=1000m,memory=1Gi` and
+  `--kubelet-arg=kube-reserved=cpu=1000m,memory=1Gi` to the `k3s
+  server` line in `scripts/k3s-start.sh`. On the 28-core / 31Gi box
+  this reserves 2 cpu + 2Gi for OS + k3s; with the default
+  `--enforce-node-allocatable=pods` the pods cgroup is capped at
+  Allocatable (~26 cpu), so pod overcommit can't starve apiserver/sshd.
+  Takes effect only on k3s restart. **Apply caveat**: the live
+  `k3s.service` ExecStart runs `~/projects/infrastructure/scripts/
+  k3s-start.sh` - a STALE pre-migration checkout (GitHub remote,
+  commit 6742868), NOT this canonical org-dir repo. So this commit
+  does not deploy until that script is synced (or the unit re-pointed
+  at the org-dir checkout) and k3s restarted with `--no-block` (#170).
+  The stale-checkout drift is tracked separately. (#151)

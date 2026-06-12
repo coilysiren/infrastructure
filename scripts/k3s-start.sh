@@ -21,4 +21,6 @@ done
 exec /usr/local/bin/k3s server \
   --write-kubeconfig-mode=0644 \
   --node-ip="$NODE_IP" \
-  --flannel-iface=tailscale0
+  --flannel-iface=tailscale0 \
+  --kubelet-arg=system-reserved=cpu=1000m,memory=1Gi \
+  --kubelet-arg=kube-reserved=cpu=1000m,memory=1Gi
