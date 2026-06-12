@@ -680,16 +680,28 @@ One line per trap. Every fix here has a commit in some repo's history.
   isn't present. (coilyco-flight-deck/infrastructure#292)
 - **Host TCP listeners on kai-server (sshd:22, apiserver:6443,
   tailscaled PeerAPI) flap during forgejo-runner workflow runs while
-  pod-network ingress (caddy 80/443) keeps serving** → privileged DinD
-  sidecar in the runner pod creates/destroys `br-XXXXXXXX` bridges in
-  bursts, racing k3s kube-proxy's iptables sync. Host-namespace
-  forward rules get torn down and rebuilt; pod-net rules stay healthy
-  because flannel + kube-proxy own them. `tailscale ping` still works
-  (control plane up), TCP listeners timeout (not refused). Fix: pin
-  the runner StatefulSet to a worker node (`kai-desktop-tower-wsl`)
-  via `nodeSelector` so the bridge churn doesn't share a netns with
-  load-bearing host services. Don't try `dockerd --iptables=false`,
-  that's a trap. (coilyco-flight-deck/infrastructure#151)
+  pod-network ingress (caddy 80/443) keeps serving; listeners time out,
+  not refuse** → the original note blamed the privileged DinD sidecar's
+  `br-XXXX` bridge churn "flushing host iptables." That mechanism is
+  wrong: netfilter tables are per-netns, the DinD shares the *pod* netns
+  (not `hostNetwork`), iptables is now the `nft` backend (incremental,
+  no global-lock full-table swap), and `bridge-nf-call-iptables` is
+  per-netns on kernel 6.8. Pod-local routing cannot edit host chains.
+  Timeout-not-refuse means SYNs are *dropped*, which points at
+  node-global kernel resources that build egress still transits in the
+  host netns: the conntrack table, CPU/softirq, and flannel/NodePort
+  NAT. **Measured 2026-06-12** (`scripts/node-pressure-probe.sh`, max
+  DinD load): conntrack peaked 0% (1.5k/917k), load 11% (the pod's
+  ~3-core cgroup cap holds it well off the 28 cores), apiserver `/livez`
+  1-3ms, zero timeouts - the flap does NOT reproduce as currently
+  configured. The original flap was almost certainly an earlier-stack
+  artifact (legacy iptables global locking, looser/absent pod CPU
+  limits, or a smaller conntrack ceiling). Defense-in-depth, not a live
+  fire: keep the runner pod CPU limits, and reserve control-plane
+  headroom via kubelet `--system-reserved`/`--kube-reserved` in the k3s
+  config. Don't bother with the `nodeSelector`-to-worker pin for
+  *this* reason, and don't try `dockerd --iptables=false`, that's a
+  trap. (coilyco-flight-deck/infrastructure#151)
 - **`systemctl restart k3s` blocks forever, unit stuck in
   `activating`, k3s itself healthy (node Ready, workloads running)** →
   the `Type=notify` unit ran k3s as a non-`exec` child of the bash
@@ -1033,3 +1045,10 @@ Forgejo job as a kubeconfig secret pointing at
   durable fix is #163 (cross-node flannel) or the DinD-free
   host-executor model. Separately fixed the long-broken tap-writer
   runner — non-root `apk` (#305). (§7, #304)
+- 2026-06-12 — corrected the §7 host-listener-flap mechanism after
+  measuring it. Added `scripts/node-pressure-probe.sh` (conntrack +
+  loadavg + apiserver-latency sampler) and drove a max DinD load
+  through a runner pod: conntrack 0%, load 11%, apiserver 1-3ms, no
+  flap. The "pod bridges flush host iptables" story was wrong
+  (per-netns tables, nft backend); the original flap was an
+  earlier-stack artifact. (#151)
