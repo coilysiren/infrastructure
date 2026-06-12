@@ -80,6 +80,8 @@ spec:
       containers:
         - name: runner
           image: data.forgejo.org/forgejo/runner:12
+          securityContext:
+            runAsUser: 0
           command:
             - /bin/sh
             - -c
