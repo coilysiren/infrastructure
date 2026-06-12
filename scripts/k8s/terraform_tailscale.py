@@ -6,9 +6,10 @@ device tags, federated identities for CI repos, per-service auth keys,
 and the SSM params holding those keys. Merged from the prior
 tailscale-{policy,oidc,devices} stacks.
 
-Admin OAuth pair at /tailscale/admin/oauth-client-{id,secret}. all:write
-needed for tailscale_acl, tailscale_device_tags, tailscale_tailnet_key,
-and tailscale_federated_identity.
+Admin OAuth pair comes from the operator's shell env
+(TAILSCALE_OAUTH_CLIENT_ID + TAILSCALE_OAUTH_CLIENT_SECRET), never SSM.
+all:write needed for tailscale_acl, tailscale_device_tags,
+tailscale_tailnet_key, and tailscale_federated_identity.
 
 Usage: terraform_tailscale.py [action]   # default: plan
 """

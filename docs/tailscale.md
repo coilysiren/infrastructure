@@ -27,38 +27,31 @@ steps:
       use-cache: 'true'
 ```
 
-## Admin OAuth client (one-time setup)
+## Admin OAuth client (operator-held, per-apply)
 
-The module needs admin scope on api.tailscale.com to manage ACLs + federated identities. OAuth client over personal API key because the client itself never expires (only short-lived access tokens it mints, which the provider rotates transparently); API keys cap at 90 days.
+The module needs admin scope on api.tailscale.com to manage ACLs + federated identities. The pair is **operator-held only - never SSM, never any agent-readable store**. The tailnet ACL is the boundary that decides which machines an agent can SSH into, so its write credential must not be readable by the agents operating under that boundary. (The pair previously lived at `/tailscale/admin/oauth-client-{id,secret}` under `alias/admin-only`; that pattern is retired and the params are gone.)
 
 1. Generate at <https://login.tailscale.com/admin/settings/trust-credentials> -> **Credential** -> **OAuth**. Scope `all:write`. Description "infrastructure terraform - tailscale-oidc module". Copy both halves immediately - the secret can't be retrieved after closing the dialog.
-2. Apply `terraform/admin-kms/` first if it isn't already - that ships the `alias/admin-only` KMS key whose policy gates access at the resource layer (SSM itself has no resource policies). See `terraform/admin-kms/README.md`.
-3. Stash in SSM under that key:
+2. Export both halves in the shell that runs the verb:
    ```
-   coily ops aws ssm put-parameter \
-     --name /tailscale/admin/oauth-client-id \
-     --type SecureString --key-id alias/admin-only \
-     --value FILL_ME_IN
-   coily ops aws ssm put-parameter \
-     --name /tailscale/admin/oauth-client-secret \
-     --type SecureString --key-id alias/admin-only \
-     --value FILL_ME_IN
+   export TAILSCALE_OAUTH_CLIENT_ID=FILL_ME_IN
+   export TAILSCALE_OAUTH_CLIENT_SECRET=FILL_ME_IN
    ```
-4. Add both to the SSM inventory in `docs/k3s-deploy-notes.md` §6, noting they're under `alias/admin-only`.
+3. Run the module verbs (below), then close the shell. Revoking the client in the console afterward and minting a fresh one per apply session is cheap and preferred.
 
-Distinct from the runtime CI OAuth client at `/tailscale/oauth-*` (devices/auth_keys scope only) - that one stays narrow and continues backing `tailscale/github-action@v3` until each repo migrates to OIDC.
+Distinct from the runtime CI OAuth clients under `/tailscale/oauth/<service>/` (narrow scopes) - those stay in SSM because they can't rewrite policy.
 
 ## Module
 
-`terraform/tailscale/`. Run via:
+`terraform/tailscale/`. Kai runs it (the env carries the admin pair, so this is a human-driven verb, not an agent one):
 
 ```
-coily exec terraform-tailscale action=init
-coily exec terraform-tailscale action=plan
-coily exec terraform-tailscale action=apply
+ward exec terraform-tailscale action=init
+ward exec terraform-tailscale action=plan
+ward exec terraform-tailscale action=apply
 ```
 
-The wrapper pulls `/tailscale/admin/oauth-client-id`, `/tailscale/admin/oauth-client-secret`, and `/github/pat` from SSM and exports them as `TAILSCALE_OAUTH_CLIENT_ID` + `TAILSCALE_OAUTH_CLIENT_SECRET` + `GITHUB_TOKEN`. State at `s3://coilysiren-assets/terraform-state/infrastructure/tailscale.tfstate` (native lockfile, same shape as `terraform/grafana/`).
+The wrapper validates `TAILSCALE_OAUTH_CLIENT_ID` + `TAILSCALE_OAUTH_CLIENT_SECRET` are exported and hands the env to terraform. State at `s3://coilysiren-assets/terraform-state/infrastructure/tailscale.tfstate` (native lockfile, same shape as `terraform/grafana/`).
 
 Adding a repo: append to `terraform.tfvars` `repos = [{ name = "<repo>" }, ...]` and re-apply.
 

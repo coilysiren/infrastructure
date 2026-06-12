@@ -23,8 +23,9 @@ terraform {
 
 # Admin OAuth pair (all:write). Needed for tailscale_acl, tailscale_device_tags,
 # tailscale_tailnet_key, and tailscale_federated_identity. The runtime CI client
-# at /tailscale/oauth-* is not sufficient. Credentials wired via
-# scripts/k8s/terraform_tailscale.py from /tailscale/admin/oauth-client-{id,secret}.
+# at /tailscale/oauth/* is not sufficient. Operator-held only, never SSM: export
+# TAILSCALE_OAUTH_CLIENT_ID + TAILSCALE_OAUTH_CLIENT_SECRET in the invoking
+# shell, validated by scripts/k8s/terraform_tailscale.py.
 provider "tailscale" {
   scopes  = ["all:write"]
   tailnet = "-"

@@ -69,22 +69,30 @@ def tailscale_admin_bearer():
 
 
 def tailscale_admin_oauth_env():
-    """A copy of os.environ with the admin Tailscale OAuth pair from SSM
-    added, ready to hand to terraform.
+    """A copy of os.environ validated to carry the admin Tailscale OAuth
+    pair, ready to hand to terraform.
 
-    The admin pair (/tailscale/admin/oauth-client-{id,secret}, all:write
-    scope) mints tagged keys and manages federated identities. Distinct
-    from the runtime CI client at /tailscale/oauth-*. Plaintext is
-    passed via env, never echoed or persisted.
+    The admin pair (all:write scope) rewrites the tailnet ACL, the
+    boundary that decides which machines an agent can SSH into - so it
+    must never sit in SSM or any other agent-readable store. The
+    operator mints it in the Tailscale admin console and exports both
+    halves in the shell that runs the verb. Distinct from the runtime
+    CI clients under /tailscale/oauth/. Plaintext is passed via env,
+    never echoed or persisted.
     """
-    client = ssm()
     env = os.environ.copy()
-    env["TAILSCALE_OAUTH_CLIENT_ID"] = client.get_parameter(
-        Name="/tailscale/admin/oauth-client-id", WithDecryption=True,
-    )["Parameter"]["Value"]
-    env["TAILSCALE_OAUTH_CLIENT_SECRET"] = client.get_parameter(
-        Name="/tailscale/admin/oauth-client-secret", WithDecryption=True,
-    )["Parameter"]["Value"]
+    missing = [
+        name
+        for name in ("TAILSCALE_OAUTH_CLIENT_ID", "TAILSCALE_OAUTH_CLIENT_SECRET")
+        if not env.get(name)
+    ]
+    if missing:
+        sys.exit(
+            "missing env: " + ", ".join(missing) + ". Mint an all:write OAuth "
+            "client at https://login.tailscale.com/admin/settings/trust-credentials "
+            "and export both halves in this shell. The admin pair stays out of SSM "
+            "by design (docs/tailscale.md)."
+        )
     return env
 
 
