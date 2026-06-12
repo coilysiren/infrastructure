@@ -355,6 +355,50 @@ agentic-os-kai), `uv sync`s, and hands off to the sync play, which converges
 everything else. Prereqs: git auth to forgejo and AWS credentials. After that,
 re-converge anytime with `ward exec ansible-sync`.
 
+## ser8 bootstrap (channel-dispatched fleet config)
+
+A parallel, server-side slice of the ansible tree, built under two non-standard
+constraints (see [agentic-os-kai#598](https://forgejo.coilysiren.me/coilyco-bridge/agentic-os-kai/issues/598)
+for the why):
+
+1. **Local-only execution.** Every play runs with `connection: local`. There is
+   no central control node. Each host owns its own checkout of
+   `coilysiren/infrastructure` and runs `ansible-playbook` against itself.
+2. **Channel-dispatched orchestration.** Fleet-wide application happens via o2r
+   Agent Channels, not SSH fanout. An on-host worker (separate,
+   [otel-a2a-relay#55](https://forgejo.coilysiren.me/coilyco-flight-deck/otel-a2a-relay/issues/55))
+   subscribes to a channel for `ansible.task` comms events and runs the local
+   playbook.
+
+The bootstrap of a brand-new host is the one exception - a one-shot
+scp-then-ssh path until the host owns its own checkout (scp the `ansible/` tree
+to `/tmp/ansible` on the target, `apt install -y ansible`, run with
+`--connection=local`). After bootstrap, the host runs Ansible on itself.
+
+- **`playbooks/ser8-bootstrap.yml`** - first-time bring-up for ser8. Sets
+  `connection: local` + `become: true` inline (it does not rely on
+  `ansible.cfg`), and a `pre_tasks` hostname assert refuses to run anywhere but
+  ser8. Run with the explicit single-host inventory:
+  `ansible-playbook -i ansible/inventory/local.yml ansible/playbooks/ser8-bootstrap.yml`.
+- **`inventory/local.yml`** - single-host inventory (localhost,
+  `connection=local`) for the bootstrap path.
+- **`roles/authorized-keys/`** - authorizes the SSH public keys a GitHub user
+  publishes at `https://github.com/<user>.keys`. The
+  `ansible.posix.authorized_key` module fetches the URL at converge time, so
+  rotating a key on GitHub propagates on the next run. Defaults:
+  `authorized_keys_github_users` (default `[coilysiren]`),
+  `authorized_keys_user` (default the connecting account), and
+  `authorized_keys_exclusive` (default `false`, so existing keys are kept).
+- **`files/sudoers-coilysiren-fleet`** - the Ansible-managed
+  `/etc/sudoers.d/coilysiren-fleet` fragment. `ser8-bootstrap.yml` removes the
+  temporary `/etc/sudoers.d/coilysiren-nopasswd` line operators paste at the
+  console during first-time bring-up and replaces it with this one - same
+  effective permission, but the lineage is Ansible-owned.
+
+Related: [infrastructure#99](https://forgejo.coilysiren.me/coilyco-flight-deck/infrastructure/issues/99)
+(cross-site warm standby decision; the ser8 bring-up implements its
+prerequisites).
+
 ## See also
 
 - [../ansible/README.md](../ansible/README.md) - quickstart.

@@ -1,0 +1,7 @@
+# authorized-keys defaults - GitHub-published SSH keys; see docs/ansible.md.
+authorized_keys_github_users:
+  - coilysiren
+
+authorized_keys_user: "{{ ansible_user_id }}"
+
+authorized_keys_exclusive: false
